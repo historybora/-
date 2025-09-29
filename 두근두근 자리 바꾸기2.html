@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>두근두근 자리 바꾸기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap');
+        body {
+            font-family: 'Gowun Dodum', sans-serif;
+            background-color: #e3f2fd; /* 하늘색 */
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .classroom-background {
+            background-color: #f0f4c3; /* 연한 노랑 */
+            border: 8px solid #c8e6c9; /* 연한 초록 테두리 */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column; /* 세로 정렬로 변경 */
+            align-items: center;
+            justify-content: flex-start; /* 상단 정렬 */
+            position: relative;
+            padding-bottom: 80px; /* Adjust padding to make space for the message */
+        }
+        .seat {
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            cursor: grab;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .seat:hover {
+            transform: translateY(-4px);
+        }
+        .seat.fixed {
+            cursor: not-allowed;
+        }
+        .seat.is-dragging {
+            opacity: 0.7;
+            transform: scale(1.1);
+            z-index: 10;
+        }
+        .shuffle-animation {
+            animation: moveAround 2s infinite alternate;
+        }
+        @keyframes moveAround {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(10px, -5px) rotate(2deg); }
+            50% { transform: translate(0, 0) rotate(0deg); }
+            75% { transform: translate(-10px, 5px) rotate(-2deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .blinking-text {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        .dialog {
+            animation: popIn 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10rem;
+            font-weight: bold;
+            color: #7a4c49;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.2);
+            animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            z-index: 100;
+        }
+        #final-message-for-pdf {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            text-align: center;
+            font-size: 14px;
+            color: #4a4a4a;
+            visibility: hidden; /* Only visible for html2canvas */
+            font-family: 'Gowun Dodum', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-[#e3f2fd] min-h-screen p-6 text-gray-800 flex justify-center items-center relative">
+    <!-- 출처 문구 -->
+    <div class="fixed top-4 right-4 text-xs text-slate-500 font-bold">
+        보라쌤과 역사를 보라
+    </div>
+    <div class="container bg-white p-8 rounded-2xl shadow-xl flex flex-col lg:flex-row gap-8">
+        <!-- Input & Options Panel -->
+        <div class="w-full lg:w-1/3 p-6 bg-[#f7f3e9] rounded-2xl shadow-inner flex flex-col gap-6">
+            <h1 class="text-4xl text-[#7a4c49] font-bold text-center">두근두근<br>자리 바꾸기</h1>
+
+            <hr class="border-t-2 border-[#d3b4a2]">
+
+            <!-- Class Info Input -->
+            <div>
+                <label for="grade" class="block text-xl font-bold mb-2">학년 정보</label>
+                <div class="flex gap-2">
+                    <input type="text" id="grade" class="w-24 p-1 rounded-lg border-2 border-[#d3b4a2] focus:outline-none focus:border-[#a89f92]" placeholder="1학년">
+                    <input type="text" id="class" class="w-24 p-1 rounded-lg border-2 border-[#d3b4a2] focus:outline-none focus:border-[#a89f92]" placeholder="3반">
+                </div>
+            </div>
+
+            <!-- Student List Input -->
+            <div>
+                <label for="studentList" class="block text-xl font-bold mb-2">학생 명단 입력 (학번 이름)</label>
+                <textarea id="studentList" rows="6" class="w-full p-2 rounded-lg border-2 border-[#d3b4a2] focus:outline-none focus:border-[#a89f92]" placeholder="예시:&#10;1112 김민지&#10;1113 김민준&#10;..."></textarea>
+                <button onclick="parseStudents()" class="mt-2 w-full bg-[#ffab91] hover:bg-[#ff8a65] text-white font-bold py-3 rounded-xl shadow-md transition">명단 불러오기</button>
+            </div>
+
+            <!-- Seating Chart Dimensions -->
+            <div>
+                <label for="colLayout" class="block text-xl font-bold mb-2">자리 배치도 크기 (열별 인원수)</label>
+                <input type="text" id="colLayout" class="w-full p-1 rounded-lg border-2 border-[#d3b4a2] focus:outline-none focus:border-[#a89f92]" placeholder="예시: 4455">
+                <p class="text-xs text-gray-500 mt-1">
+                    숫자 하나가 한 열을 의미합니다. '4455'는 4명, 4명, 5명, 5명으로 총 4열을 만듭니다.
+                </p>
+            </div>
+
+            <!-- Placement Options -->
+            <div class="mt-4">
+                <h3 class="text-xl font-bold mb-2">자리 지정 옵션</h3>
+                <div class="flex flex-col gap-3">
+                    <select id="fixedStudents" multiple size="4" class="w-full p-2 rounded-lg border-2 border-[#d3b4a2] text-sm"></select>
+                    <button onclick="setFixedStudents()" class="w-full bg-[#a5d6a7] hover:bg-[#81c784] text-white font-bold py-2 rounded-xl shadow-md transition">앞자리 고정</button>
+
+                    <div class="flex items-center gap-2">
+                        <select id="pairStudent1" class="flex-1 p-2 rounded-lg border-2 border-[#d3b4a2] text-sm"></select>
+                        <span class="text-xl font-bold">❤️</span>
+                        <select id="pairStudent2" class="flex-1 p-2 rounded-lg border-2 border-[#d3b4a2] text-sm"></select>
+                    </div>
+                    <button onclick="setPairedStudents()" class="w-full bg-[#fff59d] hover:bg-[#ffee58] text-gray-800 font-bold py-2 rounded-xl shadow-md transition">짝꿍 지정</button>
+
+                    <div class="flex items-center gap-2">
+                        <select id="separateStudent1" class="flex-1 p-2 rounded-lg border-2 border-[#d3b4a2] text-sm"></select>
+                        <span class="text-xl font-bold">💔</span>
+                        <select id="separateStudent2" class="flex-1 p-2 rounded-lg border-2 border-[#d3b4a2] text-sm"></select>
+                    </div>
+                    <button onclick="setSeparatedStudents()" class="w-full bg-[#b3e5fc] hover:bg-[#81d4fa] text-white font-bold py-2 rounded-xl shadow-md transition">분리 지정</button>
+                </div>
+            </div>
+
+            <!-- New: Style Options -->
+            <div class="mt-4">
+                <h3 class="text-xl font-bold mb-2">자리 스타일 변경</h3>
+                <select id="themeSelector" onchange="changeTheme(this.value)" class="w-full p-2 rounded-lg border-2 border-[#d3b4a2] focus:outline-none focus:border-[#a89f92]">
+                    <option value="default">기본 (파랑/노랑)</option>
+                    <option value="pastel">파스텔 (핑크/흰색)</option>
+                    <option value="monochrome">모노크롬 (회색)</option>
+                    <option value="softYellow">연노랑 (노랑/흰색)</option>
+                </select>
+            </div>
+
+        </div>
+
+        <!-- Seating Chart & Buttons -->
+        <div class="w-full lg:w-2/3 flex flex-col gap-6">
+            <!-- Seating Chart Area -->
+            <div id="classroom" class="classroom-background p-8 rounded-2xl min-h-[500px]">
+                <!-- Title at the top center -->
+                <h2 id="classroomTitle" class="text-3xl font-bold mb-4 text-center w-full text-slate-800">자리 배치도</h2>
+                <div id="seatingChart" class="flex flex-row-reverse items-center justify-center w-full gap-4 flex-grow"></div>
+                <!-- Countdown display -->
+                <div id="countdown-display" class="countdown hidden"></div>
+                <!-- Blackboard below the seats -->
+                <div class="h-12 w-2/3 bg-slate-800 rounded-b-lg mt-8 text-white flex items-center justify-center font-bold text-xl text-center">칠판 (앞)</div>
+                <!-- Final message for PDF -->
+                <div id="final-message-for-pdf"></div>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="flex flex-wrap justify-center gap-4 mt-4">
+                <button id="shuffleBtn" onclick="startShuffleWithCountdown()" class="flex-1 min-w-[150px] bg-[#ffab91] hover:bg-[#ff8a65] text-white font-bold py-4 px-6 rounded-2xl text-xl shadow-md transition">
+                    자리바꿈 시작! ✨
+                </button>
+                <button id="lockBtn" onclick="lockSeats()" class="flex-1 min-w-[150px] bg-[#a5d6a7] hover:bg-[#81c784] text-white font-bold py-4 px-6 rounded-2xl text-xl shadow-md transition">
+                    드래그앤드롭으로 최종 수정! ✍️
+                </button>
+            </div>
+            <div class="flex flex-wrap justify-center gap-4 mt-4">
+                <button id="pdfBtn" onclick="saveAsPdf()" class="flex-1 min-w-[150px] bg-[#b3e5fc] hover:bg-[#81d4fa] text-white font-bold py-4 px-6 rounded-2xl text-xl shadow-md transition">
+                    PDF로 저장하기 🖨️
+                </button>
+                <div class="flex flex-col w-full">
+                    <div class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" id="addMessage" class="h-5 w-5 rounded-md text-[#7a4c49] focus:ring-[#7a4c49]">
+                        <label for="addMessage" class="text-lg font-bold">마지막 문구 추가하기</label>
+                    </div>
+                    <textarea id="finalMessageTextarea" rows="2" class="hidden w-full p-2 rounded-lg border-2 border-[#d3b4a2] focus:outline-none focus:border-[#a89f92]"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialog for messages -->
+    <div id="messageDialog" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-xl shadow-lg dialog text-center text-xl font-bold flex flex-col items-center">
+            <p id="dialogMessage" class="mb-4"></p>
+            <button onclick="hideDialog()" class="bg-[#ffab91] hover:bg-[#ff8a65] text-white py-2 px-4 rounded-lg">확인</button>
+        </div>
+    </div>
+
+    <script>
+        window.jsPDF = window.jspdf.jsPDF;
+        
+        let students = [];
+        let fixedStudents = [];
+        let pairedStudents = [];
+        let separatedStudents = [];
+        let seatingChartData = [];
+        let isShuffling = false;
+        let isFinalized = false;
+        let colLayout = [];
+        let maxRows = 0;
+        const synth = new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.05, decay: 0.1, sustain: 0.2, release: 0.5 }
+        }).toDestination();
+
+        // 테마를 관리하는 객체
+        const themes = {
+            default: {
+                classroom: 'bg-[#f0f4c3] border-[#c8e6c9]',
+                seat: 'bg-[#bbdefb] border-[#64b5f6] shadow-[#64b5f6]',
+                fixedSeat: 'bg-[#ffcdd2] border-[#ef9a9a] shadow-[#ef9a9a]',
+                shuffleBtn: 'bg-[#ffab91] hover:bg-[#ff8a65]',
+                lockBtn: 'bg-[#a5d6a7] hover:bg-[#81c784]',
+                pdfBtn: 'bg-[#b3e5fc] hover:bg-[#81d4fa]'
+            },
+            pastel: {
+                classroom: 'bg-[#fce4ec] border-[#f8bbd0]',
+                seat: 'bg-white border-[#f48fb1] shadow-[#f48fb1]',
+                fixedSeat: 'bg-[#ffebee] border-[#ffcdd2] shadow-[#ffcdd2]',
+                shuffleBtn: 'bg-[#ffccbc] hover:bg-[#ffab91]',
+                lockBtn: 'bg-[#c8e6c9] hover:bg-[#a5d6a7]',
+                pdfBtn: 'bg-[#b3e5fc] hover:bg-[#81d4fa]'
+            },
+            monochrome: {
+                classroom: 'bg-[#e0e0e0] border-[#9e9e9e]',
+                seat: 'bg-[#cfd8dc] border-[#78909c] shadow-[#78909c]',
+                fixedSeat: 'bg-[#ffebee] border-[#ffcdd2] shadow-[#ffcdd2]',
+                shuffleBtn: 'bg-[#616161] hover:bg-[#424242]',
+                lockBtn: 'bg-[#b0bec5] hover:bg-[#78909c]',
+                pdfBtn: 'bg-[#cfd8dc] hover:bg-[#9e9e9e]'
+            },
+            softYellow: {
+                classroom: 'bg-[#fffde7] border-[#ffeb3b]',
+                seat: 'bg-white border-[#ffecb3] shadow-[#ffecb3]',
+                fixedSeat: 'bg-[#ffebee] border-[#ffcdd2] shadow-[#ffcdd2]',
+                shuffleBtn: 'bg-[#ffecb3] hover:bg-[#ffeb3b]',
+                lockBtn: 'bg-[#dcedc8] hover:bg-[#c5e1a5]',
+                pdfBtn: 'bg-[#b3e5fc] hover:bg-[#81d4fa]'
+            }
+        };
+
+        let currentTheme = 'default';
+
+        function changeTheme(themeName) {
+            currentTheme = themeName;
+            const theme = themes[themeName];
+
+            // Update classroom background
+            const classroom = document.getElementById('classroom');
+            classroom.className = `classroom-background p-8 rounded-2xl min-h-[500px] ${theme.classroom}`;
+
+            // Update button styles
+            document.getElementById('shuffleBtn').className = `flex-1 min-w-[150px] ${theme.shuffleBtn} text-white font-bold py-4 px-6 rounded-2xl text-xl shadow-md transition`;
+            document.getElementById('lockBtn').className = `flex-1 min-w-[150px] ${theme.lockBtn} text-white font-bold py-4 px-6 rounded-2xl text-xl shadow-md transition`;
+            document.getElementById('pdfBtn').className = `flex-1 min-w-[150px] ${theme.pdfBtn} text-white font-bold py-4 px-6 rounded-2xl text-xl shadow-md transition`;
+            
+            // Re-render seats to apply new styles
+            renderSeatingChart();
+        }
+
+        document.getElementById('addMessage').addEventListener('change', (e) => {
+            const textarea = document.getElementById('finalMessageTextarea');
+            if (e.target.checked) {
+                textarea.classList.remove('hidden');
+                const grade = document.getElementById('grade').value || '';
+                const className = document.getElementById('class').value || '';
+                textarea.value = `우리 ${grade} ${className}을(를) 수업해 주셔서 감사합니다. 수업을 방해하는 학생이 있다면 담임에게 꼭 알려주세요.`;
+            } else {
+                textarea.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('grade').addEventListener('input', updateTitle);
+        document.getElementById('class').addEventListener('input', updateTitle);
+
+        function updateTitle() {
+            const grade = document.getElementById('grade').value || '우리';
+            const className = document.getElementById('class').value || '반';
+            document.getElementById('classroomTitle').textContent = `${grade} ${className} 자리배치도`.trim();
+        }
+
+        function showDialog(message) {
+            const dialog = document.getElementById('messageDialog');
+            const dialogMessage = document.getElementById('dialogMessage');
+            dialogMessage.textContent = message;
+            dialog.classList.remove('hidden');
+        }
+
+        function hideDialog() {
+            const dialog = document.getElementById('messageDialog');
+            dialog.classList.add('hidden');
+        }
+
+        function parseStudents() {
+            const studentListInput = document.getElementById('studentList').value;
+            const layoutInput = document.getElementById('colLayout').value;
+
+            if (!studentListInput.trim()) {
+                showDialog('명단을 먼저 입력해 주세요.');
+                return;
+            }
+            if (!layoutInput) {
+                showDialog('자리 배치도 크기를 입력해 주세요.');
+                return;
+            }
+
+            colLayout = layoutInput.split('').map(Number);
+            const totalSeats = colLayout.reduce((sum, num) => sum + num, 0);
+            maxRows = Math.max(...colLayout);
+            
+            students = studentListInput.split('\n').map(line => {
+                const parts = line.trim().split(/\s+/);
+                if (parts.length >= 2) {
+                    const studentId = parts[0];
+                    const name = parts.slice(1).join(' ');
+                    return { id: studentId, name: name, type: 'normal' };
+                }
+                return null;
+            }).filter(student => student !== null);
+
+            console.log(`총 ${students.length}명의 학생이 입력되었습니다.`);
+
+            if (students.length > totalSeats) {
+                showDialog(`학생 수(${students.length}명)가 자리 수(${totalSeats}개)보다 많습니다.`);
+                students = [];
+                return;
+            }
+
+            fixedStudents = [];
+            pairedStudents = [];
+            separatedStudents = [];
+            
+            updateStudentSelects();
+            renderSeatingChart();
+            document.getElementById('shuffleBtn').disabled = false;
+            document.getElementById('lockBtn').disabled = false;
+            showDialog('명단 불러오기 완료! 이제 자리 배치도를 확인할 수 있습니다.');
+        }
+
+        function updateStudentSelects() {
+            const selects = ['fixedStudents', 'pairStudent1', 'pairStudent2', 'separateStudent1', 'separateStudent2'];
+            selects.forEach(selectId => {
+                const selectEl = document.getElementById(selectId);
+                selectEl.innerHTML = students.map(s => `<option value="${s.id}">${s.id} ${s.name}</option>`).join('');
+            });
+        }
+
+        function setFixedStudents() {
+            const selectEl = document.getElementById('fixedStudents');
+            fixedStudents = Array.from(selectEl.selectedOptions).map(option => {
+                const student = students.find(s => s.id === option.value);
+                if (student) {
+                    return { ...student, type: 'fixed' };
+                }
+                return null;
+            }).filter(s => s !== null);
+            showDialog(`총 ${fixedStudents.length}명의 학생이 앞자리에 고정되었습니다.`);
+        }
+
+        function setPairedStudents() {
+            const s1 = document.getElementById('pairStudent1').value;
+            const s2 = document.getElementById('pairStudent2').value;
+            if (s1 && s2 && s1 !== s2) {
+                pairedStudents.push([s1, s2]);
+                showDialog(`${students.find(s => s.id === s1).name}님과 ${students.find(s => s.id === s2).name}님이 짝꿍이 되었습니다.`);
+            } else {
+                showDialog('짝꿍으로 지정할 두 학생을 선택해주세요.');
+            }
+        }
+
+        function setSeparatedStudents() {
+            const s1 = document.getElementById('separateStudent1').value;
+            const s2 = document.getElementById('separateStudent2').value;
+            if (s1 && s2 && s1 !== s2) {
+                separatedStudents.push([s1, s2]);
+                showDialog(`${students.find(s => s.id === s1).name}님과 ${students.find(s => s.id === s2).name}님이 분리되었습니다.`);
+            } else {
+                showDialog('분리할 두 학생을 선택해주세요.');
+            }
+        }
+
+        function renderSeatingChart() {
+            const seatingChartEl = document.getElementById('seatingChart');
+            seatingChartEl.innerHTML = '';
+            
+            const totalSeats = colLayout.reduce((sum, num) => sum + num, 0);
+            if (seatingChartData.length === 0 || seatingChartData.length !== totalSeats) {
+                 seatingChartData = Array(totalSeats).fill(null);
+            }
+            
+            const deskHeightClass = `h-1/${maxRows}`;
+
+            let seatIndex = 0;
+            colLayout.forEach((rows, colIndex) => {
+                const colDiv = document.createElement('div');
+                colDiv.classList.add('flex', 'flex-col-reverse', 'items-center', 'justify-center', 'h-full', 'gap-4', 'mx-2');
+                for (let i = 0; i < maxRows; i++) {
+                    const seatDiv = document.createElement('div');
+                    seatDiv.classList.add('seat', 'rounded-lg', 'p-2', 'w-28', 'transition-all', deskHeightClass);
+                    seatDiv.dataset.index = seatIndex;
+                    
+                    if (i >= rows) {
+                         seatDiv.classList.add('bg-transparent', 'border-transparent', 'shadow-none', 'pointer-events-none');
+                    } else {
+                        seatDiv.addEventListener('dragover', handleDragOver);
+                        seatDiv.addEventListener('drop', handleDrop);
+                    }
+                    colDiv.appendChild(seatDiv);
+                    seatIndex++;
+                }
+                seatingChartEl.appendChild(colDiv);
+            });
+            updateChartUI();
+            updateTitle();
+        }
+        
+        function updateChartUI() {
+            const seatElements = document.querySelectorAll('#seatingChart .seat');
+            const theme = themes[currentTheme];
+
+            seatElements.forEach((seat, index) => {
+                const student = seatingChartData[index];
+                if (seat.classList.contains('bg-transparent')) {
+                    return;
+                }
+                
+                seat.innerHTML = '';
+                // Reset styling classes
+                seat.className = `seat rounded-lg p-2 w-28 transition-all h-1/${maxRows} ${theme.seat}`;
+                
+                seat.draggable = false;
+                seat.style.cursor = 'grab';
+
+                if (student) {
+                    // Wrap the student name and ID in a flex container for precise centering
+                    const studentInfo = document.createElement('div');
+                    studentInfo.className = 'flex flex-col justify-center items-center h-full';
+                    studentInfo.innerHTML = `<span class="text-sm text-slate-600">${student.id}</span><span class="text-lg">${student.name}</span>`;
+                    seat.appendChild(studentInfo);
+
+                    if (student.type === 'fixed') {
+                        seat.className = `seat rounded-lg p-2 w-28 transition-all h-1/${maxRows} ${theme.fixedSeat} fixed`;
+                    }
+                    if (isFinalized) {
+                        seat.draggable = true;
+                        seat.addEventListener('dragstart', handleDragStart);
+                    } else {
+                        seat.draggable = false;
+                        seat.removeEventListener('dragstart', handleDragStart);
+                    }
+                }
+            });
+        }
+        
+        function handleDragStart(e) {
+            e.target.classList.add('is-dragging');
+            e.dataTransfer.setData('text/plain', e.target.dataset.index);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            const draggedIndex = e.dataTransfer.getData('text/plain');
+            const targetIndex = e.currentTarget.dataset.index;
+            if (draggedIndex !== targetIndex && !e.currentTarget.classList.contains('fixed')) {
+                 e.currentTarget.style.backgroundColor = '#dbeafe';
+            }
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const draggedIndex = e.dataTransfer.getData('text/plain');
+            const targetIndex = e.currentTarget.dataset.index;
+
+            if (e.currentTarget.classList.contains('fixed')) {
+                showDialog('고정된 자리로는 학생을 옮길 수 없습니다.');
+                document.querySelectorAll('#seatingChart .seat').forEach(seat => seat.style.backgroundColor = '');
+                return;
+            }
+
+            const draggedStudent = seatingChartData[draggedIndex];
+            const targetStudent = seatingChartData[targetIndex];
+            
+            seatingChartData[targetIndex] = draggedStudent;
+            seatingChartData[draggedIndex] = targetStudent;
+
+            const seatElements = document.querySelectorAll('#seatingChart .seat');
+            seatElements.forEach(seat => seat.style.backgroundColor = '');
+
+            updateChartUI();
+        }
+
+        function getRelativePosition(index) {
+            let colIndex = 0;
+            let seatsPassed = 0;
+            for (let i = 0; i < colLayout.length; i++) {
+                if (index < seatsPassed + colLayout[i]) {
+                    return {
+                        col: i,
+                        row: index - seatsPassed
+                    };
+                }
+                seatsPassed += colLayout[i];
+            }
+            return null;
+        }
+
+        async function startShuffleWithCountdown() {
+            if (isShuffling) return;
+            if (Tone.context.state !== 'running') {
+                await Tone.start();
+            }
+
+            const countdownDisplay = document.getElementById('countdown-display');
+            const notes = ["C4", "D4", "E4"];
+            let count = 3;
+
+            isShuffling = true;
+            document.getElementById('shuffleBtn').disabled = true;
+
+            const interval = setInterval(() => {
+                if (count > 0) {
+                    countdownDisplay.textContent = count;
+                    countdownDisplay.classList.remove('hidden');
+                    synth.triggerAttackRelease(notes[count - 1], "8n");
+                    count--;
+                } else {
+                    clearInterval(interval);
+                    countdownDisplay.classList.add('hidden');
+                    shuffleSeats();
+                }
+            }, 1000);
+        }
+
+        async function shuffleSeats() {
+            console.log('--- 자리 섞기 시작 ---');
+            isFinalized = false;
+            
+            document.getElementById('shuffleBtn').textContent = '자리 바꾸는 중...';
+            
+            // Generate a list of only the *visible* seat indices
+            let visibleSeatIndices = [];
+            let seatIndex = 0;
+            colLayout.forEach((rows, colIndex) => {
+                for (let i = 0; i < rows; i++) {
+                    visibleSeatIndices.push(seatIndex);
+                    seatIndex++;
+                }
+                seatIndex += (maxRows - rows); // Skip the invisible seats
+            });
+
+            // Re-initialize seating chart data based on visible seats
+            const totalVisibleSeats = visibleSeatIndices.length;
+            seatingChartData = Array(totalVisibleSeats).fill(null);
+
+            // Create a pool of all students
+            let studentsToPlace = [...students];
+            
+            // 1. Place fixed students first
+            const fixedStudentIds = fixedStudents.map(s => s.id);
+            let fixedSeatIndices = [];
+            for (let i = 0; i < fixedStudentIds.length; i++) {
+                const studentId = fixedStudentIds[i];
+                const student = studentsToPlace.find(s => s.id === studentId);
+                if (student) {
+                    seatingChartData[i] = { ...student, type: 'fixed' };
+                    fixedSeatIndices.push(visibleSeatIndices[i]); // Store the index of the fixed seat
+                    studentsToPlace = studentsToPlace.filter(s => s.id !== studentId);
+                }
+            }
+
+            // 2. Filter out fixed seats from the visible seats pool
+            let availableSeatIndices = visibleSeatIndices.filter(index => !fixedSeatIndices.includes(index));
+            
+            // 3. Shuffle the remaining students and seats
+            studentsToPlace.sort(() => 0.5 - Math.random());
+            availableSeatIndices.sort(() => 0.5 - Math.random());
+
+            // 4. Place the remaining students in the remaining seats
+            for (let i = 0; i < studentsToPlace.length; i++) {
+                const seatIndex = availableSeatIndices[i];
+                // Find the correct index in the seatingChartData array
+                const chartIndex = visibleSeatIndices.indexOf(seatIndex);
+                if (chartIndex !== -1) {
+                    seatingChartData[chartIndex] = studentsToPlace[i];
+                }
+            }
+            
+            // Re-map the seatingChartData to the full grid, including transparent seats
+            const fullSeatingChartData = Array(colLayout.reduce((sum, num) => sum + num, 0)).fill(null);
+            visibleSeatIndices.forEach((visibleIndex, chartDataIndex) => {
+                fullSeatingChartData[visibleIndex] = seatingChartData[chartDataIndex];
+            });
+            seatingChartData = fullSeatingChartData;
+
+            console.log('최종 자리 배치도 확인:');
+            console.log(seatingChartData);
+            
+            const seatElements = document.querySelectorAll('#seatingChart .seat');
+            seatElements.forEach(el => el.classList.add('shuffle-animation'));
+
+            setTimeout(() => {
+                seatElements.forEach(el => el.classList.remove('shuffle-animation'));
+                updateChartUI();
+                isShuffling = false;
+                document.getElementById('shuffleBtn').textContent = '자리바꿈 시작! ✨';
+                document.getElementById('shuffleBtn').disabled = false;
+                showDialog('자리 배치가 완료되었습니다!');
+            }, 3000); // 3 seconds for animation
+        }
+
+        function lockSeats() {
+            isFinalized = true;
+            updateChartUI();
+            document.getElementById('lockBtn').textContent = '최종 수정 모드';
+            document.getElementById('lockBtn').disabled = true;
+            showDialog('드래그앤드롭으로 자리를 옮길 수 있습니다.');
+        }
+
+        async function saveAsPdf() {
+            window.jsPDF = window.jspdf.jsPDF;
+            const { jsPDF } = window.jspdf;
+            const content = document.getElementById('classroom');
+            const messageDiv = document.getElementById('final-message-for-pdf');
+            
+            showDialog('PDF 생성 중...');
+
+            // If addMessage checkbox is checked, populate and show the hidden div
+            if (document.getElementById('addMessage').checked) {
+                const message = document.getElementById('finalMessageTextarea').value;
+                messageDiv.textContent = message;
+                messageDiv.style.visibility = 'visible';
+            }
+
+            const canvas = await html2canvas(content, {
+                scale: 2,
+                logging: false,
+                useCORS: true,
+                backgroundColor: '#f0f4c3',
+            });
+            const imgData = canvas.toDataURL('image/png');
+            
+            const doc = new jsPDF('l', 'mm', 'a4'); // 'l' for landscape
+            const pdfWidth = doc.internal.pageSize.getWidth();
+            const pdfHeight = doc.internal.pageSize.getHeight();
+            
+            const imgWidth = pdfWidth - 20; // 10mm margin on each side
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            let x = 10;
+            let y = (pdfHeight - imgHeight) / 2;
+            
+            if (imgHeight > pdfHeight - 20) {
+                // If height is still too large, adjust based on height
+                const newHeight = pdfHeight - 20;
+                const newWidth = (canvas.width * newHeight) / canvas.height;
+                x = (pdfWidth - newWidth) / 2;
+                y = 10;
+                doc.addImage(imgData, 'PNG', x, y, newWidth, newHeight);
+            } else {
+                doc.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+            }
+            
+            const title = document.getElementById('classroomTitle').textContent;
+            doc.save(`${title}_자리배치도.pdf`);
+            
+            // Hide the message div again
+            messageDiv.style.visibility = 'hidden';
+
+            hideDialog();
+            showDialog('PDF 저장이 완료되었습니다!');
+        }
+    </script>
+</body>
+</html>
