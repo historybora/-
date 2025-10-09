@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>두근두근 발표자 뽑기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js"></script>
+    <style>
+        :root {
+            --bg-main: #FFFBF5;
+            --bg-display: #FCEFEF;
+            --bg-celebrate: #FFF2A1;
+            --color-start: #4A90E2;
+            --color-stop: #FF6B6B;
+            --color-feature: #4ECDC4;
+            --text-default: #333333;
+            --text-winner: #FF6B6B;
+        }
+        body {
+            font-family: 'Gowun Dodum', sans-serif;
+            background-color: var(--bg-main);
+        }
+        .result-display {
+            font-weight: 900;
+            font-size: 12rem;
+            line-height: 1;
+            text-shadow: 4px 4px 10px rgba(0,0,0,0.08);
+            color: var(--text-default);
+            transition: color 0.3s ease-in-out;
+        }
+        .characteristic-display {
+            font-weight: 700;
+            font-size: 2.5rem;
+            line-height: 1.4;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.08);
+            color: var(--text-default);
+            transition: color 0.3s ease-in-out;
+            word-break: keep-all; /* 단어 단위 줄바꿈 */
+        }
+        .winner {
+            color: var(--text-winner) !important;
+        }
+        .btn-primary {
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.15);
+        }
+        @media (min-width: 640px) {
+            .result-display { font-size: 15rem; }
+            .characteristic-display { font-size: 2.8rem; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 flex flex-col items-center justify-center min-h-screen p-4 antialiased">
+    <div class="absolute top-4 right-4 text-xs text-slate-400">
+        보라쌤과 역사를 보라
+    </div>
+
+    <div class="w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl shadow-rose-100 p-6 md:p-10 text-center">
+        
+        <h1 class="text-3xl sm:text-4xl font-bold text-slate-700 mb-2 whitespace-nowrap">두근두근 발표자 뽑기</h1>
+        <p class="text-slate-500 mb-8">오늘의 행운의 주인공은 누구일까요?</p>
+
+        <div id="display-area" class="rounded-2xl min-h-[300px] md:min-h-[350px] flex items-center justify-center my-6 p-4" style="background-color: var(--bg-display); transition: background-color 0.1s ease;">
+            <div id="result" class="result-display select-none">?</div>
+            <div id="characteristic-result" class="characteristic-display select-none hidden px-4"></div>
+        </div>
+        
+        <div>
+            <div class="flex justify-center border-b border-rose-100 mb-6">
+                <button id="tab-number" class="px-6 py-3 font-bold border-b-2 transition-colors">번호</button>
+                <button id="tab-characteristic" class="px-6 py-3 font-bold text-slate-400 transition-colors">특징</button>
+            </div>
+            
+            <div id="number-picker-controls">
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <div class="relative w-full sm:w-auto">
+                        <label for="student-count" class="absolute -top-2 left-2 inline-block bg-white px-1 text-xs font-medium text-slate-500">총 학생 수</label>
+                        <input type="number" id="student-count" min="1" class="w-full sm:w-48 text-center text-lg px-4 py-3 rounded-xl border border-slate-300 focus:ring-2" style="--tw-ring-color: var(--color-start); border-color: var(--color-start);">
+                    </div>
+                    <button id="start-btn" class="w-full sm:w-auto text-lg font-bold text-white px-8 py-3 rounded-xl btn-primary" style="background-color: var(--color-start);">
+                        시작
+                    </button>
+                    <button id="stop-btn" class="w-full sm:w-auto text-lg font-bold text-white px-8 py-3 rounded-xl btn-primary" style="background-color: var(--color-stop);" disabled>
+                        멈춤!
+                    </button>
+                </div>
+                <p id="error-msg" class="text-red-500 h-6 mt-2 text-sm"></p>
+            </div>
+
+            <div id="characteristic-picker-controls" class="hidden">
+                 <button id="pick-characteristic-btn" class="w-full sm:w-auto text-lg font-bold text-white px-10 py-4 rounded-xl btn-primary" style="background-color: var(--color-feature);">
+                    클릭해서 뽑기!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const resultDiv = document.getElementById('result');
+        const studentCountInput = document.getElementById('student-count');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const errorMsg = document.getElementById('error-msg');
+        const displayArea = document.getElementById('display-area');
+        const characteristicResultDiv = document.getElementById('characteristic-result');
+        const pickCharacteristicBtn = document.getElementById('pick-characteristic-btn');
+
+        const tabs = {
+            number: document.getElementById('tab-number'),
+            characteristic: document.getElementById('tab-characteristic')
+        };
+        const controls = {
+            number: document.getElementById('number-picker-controls'),
+            characteristic: document.getElementById('characteristic-picker-controls')
+        };
+        const displays = {
+            number: resultDiv,
+            characteristic: characteristicResultDiv
+        }
+
+        let intervalId = null, celebrateIntervalId = null, isSpinning = false, synth = null;
+        
+        try {
+            if (typeof Tone !== 'undefined') {
+                synth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination();
+            }
+        } catch (e) { console.error('Tone.js init failed.', e); }
+        
+        function playWinnerSound() {
+            if (!synth) return;
+            const now = Tone.now();
+            synth.triggerAttackRelease("C5", "16n", now);
+            synth.triggerAttackRelease("E5", "16n", now + 0.1);
+            synth.triggerAttackRelease("G5", "8n", now + 0.2);
+        }
+        function playSurpriseSound() {
+            if (!synth) return;
+            const now = Tone.now();
+            synth.triggerAttackRelease("C4", "8n", now);
+            synth.triggerAttackRelease("G4", "8n", now + 0.2);
+            synth.triggerAttackRelease("C5", "8n", now + 0.4);
+            synth.triggerAttackRelease("E5", "8n", now + 0.6);
+            synth.triggerAttackRelease("G5", "4n", now + 0.8);
+        }
+        
+        const characteristics = ["오늘 가장 일찍 등교한 사람", "생일이 오늘 날짜와 가장 가까운 사람", "어제 저녁으로 면 요리를 먹은 사람", "어제 저녁으로 밥이 아닌 다른 것을 먹은 사람", "반에서 머리가 가장 긴 사람", "반에서 머리가 가장 짧은 사람", "오늘 교과서를 안 가져온 사람", "발 사이즈가 230mm 이하인 사람", "발 사이즈가 270mm 이상인 사람", "키가 180cm에 가장 가까운 사람", "키가 150cm에 가장 가까운 사람", "필통 속에 가장 긴 펜을 가진 사람", "휴대폰 배경화면이 기본 이미지인 사람", "맨 뒷줄 가운데 자리에 앉은 사람", "오늘 파란색 계열 옷을 입은 사람", "주머니에 동전이 있는 사람", "이름이 4글자인 사람", "오늘 아침 급식 메뉴를 기억하는 사람", "어제 밤 11시 이전에 잠든 사람", "오늘 아침에 우유를 마신 사람", "학번이 홀수인 사람", "학번이 짝수인 사람", "신발끈이 없는 신발을 신은 사람", "안경알이 동그란 사람", "가방 색이 검은색이 아닌 사람", "필통이 플라스틱 재질인 사람", "손목시계를 차고 있는 사람", "오늘 체육복을 입고 있는 사람", "이름의 초성이 'ㅇ'으로 시작하는 사람", "태어난 달이 12월인 사람", "가장 최근에 영화를 본 사람", "오늘 양말 색깔이 흰색이 아닌 사람", "창가 쪽 맨 앞자리에 앉은 사람", "복도 쪽 맨 뒷자리에 앉은 사람", "형제, 자매가 없는 사람", "반려동물을 키우는 사람", "가장 좋아하는 과목이 역사인 사람", "어제 음악을 들으며 등교한 사람", "필통에 자가 없는 사람", "휴대폰 배터리가 50% 이하인 사람", "오늘 대중교통을 타고 온 사람", "상의에 주머니가 없는 사람", "가방에 책을 5권 이상 넣어온 사람", "어제 운동을 한 사람", "휴대폰 케이스가 투명한 사람", "쉬는 시간에 잠을 잔 사람", "오늘 입은 옷 소매가 가장 긴 사람", "가장 최근에 필기한 글씨 색이 검은색이 아닌 사람", "신발에 3가지 이상의 색이 들어간 사람", "필통에 캐릭터 스티커가 붙어있는 사람"];
+        const surprises = ["🎉 깜짝 간식 당첨! 🎉", "✨ 칭찬 폭탄 타임! ✨", "🌟 행운의 상점 당첨! 🌟", "👏 모두의 큰 박수 당첨! 👏", "🙌 모두의 큰 환호 당첨! 🙌"];
+
+        function startSpinning() {
+            const count = parseInt(studentCountInput.value);
+            if (isNaN(count) || count < 1) { errorMsg.textContent = "1 이상의 학생 수를 입력해주세요."; return; }
+            errorMsg.textContent = "";
+            isSpinning = true;
+            startBtn.disabled = true;
+            studentCountInput.disabled = true;
+            stopBtn.disabled = false;
+            intervalId = setInterval(() => {
+                resultDiv.textContent = Math.floor(Math.random() * count) + 1;
+            }, 50);
+        }
+
+        function stopSpinning() {
+            if (!isSpinning) return;
+            clearInterval(intervalId); isSpinning = false;
+            startBtn.disabled = false; studentCountInput.disabled = false; stopBtn.disabled = true;
+            if (Math.random() < 0.15) {
+                const surprise = surprises[Math.floor(Math.random() * surprises.length)];
+                switchToView('characteristic', surprise);
+                playSurpriseSound();
+            } else {
+                resultDiv.classList.add('winner');
+                playWinnerSound();
+            }
+            celebrateEffect();
+        }
+
+        function pickCharacteristic() {
+            if (Math.random() < 0.15) {
+                const surprise = surprises[Math.floor(Math.random() * surprises.length)];
+                characteristicResultDiv.textContent = surprise;
+                playSurpriseSound();
+            } else {
+                const chosen = characteristics[Math.floor(Math.random() * characteristics.length)];
+                characteristicResultDiv.textContent = chosen;
+                playWinnerSound();
+            }
+            characteristicResultDiv.classList.add('winner');
+            celebrateEffect();
+        }
+
+        function celebrateEffect() {
+            let flashCount = 0;
+            if (celebrateIntervalId) clearInterval(celebrateIntervalId);
+            celebrateIntervalId = setInterval(() => {
+                displayArea.style.backgroundColor = (flashCount % 2 === 0) ? 'var(--bg-celebrate)' : 'var(--bg-display)';
+                flashCount++;
+                if (flashCount > 5) {
+                    clearInterval(celebrateIntervalId);
+                    displayArea.style.backgroundColor = 'var(--bg-display)';
+                }
+            }, 120);
+        }
+
+        function resetState() {
+            if (intervalId) clearInterval(intervalId);
+            if (celebrateIntervalId) clearInterval(celebrateIntervalId);
+            displayArea.style.backgroundColor = 'var(--bg-display)';
+            Object.values(displays).forEach(d => d.classList.remove('winner'));
+            isSpinning = false;
+        }
+
+        function switchToView(mode, content = null) {
+            resetState();
+            Object.values(tabs).forEach(t => { t.style.color = '#94a3b8'; t.style.borderColor = 'transparent'; });
+            Object.values(controls).forEach(c => c.classList.add('hidden'));
+            Object.values(displays).forEach(d => d.classList.add('hidden'));
+
+            const activeColor = `var(--color-${mode === 'characteristic' ? 'feature' : 'stop'})`;
+            tabs[mode].style.color = activeColor;
+            tabs[mode].style.borderColor = activeColor;
+            controls[mode].classList.remove('hidden');
+            displays[mode].classList.remove('hidden');
+
+            if (mode === 'number') {
+                resultDiv.textContent = '?';
+                startBtn.disabled = false; stopBtn.disabled = true; studentCountInput.disabled = false;
+            } else if (mode === 'characteristic') {
+                characteristicResultDiv.textContent = content || "버튼을 눌러 뽑아보세요!";
+                 if(content) characteristicResultDiv.classList.add('winner');
+            }
+        }
+        
+        tabs.number.addEventListener('click', () => switchToView('number'));
+        tabs.characteristic.addEventListener('click', () => switchToView('characteristic'));
+        
+        startBtn.addEventListener('click', startSpinning);
+        stopBtn.addEventListener('click', stopSpinning);
+        pickCharacteristicBtn.addEventListener('click', pickCharacteristic);
+        
+        studentCountInput.addEventListener('keyup', (event) => { if (event.key === 'Enter') startSpinning(); });
+        document.body.addEventListener('click', () => { if (synth && Tone.context.state !== 'running') Tone.start(); }, { once: true });
+        
+        switchToView('number');
+    });
+    </script>
+</body>
+</html>
+
+
