@@ -53,6 +53,10 @@
             transform: translateY(-3px);
             box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.15);
         }
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
         @media (min-width: 640px) {
             .result-display { font-size: 15rem; }
             .characteristic-display { font-size: 2.8rem; }
@@ -98,7 +102,7 @@
 
             <div id="characteristic-picker-controls" class="hidden">
                  <button id="pick-characteristic-btn" class="w-full sm:w-auto text-lg font-bold text-white px-10 py-4 rounded-xl btn-primary" style="background-color: var(--color-feature);">
-                    클릭해서 뽑기!
+                    다시 뽑기!
                 </button>
             </div>
         </div>
@@ -184,7 +188,27 @@
             celebrateEffect();
         }
 
-        function pickCharacteristic() {
+        function startCharacteristicSpin() {
+            if (isSpinning) return;
+            isSpinning = true;
+            pickCharacteristicBtn.disabled = false;
+            pickCharacteristicBtn.textContent = "멈춤!";
+            pickCharacteristicBtn.style.backgroundColor = 'var(--color-stop)';
+
+            intervalId = setInterval(() => {
+                const randomChar = characteristics[Math.floor(Math.random() * characteristics.length)];
+                characteristicResultDiv.textContent = randomChar;
+                characteristicResultDiv.classList.remove('winner');
+            }, 80);
+        }
+
+        function stopCharacteristicSpin() {
+            if (!isSpinning) return;
+            clearInterval(intervalId);
+            isSpinning = false;
+            pickCharacteristicBtn.textContent = "다시 뽑기!";
+            pickCharacteristicBtn.style.backgroundColor = 'var(--color-feature)';
+
             if (Math.random() < 0.15) {
                 const surprise = surprises[Math.floor(Math.random() * surprises.length)];
                 characteristicResultDiv.textContent = surprise;
@@ -217,6 +241,7 @@
             displayArea.style.backgroundColor = 'var(--bg-display)';
             Object.values(displays).forEach(d => d.classList.remove('winner'));
             isSpinning = false;
+            pickCharacteristicBtn.disabled = false;
         }
 
         function switchToView(mode, content = null) {
@@ -235,8 +260,15 @@
                 resultDiv.textContent = '?';
                 startBtn.disabled = false; stopBtn.disabled = true; studentCountInput.disabled = false;
             } else if (mode === 'characteristic') {
-                characteristicResultDiv.textContent = content || "버튼을 눌러 뽑아보세요!";
-                 if(content) characteristicResultDiv.classList.add('winner');
+                 if(content) {
+                    characteristicResultDiv.textContent = content;
+                    characteristicResultDiv.classList.add('winner');
+                    celebrateEffect();
+                    pickCharacteristicBtn.textContent = "다시 뽑기!";
+                    pickCharacteristicBtn.style.backgroundColor = 'var(--color-feature)';
+                 } else {
+                    startCharacteristicSpin();
+                 }
             }
         }
         
@@ -245,10 +277,21 @@
         
         startBtn.addEventListener('click', startSpinning);
         stopBtn.addEventListener('click', stopSpinning);
-        pickCharacteristicBtn.addEventListener('click', pickCharacteristic);
+        
+        pickCharacteristicBtn.addEventListener('click', () => {
+            if (isSpinning) {
+                stopCharacteristicSpin();
+            } else {
+                startCharacteristicSpin();
+            }
+        });
         
         studentCountInput.addEventListener('keyup', (event) => { if (event.key === 'Enter') startSpinning(); });
-        document.body.addEventListener('click', () => { if (synth && Tone.context.state !== 'running') Tone.start(); }, { once: true });
+        document.body.addEventListener('click', () => { 
+            if (Tone.context.state !== 'running') {
+                Tone.start();
+            }
+        }, { once: true });
         
         switchToView('number');
     });
