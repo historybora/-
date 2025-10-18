@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>최순자 여사님 환갑 선물 룰렛</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Jua', sans-serif;
+            background: linear-gradient(135deg, #FAD0C4 0%, #FFD1EE 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .text-shadow {
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        }
+        .button-text-shadow {
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
+        }
+        .no-wrap {
+            white-space: nowrap;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 20px;
+            opacity: 0;
+            animation: confetti-fall 5s linear infinite;
+        }
+        .button-press {
+            transform: scale(0.95);
+            transition: transform 0.1s ease-in-out;
+        }
+        /* 룰렛 텍스트 수직/수평 중앙 정렬을 위한 핵심 스타일 */
+        .roulette-text {
+            display: flex;
+            align-items: center; /* 수직 중앙 정렬 */
+            justify-content: center; /* 수평 중앙 정렬 */
+            text-align: center;
+            word-break: keep-all; /* 단어 단위 줄바꿈 */
+            padding: 0 0.5rem;
+            height: 100%; /* 부모 높이를 꽉 채움 */
+            width: 100%; /* 부모 너비를 꽉 채움 */
+        }
+        #prize-list-scroller .prize-item {
+            height: 100%; /* 스크롤 아이템 높이를 컨테이너와 동일하게 설정 */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="w-full max-w-lg mx-auto bg-white/80 rounded-3xl shadow-2xl p-8 md:p-10 text-center backdrop-blur-md border border-white/50">
+
+        <h1 class="text-4xl md:text-5xl font-bold text-gray-800 text-shadow mb-3 no-wrap">🌸 최순자 여사님 🌸</h1>
+        <h2 class="text-3xl md:text-4xl font-bold text-[#f7cac9] text-shadow mb-8">환갑 선물 룰렛</h2>
+
+        <div id="roulette-container" class="relative w-full h-32 md:h-40 bg-gradient-to-br from-amber-50 to-orange-100 rounded-xl flex items-center justify-center overflow-hidden border-4 border-[#FFBE98] shadow-inner">
+             <div class="absolute inset-0 bg-white/20"></div>
+             <!-- h-full 클래스를 추가하여 높이를 100%로 설정 -->
+             <p id="roulette-display" class="text-gray-700 text-3xl md:text-4xl font-bold tracking-wider text-shadow transition-all duration-100 ease-out hidden roulette-text h-full">시작 버튼을 누르세요!</p>
+             <div id="prize-list-scroller" class="absolute top-0 left-0 w-full h-full text-gray-700 text-3xl md:text-4xl font-bold tracking-wider text-shadow">
+                 <!-- JavaScript will populate this -->
+             </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-5 mt-10">
+            <button id="start-button" class="w-full bg-gradient-to-br from-[#88B04B] to-[#92A8D1] text-white font-bold py-5 rounded-xl shadow-xl text-2xl md:text-3xl transform hover:scale-105 transition-transform duration-200 button-text-shadow" disabled>
+                시작
+            </button>
+            <button id="stop-button" class="w-full bg-gradient-to-br from-[#F7CAC9] to-[#FFBE98] text-white font-bold py-5 rounded-xl shadow-xl text-2xl md:text-3xl transform hover:scale-105 transition-transform duration-200 button-text-shadow" disabled>
+                멈춤
+            </button>
+        </div>
+    </div>
+
+    <div id="result-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 hidden">
+        <div id="confetti-container" class="absolute inset-0 w-full h-full overflow-hidden"></div>
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center relative transform transition-all scale-95 opacity-0 border border-white/50">
+            <h3 class="text-3xl font-bold text-[#F5DF4D] mb-2">🎉 당첨을 축하합니다! 🎉</h3>
+            <p class="text-xl text-gray-600 mb-4">최순자 여사님을 위한 선물은...</p>
+            <div class="bg-[#FFF9E8] border-2 border-[#FFBE98] rounded-xl p-4 mb-6">
+                <p id="result-text" class="text-4xl font-bold text-[#d19a66] roulette-text" style="min-height: 80px;"></p>
+            </div>
+            <button id="close-modal" class="bg-[#F7CAC9] text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-[#FFBE98] transition-colors button-text-shadow text-xl">
+                닫기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const display = document.getElementById('roulette-display');
+        const scroller = document.getElementById('prize-list-scroller');
+        const container = document.getElementById('roulette-container');
+        const startButton = document.getElementById('start-button');
+        const stopButton = document.getElementById('stop-button');
+        const resultModal = document.getElementById('result-modal');
+        const resultText = document.getElementById('result-text');
+        const closeModal = document.getElementById('close-modal');
+        const confettiContainer = document.getElementById('confetti-container');
+        
+        const prizes = [
+            "제주도 2박3일 여행권", "강릉 호텔 숙박권", "경주 한옥 스테이", 
+            "부안 풀빌라 이용권", "편안한 호캉스",
+            "손주/손녀 뽀뽀 100번", "꽝! (다음에 잘되겠지...)", "화성 갈끄니까~", 
+            "대광로제비앙 아파트 청소권", "며느리/사위가 차려주는 생일상", 
+            "자식들과 노래방가기", "가족사진 촬영권", "건강이 최고!"
+        ];
+
+        let rouletteInterval = null;
+        let isSpinning = false;
+        const synth = new Tone.Synth().toDestination();
+
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(button => {
+            button.addEventListener('mousedown', () => button.classList.add('button-press'));
+            ['mouseup', 'mouseleave', 'touchend'].forEach(evt => 
+                button.addEventListener(evt, () => button.classList.remove('button-press'))
+            );
+            button.addEventListener('touchstart', () => button.classList.add('button-press'));
+        });
+
+        async function playCongratsSound() {
+            await Tone.start();
+            const now = Tone.now();
+            synth.triggerAttackRelease("C5", "8n", now);
+            synth.triggerAttackRelease("E5", "8n", now + 0.2);
+            synth.triggerAttackRelease("G5", "8n", now + 0.4);
+            synth.triggerAttackRelease("C6", "4n", now + 0.6);
+        }
+        
+        async function previewPrizes() {
+            startButton.classList.add('opacity-50', 'cursor-not-allowed');
+            stopButton.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            scroller.innerHTML = '';
+            const allItems = ["🎁 어떤 선물이 있을까요? 🎁", ...prizes, "🎉 룰렛을 시작해볼까요? 🎉"];
+            const itemHeight = container.clientHeight;
+
+            const scrollContent = document.createElement('div');
+            scroller.appendChild(scrollContent);
+
+            allItems.forEach(text => {
+                const pContainer = document.createElement('div');
+                pContainer.style.height = `${itemHeight}px`;
+                pContainer.className = 'prize-item roulette-text';
+                pContainer.textContent = text;
+                scrollContent.appendChild(pContainer);
+            });
+
+            let currentIndex = 0;
+            
+            const scroll = () => {
+                if (currentIndex >= allItems.length) {
+                    scroller.style.display = 'none';
+                    display.style.display = 'flex';
+                    display.classList.remove('hidden');
+                    display.textContent = "시작 버튼을 누르세요!";
+                    startButton.disabled = false;
+                    startButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    return;
+                }
+                scrollContent.style.transform = `translateY(-${currentIndex * itemHeight}px)`;
+                scrollContent.style.transition = 'transform 1.2s cubic-bezier(0.77, 0, 0.175, 1)';
+                currentIndex++;
+                setTimeout(scroll, 1800);
+            };
+            scroll();
+        }
+
+        function startRoulette() {
+            if (isSpinning) return;
+            isSpinning = true;
+
+            scroller.style.display = 'none';
+            display.style.display = 'flex';
+            display.classList.remove('hidden');
+
+            startButton.disabled = true;
+            startButton.classList.add('opacity-50', 'cursor-not-allowed');
+            stopButton.disabled = false;
+            stopButton.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            rouletteInterval = setInterval(() => {
+                const randomIndex = Math.floor(Math.random() * prizes.length);
+                display.textContent = prizes[randomIndex];
+            }, 70);
+        }
+        
+        function stopRoulette() {
+            if (!isSpinning) return;
+
+            clearInterval(rouletteInterval);
+            rouletteInterval = null;
+
+            const finalPrizeIndex = Math.floor(Math.random() * prizes.length);
+            const finalPrize = prizes[finalPrizeIndex];
+            
+            display.textContent = finalPrize;
+            resultText.textContent = finalPrize;
+
+            setTimeout(() => {
+                showResultModal();
+                if (!finalPrize.includes("꽝")) {
+                    playCongratsSound();
+                }
+                isSpinning = false;
+                stopButton.disabled = true;
+                stopButton.classList.add('opacity-50', 'cursor-not-allowed');
+                startButton.disabled = false;
+                startButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            }, 500);
+        }
+        
+        function showResultModal() {
+            resultModal.classList.remove('hidden');
+            const modalContent = resultModal.querySelector('div:last-child');
+            setTimeout(() => {
+                 modalContent.classList.remove('scale-95', 'opacity-0');
+                 modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+            createConfetti();
+        }
+
+        function hideResultModal() {
+            const modalContent = resultModal.querySelector('div:last-child');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            setTimeout(() => {
+                resultModal.classList.add('hidden');
+                confettiContainer.innerHTML = '';
+            }, 300);
+        }
+        
+        function createConfetti() {
+            confettiContainer.innerHTML = '';
+            const colors = ['#F5DF4D', '#FFBE98', '#F7CAC9', '#92A8D1', '#88B04B']; 
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 5 + 's';
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                confettiContainer.appendChild(confetti);
+            }
+        }
+
+        window.onload = previewPrizes;
+
+        startButton.addEventListener('click', startRoulette);
+        stopButton.addEventListener('click', stopRoulette);
+        closeModal.addEventListener('click', hideResultModal);
+    </script>
+
+</body>
+</html>
+
