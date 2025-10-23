@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나와 닮은 인사이드 아웃 캐릭터 찾기 게임 - 보라쌤과 사회를 보라</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+        
+        * {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .bounce-in {
+            animation: bounceIn 0.6s ease-out;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        .pulse-glow {
+            animation: pulseGlow 2s infinite;
+        }
+        
+        .character-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .character-hover:hover {
+            transform: translateY(-10px) scale(1.05);
+            filter: brightness(1.1);
+        }
+        
+        .option-button {
+            transition: all 0.3s ease;
+            background: linear-gradient(145deg, #f0f9ff, #e0e7ff);
+        }
+        
+        .option-button:hover {
+            background: linear-gradient(145deg, #dbeafe, #c7d2fe);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .option-button.selected {
+            background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0.3) translateY(50px); opacity: 0; }
+            50% { transform: scale(1.05) translateY(-10px); }
+            70% { transform: scale(0.9) translateY(5px); }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.6); }
+        }
+        
+        .logo-text {
+            background: linear-gradient(45deg, #ffffff, #f1f5f9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .main-title {
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+        
+        .subtitle {
+            color: #e0e7ff;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+        }
+        
+        .source-credit {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .education-notice {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.9);
+            color: #374151;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 640px) {
+            .character-image {
+                max-width: 200px;
+                max-height: 250px;
+            }
+            
+            .question-container {
+                padding: 1rem;
+            }
+            
+            .option-grid {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            
+            .source-credit {
+                bottom: 10px;
+                left: 10px;
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+            
+            .education-notice {
+                top: 5px;
+                left: 5px;
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+        }
+        
+        @media (min-width: 641px) {
+            .character-image {
+                max-width: 300px;
+                max-height: 400px;
+            }
+            
+            .option-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- 교육용 안내 문구 -->
+    <div class="education-notice">
+        <i class="fas fa-info-circle mr-1"></i>
+        학교 교육용으로만 사용 부탁드립니다
+    </div>
+
+    <!-- 출처 정보 -->
+    <div class="source-credit">
+        <i class="fas fa-graduation-cap mr-1"></i>
+        중학교 1학년 사회 - 사회화와 자아정체성 단원 | 보라쌤과 사회를 보라
+    </div>
+
+    <!-- 메인 화면 -->
+    <div id="main-screen" class="container mx-auto px-4 py-8 text-center">
+        <div class="bounce-in mb-8">
+            <div class="flex items-center justify-center mb-6">
+                <i class="fas fa-brain text-4xl text-yellow-300 mr-3"></i>
+                <div>
+                    <h1 class="logo-text text-2xl md:text-3xl font-black mb-1">보라쌤과</h1>
+                    <h2 class="logo-text text-xl md:text-2xl font-bold">사회를 보라</h2>
+                </div>
+            </div>
+            <h1 class="main-title text-4xl md:text-5xl font-bold mb-4">
+                <i class="fas fa-heart text-red-400"></i> 나와 닮은 인사이드 아웃 캐릭터 찾기
+            </h1>
+            <p class="subtitle text-xl mb-8 leading-relaxed">
+                청소년기 나의 감정과 성격을 탐구하고<br>
+                자아정체성을 발견해보는 시간! ✨
+            </p>
+        </div>
+        
+        <div class="fade-in space-y-6">
+            <button onclick="startMyTest()" class="pulse-glow bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-12 py-4 rounded-full text-2xl font-bold hover:from-yellow-500 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                <i class="fas fa-user-circle mr-3"></i>나와 닮은 캐릭터 찾기
+            </button>
+            
+            <button onclick="startFriendTest()" class="bg-gradient-to-r from-pink-400 to-purple-600 text-white px-12 py-4 rounded-full text-2xl font-bold hover:from-pink-500 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                <i class="fas fa-users mr-3"></i>친구와 닮은 캐릭터 찾기
+            </button>
+        </div>
+    </div>
+
+    <!-- 나의 테스트 화면 -->
+    <div id="my-test-screen" class="container mx-auto px-4 py-8 hidden">
+        <div class="text-center mb-8">
+            <h2 class="text-4xl font-bold text-white mb-4">나의 성향 알아보기</h2>
+            <div class="bg-white bg-opacity-20 rounded-full h-6 mx-auto max-w-md">
+                <div id="progress-bar" class="bg-gradient-to-r from-green-400 to-blue-500 h-full rounded-full transition-all duration-500" style="width: 12.5%"></div>
+            </div>
+            <p class="text-white mt-2"><span id="current-question">1</span> / 8</p>
+        </div>
+        
+        <div id="question-container" class="question-container bg-white rounded-2xl p-8 shadow-2xl max-w-4xl mx-auto">
+            <!-- 질문이 동적으로 여기에 표시됩니다 -->
+        </div>
+        
+        <div class="text-center mt-8">
+            <button onclick="goHome()" class="bg-gray-500 text-white px-6 py-3 rounded-full hover:bg-gray-600 transition-all">
+                <i class="fas fa-home mr-2"></i>홈으로
+            </button>
+        </div>
+    </div>
+
+    <!-- 친구 테스트 화면 -->
+    <div id="friend-test-screen" class="container mx-auto px-4 py-8 hidden">
+        <div class="text-center mb-8">
+            <h2 class="text-4xl font-bold text-white mb-4">친구의 성향 알아보기</h2>
+            <p class="text-xl text-blue-100 mb-6">친구를 떠올리며 답해보세요!</p>
+            <div class="bg-white bg-opacity-20 rounded-full h-6 mx-auto max-w-md">
+                <div id="friend-progress-bar" class="bg-gradient-to-r from-pink-400 to-purple-500 h-full rounded-full transition-all duration-500" style="width: 16.67%"></div>
+            </div>
+            <p class="text-white mt-2"><span id="friend-current-question">1</span> / 6</p>
+        </div>
+        
+        <div id="friend-question-container" class="question-container bg-white rounded-2xl p-8 shadow-2xl max-w-4xl mx-auto">
+            <!-- 친구 질문이 동적으로 여기에 표시됩니다 -->
+        </div>
+        
+        <div class="text-center mt-8">
+            <button onclick="goHome()" class="bg-gray-500 text-white px-6 py-3 rounded-full hover:bg-gray-600 transition-all">
+                <i class="fas fa-home mr-2"></i>홈으로
+            </button>
+        </div>
+    </div>
+
+    <!-- 결과 화면 -->
+    <div id="result-screen" class="container mx-auto px-4 py-8 hidden">
+        <div class="text-center">
+            <div class="bounce-in">
+                <h2 id="result-title" class="text-4xl font-bold text-white mb-8">당신과 닮은 캐릭터는...</h2>
+                <div id="result-content" class="bg-white rounded-2xl p-8 shadow-2xl max-w-4xl mx-auto">
+                    <!-- 결과가 여기에 표시됩니다 -->
+                </div>
+            </div>
+            
+            <div class="mt-8 space-x-4">
+                <button onclick="goHome()" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-full text-xl font-bold hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-105">
+                    <i class="fas fa-home mr-2"></i>다시 하기
+                </button>
+                <button onclick="shareResult()" class="bg-gradient-to-r from-green-500 to-teal-600 text-white px-8 py-4 rounded-full text-xl font-bold hover:from-green-600 hover:to-teal-700 transition-all transform hover:scale-105">
+                    <i class="fas fa-share mr-2"></i>결과 공유하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentQuestionIndex = 0;
+        let currentFriendQuestionIndex = 0;
+        let answers = [];
+        let friendAnswers = [];
+        let currentTestType = '';
+        
+        const characters = {
+            joy: {
+                name: "기쁨이 (Joy)",
+                image: "https://upload.wikimedia.org/wikipedia/en/3/30/Joy_-_Inside_Out.webp",
+                color: "yellow",
+                traits: ["활발함", "긍정적", "리더십", "열정적"],
+                description: "이 친구는 기쁨이와 닮았어요! 항상 밝고 긍정적인 에너지로 주변을 환하게 만드는 사람입니다. 어떤 상황에서도 희망을 잃지 않고, 친구들에게 용기와 활력을 주는 천성적인 리더입니다. 청소년기에 이런 긍정적인 마음가짐은 정말 소중한 자산이에요!",
+                advice: "때로는 다른 사람들의 슬픔이나 걱정도 공감해주는 것이 중요해요. 항상 밝을 필요는 없다는 것을 기억하세요."
+            },
+            sadness: {
+                name: "슬픔이 (Sadness)",
+                image: "https://m.media-amazon.com/images/I/61eudSVB2fL._UF894,1000_QL80_.jpg",
+                color: "blue",
+                traits: ["공감능력", "사려깊음", "진실성", "이해심"],
+                description: "이 친구는 슬픔이와 닮았어요! 다른 사람의 감정을 깊이 이해하고 공감하는 능력이 뛰어난 사람입니다. 진실한 관계를 중요하게 여기고, 친구들이 힘들 때 따뜻한 위로가 되어주는 소중한 존재입니다. 이런 공감 능력은 성인이 되어서도 큰 강점이 될 거예요!",
+                advice: "자신의 감정도 소중히 여기고, 때로는 즐거움을 찾아보려 노력해보세요. 슬픔도 중요하지만 기쁨도 함께 느껴보세요."
+            },
+            anger: {
+                name: "버럭이 (Anger)",
+                image: "https://i.ebayimg.com/images/g/8oYAAOSwyUpm4coe/s-l1200.jpg",
+                color: "red",
+                traits: ["정의감", "솔직함", "열정적", "보호본능"],
+                description: "이 친구는 버럭이와 닮았어요! 강한 정의감을 가지고 있으며, 불공정한 일에 대해 목소리를 내는 용기가 있는 사람입니다. 자신의 신념을 굽히지 않고, 소중한 사람들을 보호하려는 마음이 강합니다. 이런 정의감은 사회를 더 좋게 만드는 원동력이 됩니다!",
+                advice: "화가 날 때는 잠시 숨을 고르고 생각해보는 시간을 가져보세요. 감정을 건설적인 방향으로 표현하는 방법을 찾아보세요."
+            },
+            fear: {
+                name: "소심이 (Fear)",
+                image: "https://everycharacter.com/images/everycharacter/public/1024/9b53297c53eb117c516a70bc8723bda0.jpg",
+                color: "purple",
+                traits: ["신중함", "계획성", "배려심", "안전의식"],
+                description: "이 친구는 소심이와 닮았어요! 신중하고 계획적인 성향으로 위험을 미리 예측하고 대비하는 능력이 뛰어납니다. 다른 사람들의 안전까지 생각하는 배려심이 깊고, 실수를 줄이려고 노력하는 모습이 인상적입니다. 이런 신중함은 인생에서 큰 실수를 피하게 도와줄 거예요!",
+                advice: "때로는 도전하는 용기도 필요해요. 작은 실수는 성장의 기회가 될 수 있다는 것을 기억하세요."
+            },
+            disgust: {
+                name: "까칠이 (Disgust)",
+                image: "https://everycharacter.com/images/everycharacter/public/1024/9aa85f15fe34a67d014b05d330add8e0.jpg",
+                color: "green",
+                traits: ["품격", "기준의식", "완벽주의", "미적감각"],
+                description: "이 친구는 까칠이와 닮았어요! 높은 기준과 품격을 중시하며, 자신만의 스타일과 가치관이 뚜렷한 사람입니다. 완벽을 추구하고 질 낮은 것을 받아들이지 않는 모습이 때로는 까칠해 보일 수 있지만, 이는 자신과 주변을 더 좋게 만들려는 마음에서 나오는 것입니다!",
+                advice: "다른 사람들의 다양한 기준도 인정해보세요. 완벽하지 않아도 괜찮다는 마음을 가져보세요."
+            },
+            anxiety: {
+                name: "불안이 (Anxiety)",
+                image: "https://angelusnews.com/wp-content/uploads/2024/06/Anxiety-scaled.jpg",
+                color: "orange",
+                traits: ["완벽주의", "책임감", "미래계획", "성취욕구"],
+                description: "이 친구는 불안이와 닮았어요! 미래를 위해 철저히 준비하고 완벽을 추구하는 성향이 강합니다. 높은 목표를 세우고 이를 달성하기 위해 끊임없이 노력하는 모습이 인상적입니다. 이런 성취욕구는 훌륭한 결과를 만들어내는 원동력이 됩니다!",
+                advice: "완벽하지 않아도 괜찮다는 것을 받아들이고, 때로는 휴식을 취하는 것도 중요해요. 과정 자체를 즐겨보세요."
+            },
+            envy: {
+                name: "부럽이 (Envy)",
+                image: "https://m.media-amazon.com/images/I/71efg3EmVlL.jpg",
+                color: "teal",
+                traits: ["동기부여", "성장의식", "열망", "발전욕구"],
+                description: "이 친구는 부럽이와 닮았어요! 다른 사람의 장점을 보고 자신도 그렇게 되고 싶어하는 건강한 경쟁심을 가진 사람입니다. 이런 마음은 자신을 발전시키는 강력한 동기가 되며, 끊임없이 성장하려는 의지를 보여줍니다. 긍정적인 부러움은 성공의 열쇠가 될 수 있어요!",
+                advice: "다른 사람과 비교하기보다는 어제의 나와 비교해보세요. 자신만의 속도로 성장해나가면 됩니다."
+            },
+            embarrassment: {
+                name: "당황이 (Embarrassment)",
+                image: "https://i.ytimg.com/vi/LPp-FUnnqyw/maxresdefault.jpg",
+                color: "pink",
+                traits: ["겸손함", "신중함", "배려심", "자기성찰"],
+                description: "이 친구는 당황이와 닮았어요! 겸손하고 다른 사람을 배려하는 마음이 깊으며, 자신의 행동에 대해 신중하게 생각하는 사람입니다. 실수했을 때 부끄러워하는 모습이 오히려 성장의 계기가 되며, 이런 겸손함은 좋은 인간관계를 만드는 바탕이 됩니다!",
+                advice: "자신감을 가지고 당당하게 행동하는 연습을 해보세요. 실수는 누구나 하는 자연스러운 일이에요."
+            },
+            ennui: {
+                name: "따분이 (Ennui)",
+                image: "https://www.thenationalnews.com/resizer/pEsMXHJztBQGAu_vtr8hxsqsSdQ=/arc-photo-thenational/eu-central-1-prod/public/Y56NGN44GBH6BLT5XBHVXEDZTY.jpg",
+                color: "indigo",
+                traits: ["현실적", "쿨함", "독립적", "분석적"],
+                description: "이 친구는 따분이와 닮았어요! 현실적이고 냉정한 판단력을 가진 사람입니다. 감정에 휘둘리지 않고 상황을 객관적으로 바라보는 능력이 뛰어나며, 자신만의 철학을 가지고 있습니다. 이런 쿨함은 어려운 상황에서 올바른 판단을 내리는 데 도움이 됩니다!",
+                advice: "가끔은 열정을 보이고 흥미로운 일들에 관심을 가져보세요. 새로운 경험이 삶을 더 풍성하게 만들어줄 거예요."
+            }
+        };
+
+        const questions = [
+            {
+                question: "스트레스 상황에서 나는 주로...",
+                options: [
+                    { text: "긍정적으로 생각하며 해결책을 찾으려 노력한다", scores: { joy: 3, anxiety: 1 } },
+                    { text: "친구들과 이야기하며 위로받고 싶어한다", scores: { sadness: 3, embarrassment: 1 } },
+                    { text: "혼자 시간을 보내며 차분하게 정리한다", scores: { fear: 2, ennui: 3 } }
+                ]
+            },
+            {
+                question: "새로운 환경에 적응할 때 나는...",
+                options: [
+                    { text: "적극적으로 새로운 사람들과 어울리려 한다", scores: { joy: 3, envy: 1 } },
+                    { text: "조심스럽게 관찰한 후 천천히 적응한다", scores: { fear: 3, embarrassment: 2 } },
+                    { text: "크게 신경 쓰지 않고 자연스럽게 적응한다", scores: { ennui: 3, disgust: 1 } }
+                ]
+            },
+            {
+                question: "친구와 의견이 다를 때 나는...",
+                options: [
+                    { text: "내 의견을 확실하게 표현한다", scores: { anger: 3, disgust: 2 } },
+                    { text: "친구의 기분을 상하게 할까봐 걱정된다", scores: { sadness: 2, embarrassment: 3 } },
+                    { text: "완벽한 해결책을 찾기 위해 고민한다", scores: { anxiety: 3, fear: 1 } }
+                ]
+            },
+            {
+                question: "도전적인 상황에 직면했을 때 나는...",
+                options: [
+                    { text: "흥미롭다고 생각하며 도전해본다", scores: { joy: 3, anger: 1 } },
+                    { text: "실패할 가능성을 먼저 생각한다", scores: { fear: 3, anxiety: 2 } },
+                    { text: "다른 사람들이 어떻게 했는지 궁금하다", scores: { envy: 3, sadness: 1 } }
+                ]
+            },
+            {
+                question: "내가 중요하게 생각하는 가치는...",
+                options: [
+                    { text: "정직과 정의", scores: { anger: 3, disgust: 1 } },
+                    { text: "친구들과의 우정과 이해", scores: { sadness: 3, joy: 2 } },
+                    { text: "개인적인 성장과 완성", scores: { anxiety: 3, ennui: 1 } }
+                ]
+            },
+            {
+                question: "실수했을 때 나의 반응은...",
+                options: [
+                    { text: "빨리 만회할 방법을 찾는다", scores: { joy: 2, anxiety: 3 } },
+                    { text: "창피해하며 숨고 싶어한다", scores: { embarrassment: 3, fear: 1 } },
+                    { text: "별일 아니라고 생각한다", scores: { ennui: 3, disgust: 1 } }
+                ]
+            },
+            {
+                question: "미래에 대한 나의 생각은...",
+                options: [
+                    { text: "설레고 기대된다", scores: { joy: 3, envy: 1 } },
+                    { text: "걱정되고 불안하다", scores: { anxiety: 3, fear: 2 } },
+                    { text: "특별히 생각하지 않는다", scores: { ennui: 3, sadness: 1 } }
+                ]
+            },
+            {
+                question: "나 자신에 대해 생각할 때...",
+                options: [
+                    { text: "더 나은 내가 되고 싶다는 욕구가 강하다", scores: { envy: 3, anxiety: 2 } },
+                    { text: "나의 부족한 점들이 걱정된다", scores: { embarrassment: 3, fear: 1 } },
+                    { text: "있는 그대로의 내가 괜찮다고 생각한다", scores: { ennui: 2, joy: 3 } }
+                ]
+            }
+        ];
+
+        const friendQuestions = [
+            {
+                question: "친구가 스트레스를 받을 때 주로...",
+                options: [
+                    { text: "밝게 웃으며 긍정적인 해결책을 제시한다", scores: { joy: 3, anxiety: 1 } },
+                    { text: "조용히 이야기를 들어주고 공감해준다", scores: { sadness: 3, embarrassment: 1 } },
+                    { text: "냉정하게 분석하고 현실적인 조언을 한다", scores: { ennui: 3, disgust: 2 } }
+                ]
+            },
+            {
+                question: "새로운 사람들과 만날 때 친구는...",
+                options: [
+                    { text: "먼저 다가가서 분위기를 이끈다", scores: { joy: 3, anger: 1 } },
+                    { text: "조심스럽게 상황을 지켜본다", scores: { fear: 3, embarrassment: 2 } },
+                    { text: "관심 있는 사람에게만 선택적으로 다가간다", scores: { disgust: 2, ennui: 3 } }
+                ]
+            },
+            {
+                question: "친구의 의견 표현 방식은...",
+                options: [
+                    { text: "확실하고 직설적으로 말한다", scores: { anger: 3, disgust: 2 } },
+                    { text: "상대방 기분을 고려해 조심스럽게 말한다", scores: { sadness: 2, embarrassment: 3 } },
+                    { text: "완벽하게 준비된 후에 체계적으로 말한다", scores: { anxiety: 3, fear: 1 } }
+                ]
+            },
+            {
+                question: "친구가 목표를 세울 때...",
+                options: [
+                    { text: "높고 도전적인 목표를 세운다", scores: { envy: 3, anxiety: 2 } },
+                    { text: "현실적이고 안전한 목표를 세운다", scores: { fear: 3, ennui: 1 } },
+                    { text: "완벽한 계획과 함께 목표를 세운다", scores: { anxiety: 3, disgust: 1 } }
+                ]
+            },
+            {
+                question: "친구가 실수했을 때의 반응은...",
+                options: [
+                    { text: "금방 털어내고 다시 시작한다", scores: { joy: 3, ennui: 1 } },
+                    { text: "많이 부끄러워하고 신경쓴다", scores: { embarrassment: 3, sadness: 2 } },
+                    { text: "화를 내며 분해한다", scores: { anger: 3, disgust: 1 } }
+                ]
+            },
+            {
+                question: "친구의 전반적인 성격은...",
+                options: [
+                    { text: "항상 밝고 에너지가 넘친다", scores: { joy: 3, envy: 1 } },
+                    { text: "신중하고 계획적이다", scores: { anxiety: 2, fear: 3 } },
+                    { text: "차분하고 현실적이다", scores: { ennui: 3, sadness: 1 } }
+                ]
+            }
+        ];
+
+        function startMyTest() {
+            document.getElementById('main-screen').classList.add('hidden');
+            document.getElementById('my-test-screen').classList.remove('hidden');
+            currentTestType = 'my';
+            currentQuestionIndex = 0;
+            answers = [];
+            showQuestion();
+        }
+
+        function startFriendTest() {
+            document.getElementById('main-screen').classList.add('hidden');
+            document.getElementById('friend-test-screen').classList.remove('hidden');
+            currentTestType = 'friend';
+            currentFriendQuestionIndex = 0;
+            friendAnswers = [];
+            showFriendQuestion();
+        }
+
+        function showQuestion() {
+            const question = questions[currentQuestionIndex];
+            const container = document.getElementById('question-container');
+            
+            container.innerHTML = `
+                <div class="fade-in">
+                    <h3 class="text-2xl md:text-3xl font-bold text-gray-800 mb-8 leading-relaxed">${question.question}</h3>
+                    <div class="option-grid space-y-4">
+                        ${question.options.map((option, index) => `
+                            <button onclick="selectOption(${index})" class="option-button w-full p-4 md:p-6 text-left rounded-xl border-2 border-transparent text-gray-700 font-medium text-lg hover:border-blue-300">
+                                <div class="flex items-center">
+                                    <span class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center mr-4 font-bold">${index + 1}</span>
+                                    <span>${option.text}</span>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('current-question').textContent = currentQuestionIndex + 1;
+            document.getElementById('progress-bar').style.width = `${((currentQuestionIndex + 1) / 8) * 100}%`;
+        }
+
+        function showFriendQuestion() {
+            const question = friendQuestions[currentFriendQuestionIndex];
+            const container = document.getElementById('friend-question-container');
+            
+            container.innerHTML = `
+                <div class="fade-in">
+                    <h3 class="text-2xl md:text-3xl font-bold text-gray-800 mb-8 leading-relaxed">${question.question}</h3>
+                    <div class="option-grid space-y-4">
+                        ${question.options.map((option, index) => `
+                            <button onclick="selectFriendOption(${index})" class="option-button w-full p-4 md:p-6 text-left rounded-xl border-2 border-transparent text-gray-700 font-medium text-lg hover:border-pink-300">
+                                <div class="flex items-center">
+                                    <span class="bg-pink-100 text-pink-600 w-8 h-8 rounded-full flex items-center justify-center mr-4 font-bold">${index + 1}</span>
+                                    <span>${option.text}</span>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('friend-current-question').textContent = currentFriendQuestionIndex + 1;
+            document.getElementById('friend-progress-bar').style.width = `${((currentFriendQuestionIndex + 1) / 6) * 100}%`;
+        }
+
+        function selectOption(optionIndex) {
+            const buttons = document.querySelectorAll('.option-button');
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            buttons[optionIndex].classList.add('selected');
+            
+            answers.push(optionIndex);
+            
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < questions.length) {
+                    showQuestion();
+                } else {
+                    calculateResult();
+                }
+            }, 800);
+        }
+
+        function selectFriendOption(optionIndex) {
+            const buttons = document.querySelectorAll('.option-button');
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            buttons[optionIndex].classList.add('selected');
+            
+            friendAnswers.push(optionIndex);
+            
+            setTimeout(() => {
+                currentFriendQuestionIndex++;
+                if (currentFriendQuestionIndex < friendQuestions.length) {
+                    showFriendQuestion();
+                } else {
+                    calculateFriendResult();
+                }
+            }, 800);
+        }
+
+        function calculateResult() {
+            const scores = {};
+            Object.keys(characters).forEach(char => scores[char] = 0);
+            
+            answers.forEach((answerIndex, questionIndex) => {
+                const selectedOption = questions[questionIndex].options[answerIndex];
+                Object.entries(selectedOption.scores).forEach(([char, score]) => {
+                    scores[char] += score;
+                });
+            });
+            
+            const maxScore = Math.max(...Object.values(scores));
+            const resultCharacter = Object.keys(scores).find(char => scores[char] === maxScore);
+            
+            showResult(resultCharacter, 'my');
+        }
+
+        function calculateFriendResult() {
+            const scores = {};
+            Object.keys(characters).forEach(char => scores[char] = 0);
+            
+            friendAnswers.forEach((answerIndex, questionIndex) => {
+                const selectedOption = friendQuestions[questionIndex].options[answerIndex];
+                Object.entries(selectedOption.scores).forEach(([char, score]) => {
+                    scores[char] += score;
+                });
+            });
+            
+            const maxScore = Math.max(...Object.values(scores));
+            const resultCharacter = Object.keys(scores).find(char => scores[char] === maxScore);
+            
+            showResult(resultCharacter, 'friend');
+        }
+
+        function showResult(characterKey, testType) {
+            const character = characters[characterKey];
+            const isMyTest = testType === 'my';
+            
+            document.getElementById('my-test-screen').classList.add('hidden');
+            document.getElementById('friend-test-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+            
+            const title = isMyTest ? "당신과 닮은 캐릭터는..." : "친구와 닮은 캐릭터는...";
+            document.getElementById('result-title').textContent = title;
+            
+            // 설명 텍스트를 테스트 유형에 따라 조정
+            let description = character.description;
+            if (isMyTest) {
+                description = description.replace("이 친구는", "당신은").replace("사람입니다", "사람입니다");
+            }
+            
+            document.getElementById('result-content').innerHTML = `
+                <div class="text-center">
+                    <div class="bounce-in mb-6">
+                        <img src="${character.image}" alt="${character.name}" class="character-image mx-auto rounded-2xl shadow-2xl mb-6">
+                        <h3 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">${character.name}</h3>
+                    </div>
+                    
+                    <div class="fade-in">
+                        <div class="flex flex-wrap justify-center gap-3 mb-6">
+                            ${character.traits.map(trait => `
+                                <span class="bg-${character.color}-100 text-${character.color}-800 px-4 py-2 rounded-full text-lg font-semibold">${trait}</span>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                            <h4 class="text-2xl font-bold text-gray-800 mb-4">
+                                <i class="fas fa-star text-yellow-500 mr-2"></i>성격 분석
+                            </h4>
+                            <p class="text-gray-700 text-lg leading-relaxed mb-4">${description}</p>
+                        </div>
+                        
+                        <div class="bg-blue-50 rounded-xl p-6">
+                            <h4 class="text-2xl font-bold text-blue-800 mb-4">
+                                <i class="fas fa-lightbulb text-blue-500 mr-2"></i>성장 포인트
+                            </h4>
+                            <p class="text-blue-700 text-lg leading-relaxed">${character.advice}</p>
+                        </div>
+                        
+                        <div class="mt-8 p-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl">
+                            <h4 class="text-xl font-bold text-purple-800 mb-3">
+                                <i class="fas fa-graduation-cap mr-2"></i>청소년기 발달 의미
+                            </h4>
+                            <p class="text-purple-700 leading-relaxed">
+                                ${isMyTest ? '이런 성격 특성은 자아정체성 형성 과정에서 나타나는 자연스러운 모습입니다.' : '친구의 이런 특성을 이해하고 인정하는 것이 좋은 관계의 시작입니다.'}
+                                다양한 감정과 성향들이 균형을 이루며 성숙한 어른으로 성장해나가는 것이 중요해요! ✨
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 스크롤을 맨 위로
+            window.scrollTo(0, 0);
+        }
+
+        function goHome() {
+            document.getElementById('my-test-screen').classList.add('hidden');
+            document.getElementById('friend-test-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.remove('hidden');
+            
+            // 스크롤을 맨 위로
+            window.scrollTo(0, 0);
+        }
+
+        function shareResult() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '나와 닮은 인사이드 아웃 캐릭터 찾기',
+                    text: '인사이드 아웃 캐릭터로 나의 성향을 알아보세요!',
+                    url: window.location.href
+                });
+            } else {
+                // 공유 기능이 없는 경우 클립보드에 복사
+                const textArea = document.createElement('textarea');
+                textArea.value = `나와 닮은 인사이드 아웃 캐릭터 찾기 게임을 해보세요! ${window.location.href}`;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('링크가 클립보드에 복사되었습니다!');
+            }
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 애니메이션을 위한 초기 설정
+            const elements = document.querySelectorAll('.bounce-in, .fade-in');
+            elements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+            });
+            
+            // 애니메이션 실행
+            setTimeout(() => {
+                elements.forEach(el => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                    el.style.transition = 'all 0.8s ease';
+                });
+            }, 100);
+        });
+    </script>
+</body>
+</html>
