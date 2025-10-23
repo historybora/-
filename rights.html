@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>청소년인 내가 인권, 노동권 침해를 당했다면...?</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .chat-bubble {
+            border-radius: 20px;
+            padding: 20px;
+            margin: 15px 0;
+            max-width: 80%;
+            position: relative;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.5s ease-out;
+        }
+        
+        .chat-bubble-user {
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            margin-left: auto;
+            margin-right: 0;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .chat-bubble-user::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: -10px;
+            width: 0;
+            height: 0;
+            border: 10px solid transparent;
+            border-left-color: #BBDEFB;
+            border-bottom: none;
+            border-right: none;
+        }
+        
+        .chat-bubble-helper {
+            background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD9 100%);
+            margin-left: 0;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .chat-bubble-helper::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -10px;
+            width: 0;
+            height: 0;
+            border: 10px solid transparent;
+            border-right-color: #F8BBD9;
+            border-bottom: none;
+            border-left: none;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .case-card {
+            background: linear-gradient(135deg, #FFF3E0 0%, #FFCC80 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 4px solid #FF9800;
+        }
+        
+        .case-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .solution-box {
+            background: linear-gradient(135deg, #E8F5E8 0%, #C8E6C9 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #FFC107;
+        }
+        
+        .character {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF6B9D 0%, #C44569 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            margin: 0 auto 15px;
+            float: left;
+            margin-right: 15px;
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+        
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            margin: 0 auto 15px;
+            float: right;
+            margin-left: 15px;
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #42A5F5 0%, #1E88E5 100%);
+            color: white;
+            border: none;
+            padding: 20px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+        }
+        
+        .news-link {
+            background: #1976D2;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 20px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .news-link:hover {
+            background: #1565C0;
+            transform: translateY(-2px);
+            text-decoration: none;
+            color: white;
+        }
+        
+        .header-bg {
+            background: linear-gradient(135deg, #FF6B9D 0%, #4FC3F7 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            border-radius: 0 0 30px 30px;
+        }
+        
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .back-btn {
+            background: #FF6B9D;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: #C44569;
+            transform: scale(1.1);
+        }
+        
+        .content-wrapper {
+            overflow-y: visible;
+        }
+        
+        ul li {
+            margin-bottom: 8px;
+        }
+        
+        .chat-bubble p, .chat-bubble ul {
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="content-wrapper">
+        <!-- Header -->
+        <div class="header-bg">
+            <div class="container mx-auto px-4 text-center">
+                <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                    <i class="fas fa-heart text-3xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold mb-4">청소년인 내가 인권, 노동권 침해를 당했다면...?</h1>
+                <div class="text-right text-sm opacity-90">
+                    <i class="fas fa-graduation-cap mr-2"></i> 보라쌤과 사회를 보라
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <!-- Main Menu -->
+            <div id="mainMenu">
+                <div class="chat-bubble chat-bubble-helper">
+                    <div class="character">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="ml-16">
+                        <p class="text-lg font-bold mb-2">안녕! 나는 '마음이'야! 💕</p>
+                        <p class="mb-4">혹시 어떤 상황에서 힘들어하고 있니? 함께 해결방법을 찾아보자!</p>
+                        <p class="text-sm text-gray-600">아래 버튼을 눌러서 상황을 선택해줘!</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                    <button onclick="showCases('human-rights')" class="btn-primary w-full py-8">
+                        <i class="fas fa-users text-3xl mb-4 block"></i>
+                        <span class="text-xl block mb-2">인권 침해를 당했어요</span>
+                        <p class="text-sm opacity-80">성차별, 외모차별, 사이버폭력 등</p>
+                    </button>
+                    
+                    <button onclick="showCases('labor-rights')" class="btn-primary w-full py-8">
+                        <i class="fas fa-briefcase text-3xl mb-4 block"></i>
+                        <span class="text-xl block mb-2">노동권 침해를 당했어요</span>
+                        <p class="text-sm opacity-80">임금체불, 부당대우, 성희롱 등</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Human Rights Cases -->
+            <div id="humanRightsCases" class="hidden">
+                <div class="flex items-center mb-6">
+                    <button onclick="showMainMenu()" class="back-btn mr-4">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-2xl font-bold text-gray-800">인권 침해 사례들</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="case-card" onclick="showCase('gender-discrimination')">
+                        <h3 class="font-bold text-lg mb-2">🚺 "여자라서 회장이 될 수 없다고 해요"</h3>
+                        <p class="text-gray-600">성별을 이유로 한 차별 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('appearance-discrimination')">
+                        <h3 class="font-bold text-lg mb-2">👀 "외모 때문에 놀림받고 따돌림당해요"</h3>
+                        <p class="text-gray-600">외모를 이유로 한 차별 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('disability-discrimination')">
+                        <h3 class="font-bold text-lg mb-2">♿ "장애가 있다고 동아리 가입을 거부당했어요"</h3>
+                        <p class="text-gray-600">장애를 이유로 한 차별 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('cyber-violence')">
+                        <h3 class="font-bold text-lg mb-2">💻 "SNS에서 악플과 괴롭힘을 당해요"</h3>
+                        <p class="text-gray-600">사이버 폭력 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('privacy-violation')">
+                        <h3 class="font-bold text-lg mb-2">📱 "휴대폰을 강제로 뺏어서 확인했어요"</h3>
+                        <p class="text-gray-600">개인정보 침해 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('learning-rights')">
+                        <h3 class="font-bold text-lg mb-2">📚 "시끄러운 친구들 때문에 수업을 들을 수 없어요"</h3>
+                        <p class="text-gray-600">학습권 침해 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('expression-freedom')">
+                        <h3 class="font-bold text-lg mb-2">🗣️ "의견을 말했는데 반항한다고 혼났어요"</h3>
+                        <p class="text-gray-600">표현의 자유 침해 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('deepfake-abuse')">
+                        <h3 class="font-bold text-lg mb-2">🤖 "딥페이크로 제 얼굴이 합성되었어요"</h3>
+                        <p class="text-gray-600">디지털 성범죄 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('religion-discrimination')">
+                        <h3 class="font-bold text-lg mb-2">🙏 "종교가 다르다고 차별받아요"</h3>
+                        <p class="text-gray-600">종교 차별 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('family-discrimination')">
+                        <h3 class="font-bold text-lg mb-2">👨‍👩‍👧‍👦 "한부모 가정이라고 놀림받아요"</h3>
+                        <p class="text-gray-600">가족 형태 차별 사례</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Labor Rights Cases -->
+            <div id="laborRightsCases" class="hidden">
+                <div class="flex items-center mb-6">
+                    <button onclick="showMainMenu()" class="back-btn mr-4">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-2xl font-bold text-gray-800">노동권 침해 사례들</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="case-card" onclick="showCase('minimum-wage')">
+                        <h3 class="font-bold text-lg mb-2">💰 "청소년이라서 최저임금을 안 준대요"</h3>
+                        <p class="text-gray-600">최저임금 미지급 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('wage-theft')">
+                        <h3 class="font-bold text-lg mb-2">💸 "일한 지 한 달인데 월급을 안 줘요"</h3>
+                        <p class="text-gray-600">임금 체불 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('no-contract')">
+                        <h3 class="font-bold text-lg mb-2">📄 "근로계약서 없이 일하라고 해요"</h3>
+                        <p class="text-gray-600">근로계약서 미작성 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('sexual-harassment')">
+                        <h3 class="font-bold text-lg mb-2">😰 "사장님이 자꾸 몸을 만져요"</h3>
+                        <p class="text-gray-600">직장 내 성희롱 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('overtime-work')">
+                        <h3 class="font-bold text-lg mb-2">⏰ "야간근무를 시키고 수당을 안 줘요"</h3>
+                        <p class="text-gray-600">초과근무 및 야간근무 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('dangerous-work')">
+                        <h3 class="font-bold text-lg mb-2">⚠️ "위험한 일을 시키는데 안전장비가 없어요"</h3>
+                        <p class="text-gray-600">청소년 유해업무 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('no-break')">
+                        <h3 class="font-bold text-lg mb-2">😴 "6시간 일하는데 휴게시간이 없어요"</h3>
+                        <p class="text-gray-600">휴게시간 미제공 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('verbal-abuse')">
+                        <h3 class="font-bold text-lg mb-2">😢 "사장님이 자꾸 욕하고 모욕해요"</h3>
+                        <p class="text-gray-600">직장 내 괴롭힘 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('forced-attendance')">
+                        <h3 class="font-bold text-lg mb-2">🏃 "아픈데도 출근하라고 해요"</h3>
+                        <p class="text-gray-600">강제 출근 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('age-discrimination')">
+                        <h3 class="font-bold text-lg mb-2">🎂 "나이가 어리다고 업무에서 차별해요"</h3>
+                        <p class="text-gray-600">연령 차별 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('penalty-deduction')">
+                        <h3 class="font-bold text-lg mb-2">🔄 "실수했다고 월급에서 돈을 빼요"</h3>
+                        <p class="text-gray-600">부당한 손해배상 사례</p>
+                    </div>
+
+                    <div class="case-card" onclick="showCase('personal-service')">
+                        <h3 class="font-bold text-lg mb-2">🍽️ "업무와 관계없는 개인 심부름을 시켜요"</h3>
+                        <p class="text-gray-600">업무 외 지시 사례</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case Details -->
+            <div id="caseDetails" class="hidden">
+                <div class="flex items-center mb-6">
+                    <button onclick="goBack()" class="back-btn mr-4">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 id="caseTitle" class="text-2xl font-bold text-gray-800"></h2>
+                </div>
+
+                <div id="caseContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSection = 'main';
+        let previousSection = 'main';
+
+        const cases = {
+            'gender-discrimination': {
+                title: '성별 차별 사례',
+                description: '학급 임원 선거에서 성별을 이유로 차별받는 경우',
+                rights: '평등권, 성별에 따른 차별금지',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😟 저의 상황</p>
+                            <p>학급 임원 선거에서 성별을 이유로 차별받는 경우입니다. 정말 속상하고 화가 나요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">이건 명백한 성차별이야! 😠</p>
+                            <p class="mb-4">성별을 이유로 기회를 박탈하는 것은 평등권 침해야. 너무 속상했겠다.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 담임선생님이나 학생부 선생님께 상담 요청</li>
+                                    <li><strong>2단계:</strong> 학교 내 성평등 담당 교사와 상담</li>  
+                                    <li><strong>3단계:</strong> 교육청 학생인권센터에 신고 (국번없이 1396)</li>
+                                    <li><strong>4단계:</strong> 국가인권위원회 진정 (인권상담전화 1331)</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">평등권, 성별에 따른 차별금지</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.hani.co.kr/arti/area/chungcheong/1181084.html" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>충남학생인권조례 실태조사 - 성차별 사례 포함
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '다른 친구들의 성별, 성적 지향을 존중하고 차별하지 않을 의무가 있어.'
+            },
+            'appearance-discrimination': {
+                title: '외모 차별 사례',
+                description: '외모를 이유로 놀림받거나 따돌림당하는 경우',
+                rights: '인격권, 차별받지 않을 권리',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😢 저의 상황</p>
+                            <p>외모를 이유로 놀림받거나 따돌림당하고 있어요. 정말 마음이 아파요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">외모로 사람을 판단하고 차별하는 건 잘못됐어! 😢</p>
+                            <p class="mb-4">모든 사람은 존중받을 권리가 있어. 너의 마음을 잘 이해해.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> "그런 말 하지 마"라고 단호하게 표현</li>
+                                    <li><strong>2단계:</strong> 신뢰할 수 있는 어른(부모, 교사)에게 도움 요청</li>
+                                    <li><strong>3단계:</strong> 학교폭력대책자치위원회 신고</li>
+                                    <li><strong>4단계:</strong> 청소년상담전화 1388 이용</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">인격권, 차별받지 않을 권리</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.chosun.com/economy/tech_it/2024/03/26/2SL5LQ3MIJHFTLPEWPSZYJ2ETI/" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청소년 디지털 혐오표현 실태조사
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '다른 사람의 외모나 신체적 특징을 놀리거나 차별하지 않을 의무가 있어.'
+            },
+            'disability-discrimination': {
+                title: '장애인 차별 사례',
+                description: '장애를 이유로 활동 참여를 거부당하는 경우',
+                rights: '평등권, 차별받지 않을 권리, 참여권',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😔 저의 상황</p>
+                            <p>장애를 이유로 동아리 가입을 거부당했어요. 정말 서운해요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">장애는 차별의 이유가 될 수 없어! 💪</p>
+                            <p class="mb-4">모든 학생은 동등하게 참여할 권리가 있어.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 동아리 담당 선생님께 상황 설명</li>
+                                    <li><strong>2단계:</strong> 학교 특수교육 담당교사와 상담</li>
+                                    <li><strong>3단계:</strong> 교육청 특수교육지원센터 신고</li>
+                                    <li><strong>4단계:</strong> 국가인권위원회 장애차별신고센터 (전화 1331)</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">평등권, 차별받지 않을 권리, 참여권</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://theindigo.co.kr/archives/57650" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>학교에서의 장애인 차별 실태
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '장애가 있는 친구들을 배려하고 함께 참여할 수 있도록 도와줄 의무가 있어.'
+            },
+            'cyber-violence': {
+                title: '사이버 폭력 사례',
+                description: 'SNS나 온라인에서 악플, 괴롭힘을 당하는 경우',
+                rights: '인격권, 명예권, 사생활의 비밀과 자유',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😰 저의 상황</p>
+                            <p>SNS나 온라인에서 악플과 괴롭힘을 당하고 있어요. 너무 무서워요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">사이버 폭력은 실제 폭력만큼 심각해! 😰</p>
+                            <p class="mb-4">혼자 견디지 말고 꼭 도움을 요청해.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 증거 자료 수집 (스크린샷, 대화 내용 저장)</li>
+                                    <li><strong>2단계:</strong> 해당 계정 차단 및 신고</li>
+                                    <li><strong>3단계:</strong> 학교폭력신고센터 117 신고</li>
+                                    <li><strong>4단계:</strong> 사이버경찰청(cyberbureau.go.kr) 신고</li>
+                                    <li><strong>5단계:</strong> 청소년상담전화 1388 심리상담</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">인격권, 명예권, 사생활의 비밀과 자유</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.yna.co.kr/view/AKR20200515159400065" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>SNS 사이버폭력으로 숨진 여중생 사건
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '온라인에서도 다른 사람을 존중하고 악플이나 괴롭힘을 하지 않을 의무가 있어.'
+            },
+            'privacy-violation': {
+                title: '개인정보 침해 사례',
+                description: '동의 없이 휴대폰을 검사하거나 개인정보를 침해당하는 경우',
+                rights: '사생활의 비밀과 자유, 개인정보자기결정권',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😡 저의 상황</p>
+                            <p>동의 없이 휴대폰을 강제로 뺏어서 확인했어요. 정말 기분이 나빠요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">개인정보와 사생활은 보호받아야 해! 📱</p>
+                            <p class="mb-4">정당한 이유와 절차 없이는 침해될 수 없어.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 침해 당시 상황과 증거 기록</li>
+                                    <li><strong>2단계:</strong> 학교 개인정보보호 담당자에게 문의</li>
+                                    <li><strong>3단계:</strong> 교육청 학생인권센터 상담 (1396)</li>
+                                    <li><strong>4단계:</strong> 개인정보보호위원회 신고 (privacy.go.kr)</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">사생활의 비밀과 자유, 개인정보자기결정권</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.joongang.co.kr/article/25282584" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>교내 휴대폰 수거 인권침해 논란
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '다른 사람의 개인정보와 사생활을 존중하고 함부로 공개하지 않을 의무가 있어.'
+            },
+            'learning-rights': {
+                title: '학습권 침해 사례',
+                description: '다른 학생들의 방해로 수업을 제대로 들을 수 없는 경우',
+                rights: '학습권, 교육받을 권리',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😤 저의 상황</p>
+                            <p>시끄러운 친구들 때문에 수업을 제대로 들을 수 없어요. 공부하고 싶은데 방해가 돼요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">학습권은 모든 학생의 기본권이야! 📚</p>
+                            <p class="mb-4">방해받지 않고 공부할 권리가 있어.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 수업 담당 선생님께 상황 보고</li>
+                                    <li><strong>2단계:</strong> 담임선생님과 상담</li>
+                                    <li><strong>3단계:</strong> 학급 회의를 통한 해결 모색</li>
+                                    <li><strong>4단계:</strong> 학교 상담실 도움 요청</li>
+                                    <li><strong>5단계:</strong> 교육청 학생인권센터 상담</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">학습권, 교육받을 권리</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://news.nate.com/view/20241104n04760" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>교내 스마트폰 사용과 학습권 침해 문제
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '나의 학습권뿐만 아니라 다른 친구들의 학습권도 존중하고 수업을 방해하지 않을 의무가 있어.'
+            },
+            'expression-freedom': {
+                title: '표현의 자유 침해 사례',
+                description: '정당한 의견 표현을 반항으로 취급받는 경우',
+                rights: '표현의 자유, 의사표현권',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😠 저의 상황</p>
+                            <p>의견을 말했는데 반항한다고 혼났어요. 정말 억울해요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">정당한 의견 표현은 권리야! 🗣️</p>
+                            <p class="mb-4">예의를 지키며 의견을 말할 수 있어.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 차분하고 예의바른 방식으로 재차 설명</li>
+                                    <li><strong>2단계:</strong> 학급 학생회나 학생자치회 활용</li>
+                                    <li><strong>3단계:</strong> 상담교사나 다른 신뢰할 수 있는 교사와 상담</li>
+                                    <li><strong>4단계:</strong> 교육청 학생인권센터 상담</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">표현의 자유, 의사표현권</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.yna.co.kr/view/AKR20240108099400056" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>학교에서 학생 의사표현 자유 침해 실태
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '표현의 자유를 행사할 때도 다른 사람을 존중하고 예의를 지킬 의무가 있어.'
+            },
+            'deepfake-abuse': {
+                title: '딥페이크 피해 사례',
+                description: '딥페이크 기술로 얼굴이 합성되어 피해를 당하는 경우',
+                rights: '인격권, 초상권, 성적 자기결정권',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😨 저의 상황</p>
+                            <p>딥페이크로 제 얼굴이 합성되었어요. 정말 무서워요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">딥페이크는 심각한 범죄야! 😡</p>
+                            <p class="mb-4">즉시 신고하고 전문가의 도움을 받아야 해.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 즉시 증거 수집 (스크린샷, URL 저장)</li>
+                                    <li><strong>2단계:</strong> 경찰서 사이버범죄수사대 신고 (112)</li>
+                                    <li><strong>3단계:</strong> 디지털성범죄피해자지원센터 신고 (02-735-8994)</li>
+                                    <li><strong>4단계:</strong> 학교폭력신고센터 117 신고</li>
+                                    <li><strong>5단계:</strong> 전문 상담기관 심리지원 요청</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">인격권, 초상권, 성적 자기결정권</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="http://newstapa.org/article/74aqg" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>학교 딥페이크 성범죄 사건 실태
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '타인의 초상권을 침해하거나 불법 합성물을 제작, 유포하지 않을 의무가 있어.'
+            },
+            'religion-discrimination': {
+                title: '종교 차별 사례',
+                description: '종교가 다르다는 이유로 차별받는 경우',
+                rights: '종교의 자유, 평등권',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😔 저의 상황</p>
+                            <p>종교가 다르다고 차별받아요. 정말 서운해요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">종교는 개인의 자유로운 선택이야! 🙏</p>
+                            <p class="mb-4">종교를 이유로 차별받아서는 안 돼.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 종교의 자유에 대해 설명</li>
+                                    <li><strong>2단계:</strong> 담임선생님께 상담 요청</li>
+                                    <li><strong>3단계:</strong> 학교 인권담당교사와 상담</li>
+                                    <li><strong>4단계:</strong> 국가인권위원회 진정 (1331)</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">종교의 자유, 평등권</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.hani.co.kr/arti/society/society_general/1140016.html" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>학교에서의 종교 차별 방지 교육
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '다른 사람의 종교나 신념을 존중하고 차별하지 않을 의무가 있어.'
+            },
+            'family-discrimination': {
+                title: '가족 형태 차별 사례',
+                description: '한부모 가정이라는 이유로 놀림받는 경우',
+                rights: '평등권, 인격권',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😢 저의 상황</p>
+                            <p>한부모 가정이라고 놀림받아요. 정말 속상해요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">가족의 형태는 다양해! 👨‍👩‍👧‍👦</p>
+                            <p class="mb-4">모든 가족 형태는 존중받아야 해.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> "가족은 다양한 형태가 있다"며 설명</li>
+                                    <li><strong>2단계:</strong> 담임선생님이나 상담교사와 상담</li>
+                                    <li><strong>3단계:</strong> 학급 인권교육 요청</li>
+                                    <li><strong>4단계:</strong> 청소년상담전화 1388 이용</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">평등권, 인격권</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.hani.co.kr/arti/area/chungcheong/1181084.html" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>학생인권 실태조사 - 가족 차별 포함
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '다양한 가족 형태를 인정하고 친구들의 가정환경을 놀리거나 차별하지 않을 의무가 있어.'
+            },
+            'minimum-wage': {
+                title: '최저임금 미지급 사례',
+                description: '청소년이라는 이유로 최저임금보다 적게 주는 경우',
+                rights: '근로의 권리, 정당한 임금을 받을 권리',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😡 저의 상황</p>
+                            <p>청소년이라서 최저임금보다 적게 준대요. 정말 화가 나요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">청소년도 성인과 똑같은 최저임금을 받아야 해! 💰</p>
+                            <p class="mb-4">나이를 이유로 임금을 깎는 건 불법이야.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 최저임금법 위반임을 사장에게 설명</li>
+                                    <li><strong>2단계:</strong> 고용노동부 근로감독관서 신고 (국번없이 1350)</li>
+                                    <li><strong>3단계:</strong> 청소년근로권익센터 상담 (1388)</li>
+                                    <li><strong>4단계:</strong> 노동청 진정서 제출</li>
+                                    <li><strong>부족분 계산:</strong> (현재 최저임금 - 받은 임금) × 일한 시간</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">근로의 권리, 정당한 임금을 받을 권리</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.khan.co.kr/article/202304301557001" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청소년 최저임금 미지급 편의점 사건
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '정당한 임금을 요구할 권리가 있지만, 성실하게 근무할 의무도 있어.'
+            },
+            'wage-theft': {
+                title: '임금 체불 사례',
+                description: '일한 지 오래됐는데 월급을 주지 않는 경우',
+                rights: '근로의 권리, 임금채권',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😠 저의 상황</p>
+                            <p>일한 지 한 달인데 월급을 안 줘요. 정말 답답해요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">일한 만큼 돈을 받는 건 당연한 권리야! 💸</p>
+                            <p class="mb-4">임금 체불은 범죄행위야.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 근무 기록과 증거 자료 수집</li>
+                                    <li><strong>2단계:</strong> 사장에게 서면으로 임금 지급 요구</li>
+                                    <li><strong>3단계:</strong> 고용노동부 진정 (1350)</li>
+                                    <li><strong>4단계:</strong> 임금체불신고센터 온라인 신고</li>
+                                    <li><strong>5단계:</strong> 법정 지연이자 3배 손해배상 요구</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">근로의 권리, 임금채권</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://news.nate.com/view/20241021n00854" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>4년간 청소년 임금체불 1400건 발생
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '정당한 임금을 요구할 권리가 있지만, 약속한 근무 시간과 업무를 성실히 이행할 의무가 있어.'
+            },
+            'no-contract': {
+                title: '근로계약서 미작성 사례',
+                description: '근로계약서 없이 일하라고 하는 경우',
+                rights: '근로조건 명시를 요구할 권리',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😕 저의 상황</p>
+                            <p>근로계약서 없이 일하라고 해요. 이게 맞나요?</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">근로계약서는 필수야! 📄</p>
+                            <p class="mb-4">일하는 조건을 명확히 알 권리가 있어.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 사장에게 근로계약서 작성 요구</li>
+                                    <li><strong>2단계:</strong> 근로조건(임금, 시간, 휴일 등) 서면 확인</li>
+                                    <li><strong>3단계:</strong> 고용노동부 신고 (1350)</li>
+                                    <li><strong>4단계:</strong> 청소년근로권익센터 도움 요청</li>
+                                    <li><strong>5단계:</strong> 계약서 없으면 일하지 않겠다고 당당히 말하기</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">근로조건 명시를 요구할 권리</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://news.kbs.co.kr/news/view.do?ncd=7663626" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>근로계약서 없이 일시킨 편의점 사건
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '근로계약서 작성을 요구할 권리가 있지만, 계약 내용을 지킬 의무도 있어.'
+            },
+            'sexual-harassment': {
+                title: '직장 내 성희롱 사례',
+                description: '직장에서 성희롱을 당하는 경우',
+                rights: '성적 자기결정권, 인격권, 근로의 권리',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😰 저의 상황</p>
+                            <p>사장님이 자꾸 몸을 만져요. 정말 무서워요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">성희롱은 절대 참으면 안 돼! 😰</p>
+                            <p class="mb-4">즉시 도움을 요청해야 해.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 즉시 "싫다", "하지 마세요"라고 명확히 표현</li>
+                                    <li><strong>2단계:</strong> 상황과 증거 기록 (일시, 장소, 내용)</li>
+                                    <li><strong>3단계:</strong> 믿을 만한 어른(부모, 교사)에게 도움 요청</li>
+                                    <li><strong>4단계:</strong> 성희롱신고센터 (1337) 또는 여성긴급전화 (1366)</li>
+                                    <li><strong>5단계:</strong> 경찰서 신고 (112) 및 고용노동부 신고</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">성적 자기결정권, 인격권, 근로의 권리</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.nocutnews.co.kr/news/4177449" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청소년 아르바이트 중 성희롱 피해 실태
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '성희롱을 거부할 권리가 있지만, 다른 사람을 성적으로 불쾌하게 하지 않을 의무도 있어.'
+            },
+            'overtime-work': {
+                title: '야간근무 및 초과근무 사례',
+                description: '야간근무를 시키고 수당을 주지 않는 경우',
+                rights: '근로시간 제한을 요구할 권리, 정당한 수당을 받을 권리',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😴 저의 상황</p>
+                            <p>야간근무를 시키고 수당을 안 줘요. 너무 피곤해요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">청소년은 야간근무가 제한되어 있어! ⏰</p>
+                            <p class="mb-4">초과근무수당도 받을 권리가 있어.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 청소년 야간근무 제한 법률 설명</li>
+                                    <li><strong>2단계:</strong> 초과근무수당 계산 및 요구 (1.5배)</li>
+                                    <li><strong>3단계:</strong> 고용노동부 근로감독관 신고 (1350)</li>
+                                    <li><strong>4단계:</strong> 청소년보호위원회 신고</li>
+                                    <li><strong>참고:</strong> 18세 미만은 22시~06시 근무 금지</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">근로시간 제한을 요구할 권리, 정당한 수당을 받을 권리</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.yna.co.kr/view/AKR20240103114300065" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청소년 노동인권 침해 - 초과근무수당 미지급
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '정당한 근로조건을 요구할 권리가 있지만, 정해진 근무시간을 지킬 의무도 있어.'
+            },
+            'dangerous-work': {
+                title: '청소년 유해업무 사례',
+                description: '위험한 일을 시키는데 안전장비가 없는 경우',
+                rights: '안전하게 일할 권리, 유해업무로부터 보호받을 권리',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">⚠️ 저의 상황</p>
+                            <p>위험한 일을 시키는데 안전장비가 없어요. 정말 무서워요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">청소년에게 위험한 일을 시키면 안 돼! ⚠️</p>
+                            <p class="mb-4">안전이 최우선이야.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 위험하다고 느끼면 즉시 작업 중단</li>
+                                    <li><strong>2단계:</strong> 안전장비 제공 요구</li>
+                                    <li><strong>3단계:</strong> 고용노동부 산업안전보건청 신고</li>
+                                    <li><strong>4단계:</strong> 청소년유해업무 신고센터 이용</li>
+                                    <li><strong>참고:</strong> 고소작업, 중량물 운반 등은 청소년 금지업무</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">안전하게 일할 권리, 유해업무로부터 보호받을 권리</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="http://www.moel.go.kr/news/enews/report/enewsView.do?news_seq=4813" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청소년 근로권익 침해행위 적발 사례
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '안전하게 일할 권리가 있지만, 안전수칙을 지키고 무리하지 않을 의무도 있어.'
+            },
+            'no-break': {
+                title: '휴게시간 미제공 사례',
+                description: '6시간 일하는데 휴게시간이 없는 경우',
+                rights: '휴식권, 건강권',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😫 저의 상황</p>
+                            <p>6시간 일하는데 휴게시간이 없어요. 너무 힘들어요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">쉬는 시간은 꼭 필요해! 😴</p>
+                            <p class="mb-4">4시간 이상 일하면 30분 휴게시간이 보장되어야 해.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 근로기준법상 휴게시간 규정 설명</li>
+                                    <li><strong>2단계:</strong> 사장에게 휴게시간 제공 요구</li>
+                                    <li><strong>3단계:</strong> 고용노동부 신고 (1350)</li>
+                                    <li><strong>4단계:</strong> 청소년근로권익센터 상담</li>
+                                    <li><strong>참고:</strong> 4시간 이상 30분, 8시간 이상 1시간 휴게</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">휴식권, 건강권</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.yna.co.kr/view/AKR20240103114300065" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청소년 노동인권 침해 - 휴게시간 미준수
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '휴게시간을 요구할 권리가 있지만, 휴게시간을 남용하지 않을 의무도 있어.'
+            },
+            'verbal-abuse': {
+                title: '직장 내 괴롭힘 사례',
+                description: '사장님이 자꾸 욕하고 모욕하는 경우',
+                rights: '인격권, 근로의 권리',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😢 저의 상황</p>
+                            <p>사장님이 자꾸 욕하고 모욕해요. 정말 속상해요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">욕설과 모욕은 절대 참으면 안 돼! 😢</p>
+                            <p class="mb-4">존중받으며 일할 권리가 있어.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 욕설과 모욕 상황을 자세히 기록</li>
+                                    <li><strong>2단계:</strong> 가능하면 동료나 목격자 확보</li>
+                                    <li><strong>3단계:</strong> 고용노동부 직장 내 괴롭힘 신고</li>
+                                    <li><strong>4단계:</strong> 청소년상담전화 1388 심리상담</li>
+                                    <li><strong>5단계:</strong> 심한 경우 모욕죄로 경찰 신고</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">인격권, 근로의 권리</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.vop.co.kr/A00001457430.html" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청소년 노동자 폭언, 협박 피해 실태
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '존중받을 권리가 있지만, 직장에서 예의바르게 행동할 의무도 있어.'
+            },
+            'forced-attendance': {
+                title: '강제 출근 사례',
+                description: '아픈데도 출근하라고 하는 경우',
+                rights: '건강권, 병가를 사용할 권리',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">🤒 저의 상황</p>
+                            <p>아픈데도 출근하라고 해요. 정말 몸이 안 좋아요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">아플 때는 쉴 권리가 있어! 🏃</p>
+                            <p class="mb-4">건강이 가장 중요해.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 병원 진료 받고 진단서 발급</li>
+                                    <li><strong>2단계:</strong> 사장에게 병가 사용 의사 명확히 전달</li>
+                                    <li><strong>3단계:</strong> 강제 출근 시 고용노동부 신고</li>
+                                    <li><strong>4단계:</strong> 청소년보호위원회 신고</li>
+                                    <li><strong>5단계:</strong> 부모님께 도움 요청</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">건강권, 병가를 사용할 권리</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://youthlabor.co.kr/_subpage/kor/board/report.php?viewMode=view&idx=452&ca=&sel_search=&txt_search=&page=2" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청소년 노동인권 침해와 근로의욕
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '건강할 때 성실히 근무할 의무가 있지만, 아플 때는 치료받을 권리도 있어.'
+            },
+            'age-discrimination': {
+                title: '연령 차별 사례',
+                description: '나이가 어리다고 업무에서 차별하는 경우',
+                rights: '평등권, 연령차별금지',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😔 저의 상황</p>
+                            <p>나이가 어리다고 업무에서 차별해요. 정말 속상해요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">나이로 차별하는 건 잘못됐어! 🎂</p>
+                            <p class="mb-4">능력으로 평가받을 권리가 있어.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 연령차별금지법 위반임을 설명</li>
+                                    <li><strong>2단계:</strong> 구체적인 차별 사례와 증거 수집</li>
+                                    <li><strong>3단계:</strong> 고용노동부 고용평등상담실 신고</li>
+                                    <li><strong>4단계:</strong> 국가인권위원회 진정 (1331)</li>
+                                    <li><strong>5단계:</strong> 능력으로 인정받을 수 있도록 노력</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">평등권, 연령차별금지</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.newsis.com/view/NISX20210507_0001433688" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청년도 느끼는 나이 차별 실태
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '연령차별을 받지 않을 권리가 있지만, 나이에 맞는 책임감을 보일 의무도 있어.'
+            },
+            'penalty-deduction': {
+                title: '부당한 손해배상 사례',
+                description: '실수했다고 월급에서 돈을 빼는 경우',
+                rights: '임금 전액지급의 원칙, 부당한 손해배상 거부권',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😰 저의 상황</p>
+                            <p>실수했다고 월급에서 돈을 빼요. 이게 맞나요?</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">실수했다고 월급을 빼는 건 불법이야! 🔄</p>
+                            <p class="mb-4">고의가 아닌 실수는 배상할 필요 없어.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 근로기준법상 임금 전액지급 원칙 설명</li>
+                                    <li><strong>2단계:</strong> 실수의 경위와 고의성 여부 확인</li>
+                                    <li><strong>3단계:</strong> 고용노동부 임금체불신고센터 신고</li>
+                                    <li><strong>4단계:</strong> 청소년근로권익센터 법률상담</li>
+                                    <li><strong>5단계:</strong> 부당공제 금액 반환 요구</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">임금 전액지급의 원칙, 부당한 손해배상 거부권</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.incheontoday.com/news/articleView.html?idxno=9060" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청소년 알바 노동인권 침해 심각
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '부당한 배상을 거부할 권리가 있지만, 성실하고 주의깊게 일할 의무도 있어.'
+            },
+            'personal-service': {
+                title: '업무 외 지시 사례',
+                description: '업무와 관계없는 개인 심부름을 시키는 경우',
+                rights: '계약상 업무만 수행할 권리',
+                solution: `
+                    <div class="chat-bubble chat-bubble-user">
+                        <div class="user-avatar"><i class="fas fa-user"></i></div>
+                        <div class="mr-16">
+                            <p class="font-bold mb-2">😤 저의 상황</p>
+                            <p>업무와 관계없는 개인 심부름을 시켜요. 이상해요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-bubble chat-bubble-helper">
+                        <div class="character"><i class="fas fa-heart"></i></div>
+                        <div class="ml-16">
+                            <p class="font-bold mb-2">계약에 없는 일을 억지로 시킬 수 없어! 🍽️</p>
+                            <p class="mb-4">정해진 업무만 할 권리가 있어.</p>
+                            
+                            <div class="solution-box">
+                                <h4 class="font-bold mb-3 text-green-700"><i class="fas fa-lightbulb mr-2"></i>해결 방법</h4>
+                                <ul class="list-disc list-inside space-y-2">
+                                    <li><strong>1단계:</strong> 근로계약서상 업무 범위 확인</li>
+                                    <li><strong>2단계:</strong> "계약에 없는 업무입니다"라고 정중히 거절</li>
+                                    <li><strong>3단계:</strong> 지속될 경우 고용노동부 신고</li>
+                                    <li><strong>4단계:</strong> 청소년근로권익센터 상담</li>
+                                    <li><strong>5단계:</strong> 부모님께 상황 공유</li>
+                                </ul>
+                            </div>
+
+                            <p class="font-bold mb-2 text-purple-700"><i class="fas fa-balance-scale mr-2"></i>침해된 권리</p>
+                            <p class="mb-4 bg-purple-50 p-3 rounded-lg">계약상 업무만 수행할 권리</p>
+                            
+                            <p class="font-bold mb-2"><i class="fas fa-newspaper mr-2"></i>실제 뉴스 사례</p>
+                            <a href="https://www.hani.co.kr/arti/society/schooling/817783.html" target="_blank" class="news-link">
+                                <i class="fas fa-external-link-alt mr-2"></i>청소년 노동권 침해와 부당한 업무 지시
+                            </a>
+                        </div>
+                    </div>
+                `,
+                responsibility: '계약된 업무를 거부할 권리가 있지만, 정해진 업무는 성실히 수행할 의무도 있어.'
+            }
+        };
+
+        function showMainMenu() {
+            document.getElementById('mainMenu').classList.remove('hidden');
+            document.getElementById('humanRightsCases').classList.add('hidden');
+            document.getElementById('laborRightsCases').classList.add('hidden');
+            document.getElementById('caseDetails').classList.add('hidden');
+            currentSection = 'main';
+        }
+
+        function showCases(type) {
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('caseDetails').classList.add('hidden');
+            
+            if (type === 'human-rights') {
+                document.getElementById('humanRightsCases').classList.remove('hidden');
+                document.getElementById('laborRightsCases').classList.add('hidden');
+                currentSection = 'human-rights';
+            } else {
+                document.getElementById('laborRightsCases').classList.remove('hidden');
+                document.getElementById('humanRightsCases').classList.add('hidden');
+                currentSection = 'labor-rights';
+            }
+            previousSection = 'main';
+        }
+
+        function showCase(caseId) {
+            const caseData = cases[caseId];
+            if (!caseData) return;
+
+            document.getElementById('humanRightsCases').classList.add('hidden');
+            document.getElementById('laborRightsCases').classList.add('hidden');
+            document.getElementById('caseDetails').classList.remove('hidden');
+            
+            document.getElementById('caseTitle').textContent = caseData.title;
+            
+            const content = `
+                ${caseData.solution}
+
+                <div class="warning-box">
+                    <h4 class="font-bold mb-3 text-orange-700"><i class="fas fa-balance-scale mr-2"></i>권리와 함께하는 의무와 책임</h4>
+                    <p class="mb-2">${caseData.responsibility}</p>
+                    <p class="text-sm"><strong>기억해:</strong> 내 권리만큼 다른 사람의 권리도 소중해. 서로 존중하는 마음으로 문제를 해결해보자! 💕</p>
+                </div>
+
+                <div class="chat-bubble chat-bubble-helper">
+                    <div class="character"><i class="fas fa-heart"></i></div>
+                    <div class="ml-16">
+                        <p class="font-bold mb-2">마음이의 마지막 한마디 💪</p>
+                        <p>혼자 해결하기 어려우면 언제든 믿을 수 있는 어른들에게 도움을 요청해. 너의 권리를 지키는 것은 당당한 일이야! 화이팅!</p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('caseContent').innerHTML = content;
+            previousSection = currentSection;
+        }
+
+        function goBack() {
+            document.getElementById('caseDetails').classList.add('hidden');
+            
+            if (previousSection === 'human-rights') {
+                document.getElementById('humanRightsCases').classList.remove('hidden');
+                currentSection = 'human-rights';
+            } else if (previousSection === 'labor-rights') {
+                document.getElementById('laborRightsCases').classList.remove('hidden');
+                currentSection = 'labor-rights';
+            } else {
+                showMainMenu();
+            }
+        }
+
+        // Initialize
+        showMainMenu();
+    </script>
+</body>
+</html>
