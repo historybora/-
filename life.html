@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>억만장자가 되고 싶어! (v2.28)</title>
+    <!-- 외부 CSS 파일 연결 -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 폰트 및 아이콘 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans KR', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        lightgray: '#F3F4F6',
+                        darkgray: '#4B5563',
+                    },
+                    boxShadow: {
+                        'card': '0 4px 12px 0 rgba(0, 0, 0, 0.07)',
+                        'modal': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                        'slide-up': 'slideUp 0.5s ease-out forwards',
+                        'pulse-sm': 'pulse-sm 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: 0 },
+                            '100%': { opacity: 1 },
+                        },
+                        slideUp: {
+                            '0%': { opacity: 0, transform: 'translateY(20px)' },
+                            '100%': { opacity: 1, transform: 'translateY(0)' },
+                        },
+                        'pulse-sm': {
+                            '0%, 100%': { opacity: 1, transform: 'scale(1)' },
+                            '50%': { opacity: .7, transform: 'scale(0.98)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-lightgray font-sans antialiased">
+
+    <!-- 메인 게임 컨테이너 -->
+    <div id="game-container" class="container mx-auto max-w-6xl p-4 min-h-screen flex flex-col hidden">
+        
+        <!-- 상단 헤더 -->
+        <header class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl md:text-3xl font-bold text-primary">억만장자가 되고 싶어!</h1>
+            <div class="text-right">
+                <div id="clock" class="text-xl md:text-2xl font-bold text-darkgray">20세 0개월</div>
+                <div class="text-sm text-gray-500">보라쌤과 사회를 보라</div>
+            </div>
+        </header>
+
+        <!-- 진행 상태 바 -->
+        <div class="mb-4">
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div id="progress-bar" class="bg-primary h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-sm text-gray-500 mt-1">
+                <span>20세 (시작)</span>
+                <span id="progress-age" class="font-semibold">현재 나이: 20세</span>
+                <span>80세 (종료)</span>
+            </div>
+        </div>
+
+        <!-- 메인 콘텐츠 영역 (PC: 2단, 모바일: 1단) -->
+        <div class="flex flex-col md:flex-row gap-4 flex-grow">
+
+            <!-- 왼쪽 패널 (캐릭터 & 재정) -->
+            <aside class="w-full md:w-1/3 lg:w-1/4 flex-shrink-0">
+                <div class="bg-white p-5 rounded-xl shadow-card sticky top-4">
+                    <!-- 캐릭터 정보 -->
+                    <div id="character-info" class="text-center">
+                        <div id="character-image-container" class="w-full h-56 bg-gray-200 rounded-lg flex items-center justify-center mb-3 overflow-hidden">
+                            <span id="character-loading" class="text-gray-500">캐릭터 생성 중...</span>
+                            <img id="character-image" src="" alt="캐릭터" class="hidden w-full h-full object-cover">
+                        </div>
+                        <h2 id="character-name" class="text-2xl font-bold text-darkgray"></h2>
+                        <p id="character-job" class="text-lg text-primary"></p>
+                    </div>
+
+                    <!-- 재정 상태 -->
+                    <div class="mt-4">
+                        <h3 classs="text-xl font-semibold mb-3 text-darkgray">재정 상태</h3>
+                        <div class="space-y-2">
+                            <div>
+                                <div class="flex justify-between text-lg">
+                                    <span>총 자산:</span>
+                                    <span id="total-assets" class="font-bold">₩ 1,000만</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-500">
+                                    <span>현금:</span>
+                                    <span id="cash-assets">₩ 1,000만</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-500">
+                                    <span>부동산:</span>
+                                    <span id="property-assets">₩ 0</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-500">
+                                    <span>투자:</span>
+                                    <span id="stock-assets">₩ 0</span>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t">
+                                <div class="flex justify-between text-base">
+                                    <span>월 수입:</span>
+                                    <span id="monthly-income" class="font-semibold text-green-600">+ ₩ 0</span>
+                                </div>
+                                <div class="flex justify-between text-base">
+                                    <span>월 지출:</span>
+                                    <span id="monthly-expenses" class="font-semibold text-red-600">- ₩ 20만</span>
+                                </div>
+                                <div class="flex justify-between text-base font-bold mt-1">
+                                    <span>월 순수익:</span>
+                                    <span id="net-income" class="text-gray-700"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 오른쪽 패널 (이벤트 로그 & 게임 상태) -->
+            <main class="w-full md:w-2/3 lg:w-3/4">
+                <div class="bg-white p-5 rounded-xl shadow-card min-h-[60vh] flex flex-col">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-2xl font-bold text-darkgray">생애 이벤트</h2>
+                        <div class="flex items-center gap-2">
+                            <span id="game-status" class="text-sm font-medium text-gray-500 px-3 py-1 bg-gray-100 rounded-full">게임 진행 중...</span>
+                            <button id="pause-button" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/80 transition">
+                                일시정지
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 이벤트 로그 -->
+                    <div id="event-log" class="flex-grow space-y-3 overflow-y-auto h-[50vh] pr-2">
+                        <!-- 이벤트 로그 항목이 여기에 추가됩니다 -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 시작 화면 -->
+    <div id="start-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary to-secondary p-4 animate-fade-in">
+        <div class="bg-white p-8 md:p-12 rounded-2xl shadow-modal text-center max-w-lg w-full">
+            <h1 class="text-4xl font-bold text-darkgray mb-4">억만장자가 되고 싶어!</h1>
+            <p class="text-lg text-gray-600 mb-8">당신의 경제적 선택이 인생을 결정합니다.</p>
+            
+            <div class="mb-6">
+                <label for="player-name" class="block text-left text-sm font-medium text-gray-700 mb-2">당신의 이름은 무엇인가요?</label>
+                <input type="text" id="player-name" placeholder="이름 입력..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                <p id="name-error" class="text-red-500 text-sm text-left mt-1 hidden">이름을 입력해주세요!</p>
+            </div>
+
+            <div class="mb-8">
+                <p class="block text-left text-sm font-medium text-gray-700 mb-2">성별을 선택하세요.</p>
+                <div class="flex gap-4">
+                    <button id="select-male" class="flex-1 p-4 border border-gray-300 rounded-lg text-lg hover:bg-blue-50 focus:bg-blue-100 focus:ring-2 focus:ring-blue-400 focus:outline-none transition">
+                        👨‍🦱 남자
+                    </button>
+                    <button id="select-female" class="flex-1 p-4 border border-gray-300 rounded-lg text-lg hover:bg-pink-50 focus:bg-pink-100 focus:ring-2 focus:ring-pink-400 focus:outline-none transition">
+                        👩‍🦱 여자
+                    </button>
+                </div>
+            </div>
+
+            <button id="start-button" class="w-full bg-primary text-white py-4 rounded-lg text-xl font-bold hover:bg-primary/80 transition-transform transform hover:scale-105 active:scale-100 shadow-lg">
+                인생 시작하기!
+            </button>
+        </div>
+    </div>
+
+    <!-- 모달창 -->
+    <div id="modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 hidden animate-fade-in">
+        <div id="modal-content" class="bg-white p-8 rounded-2xl shadow-modal max-w-lg w-full animate-slide-up">
+            <h2 id="modal-title" class="text-2xl font-bold mb-4"></h2>
+            <p id="modal-text" class="text-base text-gray-600 mb-6"></p>
+            <div id="modal-choices" class="space-y-3">
+                <!-- 선택지가 여기에 추가됩니다 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 게임 오버 화면 -->
+    <div id="game-over-screen" class="fixed inset-0 bg-gradient-to-br from-darkgray to-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden animate-fade-in">
+        <div class="bg-white p-8 md:p-12 rounded-2xl shadow-modal text-center max-w-lg w-full animate-slide-up">
+            <h1 id="game-over-title" class="text-4xl font-bold text-darkgray mb-4"></h1>
+            <p id="game-over-text" class="text-lg text-gray-600 mb-8"></p>
+            <div class="text-3xl font-bold text-primary mb-8" id="final-assets"></div>
+            <button id="restart-button" class="w-full bg-primary text-white py-4 rounded-lg text-xl font-bold hover:bg-primary/80 transition-transform transform hover:scale-105 active:scale-100 shadow-lg">
+                다시 태어나기
+            </button>
+        </div>
+    </div>
+
+    <!-- 외부 JS 파일 연결 (순서 중요!) -->
+    <!-- 1. 시나리오 데이터 로드 -->
+    <script src="js/scenarios.js"></script>
+    <!-- 2. 게임 엔진(클래스) 로드 -->
+    <script src="js/game.js"></script>
+    <!-- 3. 앱 실행 -->
+    <script src="js/main.js"></script>
+</body>
+</html>
+/* 기본 스타일 */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 스크롤바 스타일링 (Tailwind로는 어려움) */
+#event-log::-webkit-scrollbar {
+    width: 6px;
+}
+
+#event-log::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#event-log::-webkit-scrollbar-thumb {
+    background: #c5c5c5;
+    border-radius: 10px;
+}
+
+#event-log::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 이벤트 로그 항목 스타일 */
+.log-item {
+    padding: 12px;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease-out;
+}
+.log-item-default {
+    background-color: #F9FAFB; /* bg-gray-50 */
+    border-left: 4px solid #D1D5DB; /* border-gray-300 */
+}
+.log-item-event {
+    background-color: #F0F9FF; /* bg-blue-50 */
+    border-left: 4px solid #3B82F6; /* border-blue-500 */
+    animation: pulse-sm 1.5s ease-out 1; /* 한번만 강조 */
+}
+.log-item-good {
+    background-color: #F0FDF4; /* bg-green-50 */
+    border-left: 4px solid #22C55E; /* border-green-500 */
+}
+.log-item-bad {
+    background-color: #FFFBEB; /* bg-amber-50 */
+    border-left: 4px solid #F59E0B; /* border-amber-500 */
+}
+.log-item-critical {
+    background-color: #FEF2F2; /* bg-red-50 */
+    border-left: 4px solid #EF4444; /* border-red-500 */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* pulse-sm 애니메이션 (Tailwind config에 정의함) */
+@keyframes pulse-sm {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: .8;
+        transform: scale(0.99);
+    }
+}
+
+/* 선택 버튼 포커스 스타일 */
+#select-male.focused {
+    background-color: #EFF6FF; /* bg-blue-100 */
+    border-color: #60A5FA; /* border-blue-400 */
+    box-shadow: 0 0 0 2px #BFDBFE; /* ring-2 ring-blue-300 */
+}
+#select-female.focused {
+    background-color: #FFF1F2; /* bg-pink-100 */
+    border-color: #F472B6; /* border-pink-400 */
+    box-shadow: 0 0 0 2px #FBCFE8; /* ring-2 ring-pink-300 */
+}
+// js/scenarios.js
+
+// -----------------------------------------------------------------------------
+// 생애주기 이벤트 (LIFECYCLE_EVENTS)
+// -----------------------------------------------------------------------------
+// 특정 나이(개월 수)에 도달하면 *반드시* 발생하는 이벤트입니다.
+// -----------------------------------------------------------------------------
+const LIFECYCLE_EVENTS = {
+    // 20세 (시작)
+    240: {
+        id: "START_GAME",
+        title: "스무살, 인생의 시작!",
+        text: "인생의 첫 번째 갈림길입니다. 당신의 20대 초반을 어떻게 보내시겠습니까?",
+        choices: [
+            { text: "부모님 댁에서 용돈 받기", action: "START_ALLOWANCE" },
+            { text: "아르바이트로 생활비 벌기", action: "START_PART_TIME" },
+            { text: "미래를 위해 공부에 전념하기", action: "START_STUDYING" }
+        ]
+    },
+    // 25세 (직업 선택)
+    300: {
+        id: "GET_JOB",
+        title: "첫 직장을 구할 시간입니다!",
+        text: "당신의 20대 초반 노력에 따라 선택지가 달라졌습니다. 어떤 직업을 선택하시겠습니까?",
+        // 'condition' 함수는 이 이벤트가 트리거될 때 호출됩니다.
+        // 플레이어의 상태(state)에 따라 선택지를 동적으로 변경합니다.
+        condition: (state) => {
+            let choices = [
+                { text: "사무직 (월 250만)", action: "JOB_OFFICE" },
+                { text: "서비스직 (월 230만)", action: "JOB_SERVICE" },
+                { text: "프리랜서 (월 200만~300만 변동)", action: "JOB_FREELANCER" }
+            ];
+            
+            // '공부'를 선택했던(study: true) 플레이어에게만 '전문직' 선택지가 보입니다.
+            if (state.flags.study) {
+                choices.push({ text: "전문직 (월 400만)", action: "JOB_PROFESSIONAL" });
+            }
+            // '알바'를 했던(partTime: true) 플레이어에게만 '창업' 선택지가 보입니다.
+            if (state.flags.partTime) {
+                choices.push({ text: "작은 가게 창업 (초기 비용 5000만)", action: "JOB_ENTREPRENEUR" });
+            }
+            return { choices: choices }; // 변경된 선택지를 반환
+        }
+    },
+    // 30세 (결혼)
+    360: {
+        id: "GET_MARRIED",
+        title: "결혼을 생각할 나이",
+        text: "인생의 중대사입니다. 결혼하시겠습니까?",
+        choices: [
+            { text: "결혼한다 (비용 3000만)", action: "MARRIAGE_YES" },
+            { text: "아직은 혼자가 좋다", action: "MARRIAGE_NO" }
+        ]
+    },
+    // 40세 (자녀 교육 / 부모님 간병)
+    480: {
+        id: "MID_LIFE_CHOICE",
+        title: "40세, 삶의 무게",
+        text: "자녀가 중학생이 되어 학원비가 고민되고, 부모님도 연로하셔서 걱정입니다.",
+        // 'condition' 함수로 플레이어 상태(결혼 여부)에 따라 다른 이벤트를 보여줍니다.
+        condition: (state) => {
+            if (state.flags.married) {
+                // 결혼한 경우 -> 자녀 학원
+                return {
+                    title: "자녀 교육 문제",
+                    text: "자녀가 중학생이 되었습니다. 학원에 보내시겠습니까?",
+                    choices: [
+                        { text: "사교육 시작 (월 30만 지출)", action: "CHILD_CARE_YES" },
+                        { text: "아직은 괜찮다", action: "CHILD_CARE_NO" }
+                    ]
+                };
+            } else {
+                // 미혼인 경우 -> 부모님 간병
+                return {
+                    title: "부모님 간병 문제",
+                    text: "연로하신 부모님께서 편찮으십니다. 간병비 지원이 필요해 보입니다.",
+                    choices: [
+                        { text: "간병비 지원 (월 50만 지출)", action: "PARENT_CARE_YES" },
+                        { text: "지금은 여유가 없다", action: "PARENT_CARE_NO" }
+                    ]
+                };
+            }
+        }
+    },
+    // 50세 (자녀 대학 / 내 집 마련)
+    600: {
+        id: "LATE_LIFE_CHOICE",
+        title: "50세, 인생의 전환점",
+        text: "자녀가 대학에 가거나, 혹은 내 집 마련의 마지막 기회일 수 있습니다.",
+        condition: (state) => {
+            if (state.flags.married) {
+                // 결혼한 경우 -> 자녀 대학 등록금
+                return {
+                    title: "자녀 대학 등록금",
+                    text: "자녀가 대학교에 합격했습니다! 등록금 1000만원을 내줘야 합니다.",
+                    choices: [
+                        { text: "등록금을 내준다 (1000만 지출)", action: "COLLEGE_YES" },
+                        { text: "학자금 대출을 받으라고 한다", action: "COLLEGE_NO" }
+                    ]
+                };
+            } else {
+                // 미혼인 경우 -> 내 집 마련 (또는 이사)
+                return {
+                    title: "내 집 마련의 꿈",
+                    text: "안정적인 노후를 위해 내 집 마련(또는 이사)을 고려해봅니다.",
+                    choices: [
+                        { text: "작은 아파트 매수 (3억 지출)", action: "BUY_HOUSE_SMALL" },
+                        { text: "이대로 만족한다", action: "BUY_HOUSE_NO" }
+                    ]
+                };
+            }
+        }
+    },
+    // 60세 (은퇴)
+    720: {
+        id: "RETIREMENT",
+        title: "은퇴할 시간",
+        text: "정년입니다. 직장에서 은퇴합니다. 은퇴 후 계획이 있으신가요?",
+        choices: [
+            { text: "은퇴한다 (월 수입 0)", action: "RETIRE_YES" },
+            { text: "촉탁직으로 계속 일한다 (수입 50% 감소)", action: "RETIRE_PART_TIME" }
+        ]
+    },
+    // 65세 (국민연금 수령)
+    780: {
+        id: "PENSION",
+        title: "국민연금 수령 개시",
+        text: "그동안 납부했던 국민연금을 수령할 나이가 되었습니다.",
+        choices: [
+            { text: "연금 수령 시작 (월 150만 수입)", action: "PENSION_START" }
+        ]
+    }
+};
+
+// -----------------------------------------------------------------------------
+// 랜덤 이벤트 (RANDOM_EVENTS)
+// -----------------------------------------------------------------------------
+// 매월 `RANDOM_EVENT_PROBABILITY` (기본 15%) 확률로 발생하는 이벤트입니다.
+// 'type' (good, bad, normal)에 따라 로그 색상이 달라집니다.
+// -----------------------------------------------------------------------------
+const RANDOM_EVENTS = [
+    // -- 소비 이벤트 --
+    {
+        id: "BUY_LUXURY_BAG",
+        type: "normal",
+        title: "유행하는 명품 가방",
+        text: "최신 유행하는 명품 가방이 눈에 아른거립니다. 하나 구매하시겠습니까?",
+        choices: [
+            { text: "구매한다 (500만 지출)", action: "BUY_LUXURY_YES" },
+            { text: "참는다", action: "BUY_LUXURY_NO" }
+        ]
+    },
+    {
+        id: "NEW_CAR",
+        type: "normal",
+        title: "신차 구입 기회",
+        text: "마음에 쏙 드는 신차가 출시되었습니다. 차를 바꾸시겠습니까?",
+        choices: [
+            { text: "새 차를 구매한다 (3000만 지출)", action: "BUY_CAR_YES" },
+            { text: "아직은 때가 아니다", action: "BUY_CAR_NO" }
+        ]
+    },
+    {
+        id: "VACATION",
+        type: "normal",
+        title: "여름 휴가 계획",
+        text: "열심히 일한 당신, 떠나야죠! 해외 여행을 가시겠습니까?",
+        choices: [
+            { text: "유럽으로 떠난다 (400만 지출)", action: "VACATION_EUROPE" },
+            { text: "동남아에서 휴양한다 (150만 지출)", action: "VACATION_ASIA" },
+            { text: "집에서 쉰다", action: "VACATION_STAY" }
+        ]
+    },
+
+    // -- 투자 이벤트 --
+    {
+        id: "STOCK_OPPORTUNITY",
+        type: "normal",
+        title: "주식 투자 기회",
+        text: "유망해 보이는 기술주(A)와 안정적인 배당주(B)가 있습니다. 투자하시겠습니까?",
+        choices: [
+            { text: "A 기술주에 1000만 투자", action: "STOCK_TECH" },
+            { text: "B 배당주에 1000만 투자", action: "STOCK_DIVIDEND" },
+            { text: "투자는 위험하다", action: "STOCK_NO" }
+        ]
+    },
+    {
+        id: "STOCK_OPPORTUNITY_2",
+        type: "normal",
+        title: "주식 시장 호황!",
+        text: "주식 시장이 전반적으로 상승세입니다. 이 기회에 투자금을 늘리시겠습니까?",
+        choices: [
+            { text: "가진 현금의 20% 추가 투자", action: "STOCK_MORE" },
+            { text: "지금이 팔 때! (투자금 50% 현금화)", action: "STOCK_SELL" },
+            { text: "관망한다", action: "STOCK_HOLD" }
+        ]
+    },
+    {
+        id: "PROPERTY_OPPORTUNITY",
+        type: "normal",
+        title: "부동산 투자 기회",
+        text: "수도권 외곽에 소형 오피스텔(8000만)이 급매로 나왔습니다. 매수하시겠습니까?",
+        choices: [
+            { text: "매수한다 (8000만 지출, 부동산 자산 +1억)", action: "PROPERTY_BUY_OFFICE" },
+            { text: "관심 없다", action: "PROPERTY_NO" }
+        ]
+    },
+
+    // -- 행운 / 불운 이벤트 --
+    {
+        id: "LOTTERY_WIN",
+        type: "good",
+        title: "복권 당첨!",
+        text: "무심코 샀던 복권이 3등에 당첨되었습니다!",
+        choices: [
+            { text: "야호! (현금 100만 획득)", action: "LOTTERY_WIN_SMALL" }
+        ]
+    },
+    {
+        id: "BONUS",
+        type: "good",
+        title: "깜짝 보너스",
+        text: "회사에서 우수 사원으로 선정되어 보너스를 받았습니다!",
+        choices: [
+            { text: "감사합니다! (월급만큼 획득)", action: "BONUS_GET" }
+        ]
+    },
+    {
+        id: "HEALTH_ISSUE",
+        type: "bad",
+        title: "건강 적신호",
+        text: "갑작스러운 건강 문제로 병원비가 발생했습니다.",
+        choices: [
+            { text: "어쩔 수 없지... (200만 지출)", action: "HEALTH_PAY" }
+        ]
+    },
+    {
+        id: "SCAM",
+        type: "bad",
+        title: "금융 사기 주의",
+        text: "'원금 보장, 월 20% 수익!' 수상한 투자 권유 전화가 걸려왔습니다.",
+        choices: [
+            { text: "이런 기회를 놓칠 수 없지! (1000만 투자)", action: "SCAM_YES" },
+            { text: "말도 안 되는 소리 (무시한다)", action: "SCAM_NO" }
+        ]
+    },
+    
+    // -- 20대에만 발생하는 이벤트 --
+    {
+        id: "DATING",
+        type: "normal",
+        title: "연애 시작",
+        text: "마음이 잘 맞는 상대를 만났습니다. 연애를 시작하시겠습니까?",
+        choices: [
+            { text: "연애 시작! (월 20만 데이트 비용)", action: "DATING_START" },
+            { text: "지금은 연애할 때가 아니다", action: "DATING_NO" }
+        ],
+        // 'condition' 함수로 20대(240~359개월)에만 등장하도록 설정
+        condition: (state) => state.ageInMonths < 360 
+    }
+];
+// js/game.js
+
+/**
+ * 억만장자가 되고 싶어! (v2.28)
+ * 게임의 핵심 로직을 관리하는 Game 클래스
+ * v2.27의 결혼 이벤트 멈춤 버그 수정됨.
+ */
+class Game {
+    constructor() {
+        // --- 게임 상태 (State) ---
+        this.state = {
+            playerName: "플레이어",
+            gender: "female",
+            ageInMonths: 240, // 20세 (240개월)
+            cash: 10000000,    // 현금: 1000만
+            stocks: 0,          // 주식 자산
+            property: 0,        // 부동산 자산
+            monthlyIncome: 0,   // 월 수입
+            monthlyExpenses: 200000, // 월 고정 지출 (기본 20만)
+            job: "무직",
+            happiness: 50,
+            health: 80,
+            flags: { // 특별한 상태 플래그
+                study: false,
+                partTime: false,
+                married: false,
+                dating: false,
+                childCare: false,
+                parentCare: false,
+                retired: false,
+                pension: false,
+            }
+        };
+
+        // --- 게임 설정 (Config) ---
+        this.GAME_SPEED = 200; // 1개월 진행 속도 (ms)
+        this.END_AGE_MONTHS = 80 * 12; // 80세 (960개월)
+        this.RANDOM_EVENT_PROBABILITY = 0.15; // 매월 랜덤 이벤트 발생 확률 (15%)
+        this.AI_IMAGE_GENERATION_INTERVAL = 60; // 5년(60개월)마다 캐릭터 이미지 생성
+
+        // --- 내부 관리 변수 ---
+        this.gameLoopInterval = null;
+        this.isPaused = false;
+        this.eventQueue = []; // 처리해야 할 이벤트를 쌓아두는 큐
+
+        // --- DOM 요소 캐싱 ---
+        // (각 DOM 요소들을 찾아서 변수에 할당)
+        this.dom = {
+            startScreen: document.getElementById('start-screen'),
+            gameContainer: document.getElementById('game-container'),
+            gameOverScreen: document.getElementById('game-over-screen'),
+            
+            playerNameInput: document.getElementById('player-name'),
+            nameError: document.getElementById('name-error'),
+            maleButton: document.getElementById('select-male'),
+            femaleButton: document.getElementById('select-female'),
+            startButton: document.getElementById('start-button'),
+            restartButton: document.getElementById('restart-button'),
+
+            clock: document.getElementById('clock'),
+            progressBar: document.getElementById('progress-bar'),
+            progressAge: document.getElementById('progress-age'),
+            pauseButton: document.getElementById('pause-button'),
+            gameStatus: document.getElementById('game-status'),
+            eventLog: document.getElementById('event-log'),
+
+            // 캐릭터 & 재정
+            characterImageContainer: document.getElementById('character-image-container'),
+            characterLoading: document.getElementById('character-loading'),
+            characterImage: document.getElementById('character-image'),
+            characterName: document.getElementById('character-name'),
+            characterJob: document.getElementById('character-job'),
+            totalAssets: document.getElementById('total-assets'),
+            cashAssets: document.getElementById('cash-assets'),
+            stockAssets: document.getElementById('stock-assets'),
+            propertyAssets: document.getElementById('property-assets'),
+            monthlyIncome: document.getElementById('monthly-income'),
+            monthlyExpenses: document.getElementById('monthly-expenses'),
+            netIncome: document.getElementById('net-income'),
+
+            // 모달
+            modal: document.getElementById('modal'),
+            modalTitle: document.getElementById('modal-title'),
+            modalText: document.getElementById('modal-text'),
+            modalChoices: document.getElementById('modal-choices'),
+
+            // 게임 오버
+            gameOverTitle: document.getElementById('game-over-title'),
+            gameOverText: document.getElementById('game-over-text'),
+            finalAssets: document.getElementById('final-assets'),
+        };
+
+        // --- API 키 (나노바나나) ---
+        this.NANO_BANANA_API_KEY = ""; // 환경에 따라 자동 주입될 수 있음
+    }
+
+    // =========================================================================
+    // 게임 초기화 및 루프
+    // =========================================================================
+
+    /**
+     * 게임 초기화: 이벤트 리스너를 설정합니다.
+     */
+    init() {
+        this.dom.startButton.addEventListener('click', () => this.startGame());
+        this.dom.restartButton.addEventListener('click', () => window.location.reload());
+        this.dom.pauseButton.addEventListener('click', () => this.togglePause());
+        this.dom.maleButton.addEventListener('click', () => this.selectGender('male'));
+        this.dom.femaleButton.addEventListener('click', () => this.selectGender('female'));
+
+        this.dom.playerNameInput.addEventListener('input', () => {
+            if (this.dom.playerNameInput.value.trim()) {
+                this.dom.nameError.classList.add('hidden');
+            }
+        });
+    }
+
+    /**
+     * 성별 선택 처리
+     * @param {string} gender 'male' 또는 'female'
+     */
+    selectGender(gender) {
+        this.state.gender = gender;
+        if (gender === 'male') {
+            this.dom.maleButton.classList.add('focused');
+            this.dom.femaleButton.classList.remove('focused');
+        } else {
+            this.dom.femaleButton.classList.add('focused');
+            this.dom.maleButton.classList.remove('focused');
+        }
+    }
+
+    /**
+     * 게임 시작
+     */
+    startGame() {
+        const playerName = this.dom.playerNameInput.value.trim();
+
+        // 이름 유효성 검사 (alert() 대신 UI 오류 메시지 사용)
+        if (!playerName) {
+            this.dom.nameError.classList.remove('hidden');
+            this.dom.playerNameInput.focus();
+            return; // 게임 시작 중단
+        }
+
+        this.state.playerName = playerName;
+        this.dom.characterName.innerText = playerName;
+
+        this.dom.startScreen.classList.add('hidden');
+        this.dom.gameContainer.classList.remove('hidden');
+
+        this.generateCharacterImage();
+        this.updateUI();
+        this.addLog("20세, 인생이 시작되었습니다.", "event");
+        this.enqueueEvent(LIFECYCLE_EVENTS[240]); // 20세 이벤트
+        this.startGameLoop();
+    }
+
+    /**
+     * 메인 게임 루프 시작
+     */
+    startGameLoop() {
+        if (this.gameLoopInterval) {
+            clearInterval(this.gameLoopInterval);
+        }
+        
+        this.gameLoopInterval = setInterval(() => {
+            if (!this.isPaused) {
+                this.nextMonth();
+            }
+        }, this.GAME_SPEED);
+    }
+
+    /**
+     * 게임 루프 정지
+     */
+    stopGameLoop() {
+        clearInterval(this.gameLoopInterval);
+        this.gameLoopInterval = null;
+    }
+
+    /**
+     * 일시정지 / 재개 토글
+     */
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        if (this.isPaused) {
+            this.dom.pauseButton.innerText = "게임 재개";
+            this.dom.gameStatus.innerText = "일시정지됨";
+        } else {
+            this.dom.pauseButton.innerText = "일시정지";
+            this.dom.gameStatus.innerText = "게임 진행 중...";
+        }
+    }
+
+    /**
+     * 게임 재개 (모달이 닫힐 때 호출됨)
+     */
+    playGame() {
+        this.isPaused = false;
+        this.dom.modal.classList.add('hidden');
+        this.dom.pauseButton.innerText = "일시정지";
+        this.dom.gameStatus.innerText = "게임 진행 중...";
+        
+        // v2.27 버그 수정:
+        // 만약 큐에 이벤트가 또 남아있다면(예: 결혼 -> 주거 연쇄 이벤트)
+        // 루프를 바로 돌리지 않고, 다음 틱에 처리되도록 nextMonth를 한 번 더 호출.
+        // 그렇지 않으면(큐가 비었으면) 루프를 재시작.
+        if (this.eventQueue.length > 0) {
+            // 큐에 남은 이벤트를 즉시 처리하기 위해 nextMonth() 호출
+            // (이러면 멈춤 상태로 모달이 바로 다시 뜸)
+             setTimeout(() => this.nextMonth(), 50); // 살짝 딜레이를 줌
+        } else {
+            // 큐가 비었으면 게임 루프 재시작
+            this.startGameLoop();
+        }
+    }
+
+    /**
+     * 1개월 진행 (게임의 핵심 로직)
+     */
+    nextMonth() {
+        // v2.27 수정: 이미 일시정지 상태(모달이 떠 있거나, 떠야 할)면 
+        //            월을 진행시키지 않음. (playGame()이 호출되어야만 풀림)
+        if (this.isPaused) {
+            // 큐에 이벤트가 있는데 아직 모달이 안 떴다면?
+            if (this.eventQueue.length > 0) {
+                this.processEventQueue();
+            }
+            return;
+        }
+
+        // ---
+        // (게임이 진행 중일 때만 아래 로직 실행)
+        // ---
+
+        // 1. 나이 증가
+        this.state.ageInMonths++;
+        
+        // 2. 월별 수입/지출 정산
+        this.state.cash += this.state.monthlyIncome;
+        this.state.cash -= this.state.monthlyExpenses;
+
+        // 3. 주식 자산 변동 (간단한 시뮬레이션)
+        if (this.state.stocks > 0) {
+            const randomChange = (Math.random() * 0.15) - 0.05;
+            const changeAmount = Math.round(this.state.stocks * randomChange);
+            this.state.stocks += changeAmount;
+            
+            // 1년에 한 번 정도만 로그 표시 (너무 많으면 지저분함)
+            if (this.state.ageInMonths % 12 === 0) {
+                 if (changeAmount > 0) {
+                    this.addLog(`투자 자산이 연간 ${this.formatCurrency(changeAmount * 12)} 변동했습니다.`, "good");
+                 } else if (changeAmount < 0) {
+                    this.addLog(`투자 자산이 연간 ${this.formatCurrency(Math.abs(changeAmount) * 12)} 변동했습니다.`, "bad");
+                 }
+            }
+        }
+
+        // 4. 이벤트 처리
+        // 4a. 생애주기 이벤트 확인
+        const lifecycleEvent = LIFECYCLE_EVENTS[this.state.ageInMonths];
+        if (lifecycleEvent) {
+            this.enqueueEvent(lifecycleEvent); // 큐에 추가
+        } else {
+            // 4b. 랜덤 이벤트 확인 (생애주기 이벤트가 없을 때만)
+            if (Math.random() < this.RANDOM_EVENT_PROBABILITY) {
+                this.triggerRandomEvent();
+            }
+        }
+
+        // 4c. 이벤트 큐 처리 (v2.27)
+        // 이번 달에 처리할 이벤트가 있다면 (생애주기 or 랜덤)
+        if (this.eventQueue.length > 0) {
+            this.processEventQueue();
+        }
+
+
+        // 5. 캐릭터 이미지 갱신 (5년마다)
+        if (this.state.ageInMonths % this.AI_IMAGE_GENERATION_INTERVAL === 0) {
+            this.generateCharacterImage();
+        }
+
+        // 6. UI 업데이트
+        this.updateUI();
+
+        // 7. 게임 종료 조건 확인
+        if (this.state.cash < -10000000) { // 파산 (현금 -1000만)
+            this.gameOver("파산");
+        } else if (this.state.ageInMonths >= this.END_AGE_MONTHS) { // 80세 도달
+            this.gameOver("은퇴");
+        }
+    }
+    
+    /**
+     * (v2.27 신규) 이벤트 큐에서 이벤트를 꺼내 처리
+     */
+    processEventQueue() {
+        if (this.eventQueue.length > 0) {
+            const event = this.eventQueue.shift(); // 큐에서 첫 번째 이벤트 꺼내기
+            
+            if (event) {
+                // 게임 루프 정지 (setInterval 자체를 멈추는 게 아님)
+                // v2.27 수정: stopGameLoop() 대신 isPaused 플래그만 사용
+                this.isPaused = true; 
+                this.dom.gameStatus.innerText = "선택 대기 중...";
+                
+                // 모달창 표시 (비동기적으로 잠시 후)
+                // (DOM 그리기가 멈추는 것을 방지)
+                setTimeout(() => this.triggerModal(event), 50);
+
+            } else {
+                 // 큐에서 꺼냈는데 undefined인 경우 (v2.26 버그 케이스)
+                 // 아무것도 안 함 (다음 달로 진행)
+            }
+        }
+    }
+
+
+    /**
+     * 이벤트를 큐에 추가
+     * @param {object} event - LIFECYCLE_EVENTS 또는 RANDOM_EVENTS의 이벤트 객체
+     */
+    enqueueEvent(event) {
+        // v2.28 수정: 조건(condition) 함수가 여기서 체크되어야 함.
+        if (event.condition) {
+            // 조건 함수가 true를 반환할 때만 이벤트를 큐에 추가
+            if (event.condition(this.state)) {
+                 this.eventQueue.push(event);
+            }
+            // 조건이 false면, 무시
+        } else {
+            // 조건이 없는 이벤트는 항상 큐에 추가
+            this.eventQueue.push(event);
+        }
+    }
+
+    /**
+     * 랜덤 이벤트 큐에 추가 (v2.28 수정)
+     */
+    triggerRandomEvent() {
+        const event = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
+        this.enqueueEvent(event); // 큐에 추가 (enqueueEvent가 조건 검사)
+    }
+
+
+    /**
+     * 게임 오버 처리
+     * @param {string} type - "파산" 또는 "은퇴"
+     */
+    gameOver(type) {
+        this.stopGameLoop(); // 메인 루프(setInterval) 완전 정지
+        this.isPaused = true;
+        
+        let title = "";
+        let text = "";
+        const totalAssets = this.state.cash + this.state.stocks + this.state.property;
+
+        if (type === "파산") {
+            title = "파산";
+            text = "막대한 빚을 감당하지 못하고 파산했습니다...";
+        } else {
+            if (totalAssets > 1000000000) title = "억만장자";
+            else if (totalAssets > 500000000) title = "성공한 자산가";
+            else if (totalAssets > 100000000) title = "안정적인 은퇴";
+            else if (totalAssets > 0) title = "평범한 시민";
+            else title = "빈곤한 노후";
+            
+            text = `80세, 긴 인생을 보냈습니다. (${title} 엔딩)`;
+        }
+
+        this.dom.gameOverTitle.innerText = title;
+        this.dom.gameOverText.innerText = text;
+        this.dom.finalAssets.innerText = `최종 자산: ${this.formatCurrency(totalAssets)}`;
+        this.dom.gameContainer.classList.add('hidden');
+        this.dom.gameOverScreen.classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // 이벤트 트리거 및 처리
+    // =========================================================================
+
+    /**
+     * 모달창 표시
+     * @param {object} event - 표시할 이벤트 객체
+     */
+    triggerModal(event) {
+        if (!event) {
+            console.error("triggerModal: event가 undefined입니다.");
+            this.playGame(); // 즉시 게임 재개
+            return;
+        }
+
+        let { id, title, text, choices, condition } = event;
+
+        // 'condition' 함수가 있다면 실행 (v2.28: 여기서도 실행)
+        // (LIFECYCLE_EVENTS의 동적 선택지 생성용)
+        if (condition) {
+            // (이미 enqueueEvent에서 체크했지만, 동적 텍스트/선택지 생성을 위해 한 번 더)
+            const conditionalEvent = condition(this.state);
+            if (conditionalEvent) {
+                title = conditionalEvent.title || title;
+                text = conditionalEvent.text || text;
+                choices = conditionalEvent.choices || choices;
+            }
+        }
+        
+        // 모달 내용 채우기
+        this.dom.modalTitle.innerText = title;
+        this.dom.modalText.innerText = text;
+        this.dom.modalChoices.innerHTML = ""; // 기존 선택지 초기화
+
+        // 선택지 버튼 생성
+        choices.forEach(choice => {
+            const button = document.createElement('button');
+            button.className = "w-full text-left p-4 border border-gray-300 rounded-lg hover:bg-gray-100 focus:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary transition";
+            button.innerText = choice.text;
+            
+            button.onclick = () => {
+                this.handleChoice(id, choice.action); 
+            };
+            this.dom.modalChoices.appendChild(button);
+        });
+
+        // 모달 표시
+        this.dom.modal.classList.remove('hidden');
+    }
+
+    /**
+     * 플레이어의 선택 처리
+     * @param {string} eventId - 이벤트 ID
+     * @param {string} action - 선택한 액션 ID
+     */
+    handleChoice(eventId, action) {
+        // (v2.27에서 수정된 로직 반영)
+
+        let logMsg = "";
+        let logType = "default";
+
+        // --- 선택(action)에 따라 state 변경 ---
+        switch (action) {
+            // --- 20세: 시작 ---
+            case "START_ALLOWANCE":
+                this.state.monthlyIncome = 300000;
+                logMsg = "부모님 댁에서 용돈 30만원을 받으며 생활을 시작합니다.";
+                break;
+            case "START_PART_TIME":
+                this.state.monthlyIncome = 800000;
+                this.state.monthlyExpenses += 300000;
+                this.state.flags.partTime = true;
+                logMsg = "아르바이트(월 80만)를 하며 자취(월 30만)를 시작합니다.";
+                break;
+            case "START_STUDYING":
+                this.state.monthlyExpenses += 400000;
+                this.state.flags.study = true;
+                logMsg = "미래를 위해 공부에 전념합니다. (월 40만 지출)";
+                break;
+
+            // --- 25세: 직업 ---
+            case "JOB_OFFICE":
+                this.state.job = "사무직";
+                this.state.monthlyIncome = 2500000;
+                logMsg = "사무직(월 250만)으로 커리어를 시작합니다.";
+                break;
+            case "JOB_SERVICE":
+                this.state.job = "서비스직";
+                this.state.monthlyIncome = 2300000;
+                logMsg = "서비스직(월 230만)으로 커리어를 시작합니다.";
+                break;
+            case "JOB_FREELANCER":
+                this.state.job = "프리랜서";
+                this.state.monthlyIncome = 2500000;
+                logMsg = "프리랜서(월 평균 250만)로 자유롭게 일합니다.";
+                break;
+            case "JOB_PROFESSIONAL":
+                this.state.job = "전문직";
+                this.state.monthlyIncome = 4000000;
+                logMsg = "공부의 결실! 전문직(월 400만)으로 커리어를 시작합니다.";
+                logType = "good";
+                break;
+            case "JOB_ENTREPRENEUR":
+                this.state.job = "자영업";
+                this.state.monthlyIncome = 3000000;
+                this.state.cash -= 50000000;
+                logMsg = "창업 비용 5000만원을 들여 작은 가게를 열었습니다. (월 300만 수입)";
+                logType = "event";
+                break;
+
+            // --- 30세: 결혼 ---
+            case "MARRIAGE_YES":
+                this.state.cash -= 30000000;
+                this.state.flags.married = true;
+                logMsg = "결혼을 축하합니다! (비용 3000만 지출)";
+                logType = "event";
+                // v2.27 버그 수정: 여기서 멈췄었음.
+                break;
+            case "MARRIAGE_NO":
+                logMsg = "독신의 삶을 즐기기로 합니다.";
+                break;
+                
+            // --- 40세: 중년 ---
+            case "CHILD_CARE_YES":
+                this.state.monthlyExpenses += 300000;
+                this.state.flags.childCare = true;
+                logMsg = "자녀의 사교육을 시작합니다. (월 30만 지출 추가)";
+                break;
+            case "CHILD_CARE_NO":
+                logMsg = "아직은 사교육 없이 괜찮다고 생각합니다.";
+                break;
+            case "PARENT_CARE_YES":
+                this.state.monthlyExpenses += 500000;
+                this.state.flags.parentCare = true;
+                logMsg = "부모님 간병비를 지원합니다. (월 50만 지출 추가)";
+                break;
+            case "PARENT_CARE_NO":
+                logMsg = "지금은 여유가 없어 마음이 무겁습니다.";
+                logType = "bad";
+                break;
+                
+            // --- 50세: 장년 ---
+            case "COLLEGE_YES":
+                this.state.cash -= 10000000;
+                logMsg = "자녀의 대학 등록금을 내주었습니다. (-1000만)";
+                logType = "event";
+                break;
+            case "COLLEGE_NO":
+                logMsg = "자녀가 학자금 대출을 받았습니다.";
+                break;
+            case "BUY_HOUSE_SMALL":
+                if (this.state.cash >= 300000000) {
+                    this.state.cash -= 300000000;
+                    this.state.property += 300000000;
+                    logMsg = "3억으로 내 집 마련에 성공했습니다!";
+                    logType = "good";
+                } else {
+                    logMsg = "현금이 부족하여 집을 살 수 없었습니다.";
+                    logType = "bad";
+                }
+                break;
+            case "BUY_HOUSE_NO":
+                logMsg = "내 집 마련 대신 현금을 보유하기로 합니다.";
+                break;
+
+            // --- 60세: 은퇴 ---
+            case "RETIRE_YES":
+                this.state.job = "은퇴";
+                this.state.monthlyIncome = 0;
+                this.state.flags.retired = true;
+                logMsg = "60세, 정년 은퇴합니다.";
+                break;
+            case "RETIRE_PART_TIME":
+                this.state.job = "촉탁직";
+                this.state.monthlyIncome /= 2;
+                this.state.flags.retired = true;
+                logMsg = "촉탁직으로 절반의 수입을 받으며 일을 계속합니다.";
+                break;
+                
+            // --- 65세: 연금 ---
+            case "PENSION_START":
+                this.state.monthlyIncome += 1500000;
+                this.state.flags.pension = true;
+                logMsg = "국민연금 수령이 시작됩니다. (월 150만 수입)";
+                logType = "good";
+                break;
+
+            // --- 랜덤: 소비 ---
+            case "BUY_LUXURY_YES":
+                this.state.cash -= 5000000;
+                logMsg = "명품 가방을 구매했습니다. (-500만)";
+                break;
+            case "BUY_LUXURY_NO":
+                logMsg = "명품 가방을 사지 않고 돈을 아꼈습니다.";
+                break;
+            case "BUY_CAR_YES":
+                this.state.cash -= 30000000;
+                this.state.monthlyExpenses += 150000;
+                logMsg = "신차를 구매했습니다! (-3000만, 월 유지비 15만 추가)";
+                break;
+            case "BUY_CAR_NO":
+                logMsg = "차를 바꾸지 않고 돈을 아꼈습니다.";
+                break;
+            case "VACATION_EUROPE":
+                this.state.cash -= 4000000;
+                logMsg = "유럽에서 멋진 휴가를 보냈습니다. (-400만)";
+                break;
+            case "VACATION_ASIA":
+                this.state.cash -= 1500000;
+                logMsg = "동남아에서 편안한 휴가를 보냈습니다. (-150만)";
+                break;
+            case "VACATION_STAY":
+                logMsg = "집에서 조용히 휴가를 보냈습니다.";
+                break;
+
+            // --- 랜덤: 투자 ---
+            case "STOCK_TECH":
+                this.state.cash -= 10000000;
+                this.state.stocks += 11000000;
+                logMsg = "A 기술주에 1000만원을 투자했습니다.";
+                break;
+            case "STOCK_DIVIDEND":
+                this.state.cash -= 10000000;
+                this.state.stocks += 10000000;
+                this.state.monthlyIncome += 50000;
+                logMsg = "B 배당주에 1000만원을 투자했습니다. (월 5만 배당)";
+                break;
+            case "STOCK_NO":
+                logMsg = "주식 투자를 하지 않았습니다.";
+                break;
+            case "STOCK_MORE":
+                let investAmount = Math.round(this.state.cash * 0.2);
+                this.state.cash -= investAmount;
+                this.state.stocks += investAmount;
+                logMsg = `현금의 20% (${this.formatCurrency(investAmount)})를 추가 투자했습니다.`;
+                break;
+            case "STOCK_SELL":
+                let sellAmount = Math.round(this.state.stocks * 0.5);
+                this.state.stocks -= sellAmount;
+                this.state.cash += sellAmount;
+                logMsg = `투자금의 50% (${this.formatCurrency(sellAmount)})를 현금화했습니다.`;
+                break;
+            case "STOCK_HOLD":
+                logMsg = "시장을 관망하기로 했습니다.";
+                break;
+            case "PROPERTY_BUY_OFFICE":
+                this.state.cash -= 80000000;
+                this.state.property += 100000000;
+                this.state.monthlyIncome += 400000;
+                logMsg = "오피스텔을 매수했습니다. (-8000만, 부동산 +1억, 월 수입 40만)";
+                logType = "good";
+                break;
+            case "PROPERTY_NO":
+                logMsg = "오피스텔에 투자하지 않았습니다.";
+                break;
+
+            // --- 랜덤: 행운/불운 ---
+            case "LOTTERY_WIN_SMALL":
+                this.state.cash += 1000000;
+                logMsg = "복권 3등 당첨! (100만 획득)";
+                logType = "good";
+                break;
+            case "BONUS_GET":
+                let bonus = this.state.monthlyIncome;
+                this.state.cash += bonus;
+                logMsg = `깜짝 보너스 ${this.formatCurrency(bonus)}을 받았습니다!`;
+                logType = "good";
+                break;
+            case "HEALTH_PAY":
+                this.state.cash -= 2000000;
+                logMsg = "병원비로 200만원을 지출했습니다.";
+                logType = "bad";
+                break;
+            case "SCAM_YES":
+                this.state.cash -= 10000000;
+                logMsg = "사기였습니다! 1000만원을 잃었습니다.";
+                logType = "critical";
+                break;
+            case "SCAM_NO":
+                logMsg = "수상한 투자를 무시하고 자산을 지켰습니다.";
+                break;
+
+            // --- 랜덤: 20대 (연애) ---
+            case "DATING_START":
+                this.state.monthlyExpenses += 200000;
+                this.state.flags.dating = true;
+                logMsg = "연애를 시작합니다. (월 20만 데이트 비용)";
+                break;
+            case "DATING_NO":
+                logMsg = "연애 대신 자기계발에 집중합니다.";
+                break;
+
+            default:
+                console.warn(`Unhandled action: ${action} from event: ${eventId}`);
+                logMsg = "아무 일도 일어나지 않았습니다.";
+        }
+
+        if (logMsg) {
+            this.addLog(logMsg, logType);
+        }
+        
+        // v2.27 수정:
+        // 모달 닫고 게임 재개 (playGame이 큐를 확인하고 루프를 재시작함)
+        this.playGame(); 
+    }
+
+
+    // =========================================================================
+    // UI 업데이트 헬퍼
+    // =========================================================================
+
+    /**
+     * 매월 UI를 최신 상태로 업데이트
+     */
+    updateUI() {
+        // 시계 및 나이
+        const ageYears = Math.floor(this.state.ageInMonths / 12);
+        const ageMonths = this.state.ageInMonths % 12;
+        this.dom.clock.innerText = `${ageYears}세 ${ageMonths}개월`;
+
+        // 진행 바
+        const progressPercent = ((this.state.ageInMonths - 240) / (this.END_AGE_MONTHS - 240)) * 100;
+        this.dom.progressBar.style.width = `${progressPercent}%`;
+        this.dom.progressAge.innerText = `현재 나이: ${ageYears}세`;
+
+        // 직업
+        this.dom.characterJob.innerText = this.state.job;
+
+        // 재정
+        const totalAssets = this.state.cash + this.state.stocks + this.state.property;
+        const netIncome = this.state.monthlyIncome - this.state.monthlyExpenses;
+
+        this.dom.totalAssets.innerText = this.formatCurrency(totalAssets);
+        this.dom.cashAssets.innerText = this.formatCurrency(this.state.cash);
+        this.dom.stockAssets.innerText = this.formatCurrency(this.state.stocks);
+        this.dom.propertyAssets.innerText = this.formatCurrency(this.state.property);
+        
+        this.dom.monthlyIncome.innerText = `+ ${this.formatCurrency(this.state.monthlyIncome)}`;
+        this.dom.monthlyExpenses.innerText = `- ${this.formatCurrency(this.state.monthlyExpenses)}`;
+        
+        this.dom.netIncome.innerText = this.formatCurrency(netIncome);
+        this.dom.netIncome.className = netIncome >= 0 ? 'text-green-700 font-bold' : 'text-red-700 font-bold';
+    }
+
+    /**
+     * 이벤트 로그에 메시지 추가
+     * @param {string} text - 로그 메시지
+     * @param {string} type - 'good', 'bad', 'critical', 'event', 'default'
+     */
+    addLog(text, type = "default") {
+        const logItem = document.createElement('div');
+        
+        const typeClasses = {
+            "good": "log-item-good",
+            "bad": "log-item-bad",
+            "critical": "log-item-critical",
+            "event": "log-item-event",
+            "default": "log-item-default"
+        };
+        logItem.className = `log-item ${typeClasses[type] || typeClasses['default']}`;
+
+        const ageYears = Math.floor(this.state.ageInMonths / 12);
+        const ageMonths = this.state.ageInMonths % 12;
+        logItem.innerHTML = `<span class="font-semibold text-xs text-gray-500">[${ageYears}세 ${ageMonths}개월]</span><p class="text-sm text-darkgray">${text}</p>`;
+        
+        this.dom.eventLog.prepend(logItem);
+        
+        if (this.dom.eventLog.children.length > 50) {
+            this.dom.eventLog.lastChild.remove();
+        }
+    }
+
+    /**
+     * 숫자(원)를 통화 형식 (₩ 1,000만)으로 변환
+     * @param {number} amount - 금액
+     * @returns {string} - 포맷된 문자열
+     */
+    formatCurrency(amount) {
+        if (amount >= 100000000) return `₩ ${Math.floor(amount / 10000000) / 10}억`;
+        if (amount >= 10000) return `₩ ${Math.floor(amount / 1000) / 10}만`;
+        if (amount <= -100000000) return `- ₩ ${Math.floor(Math.abs(amount) / 10000000) / 10}억`;
+        if (amount <= -10000) return `- ₩ ${Math.floor(Math.abs(amount) / 1000) / 10}만`;
+        return `₩ ${amount.toLocaleString()}`;
+    }
+
+    // =========================================================================
+    // AI 캐릭터 이미지 생성 (나노바나나 API)
+    // =========================================================================
+
+    /**
+     * 현재 상태를 기반으로 AI 캐릭터 이미지 생성 (비동기)
+     */
+    async generateCharacterImage() {
+        const age = Math.floor(this.state.ageInMonths / 12);
+        const totalAssets = this.state.cash + this.state.stocks + this.state.property;
+
+        // 1. 상태에 따른 프롬프트 생성
+        let ageDesc = `${age}세`;
+        if (age < 30) ageDesc = `20대 초반, ${age}세`;
+        else if (age < 40) ageDesc = `30대, ${age}세`;
+        else if (age < 50) ageDesc = `40대 중년, ${age}세`;
+        else if (age < 60) ageDesc = `50대 중년, ${age}세`;
+        else ageDesc = `${age}세 노년`;
+
+        let emotion = "보통 표정의";
+        let clothing = "평범한 옷을 입은";
+        
+        if (totalAssets > 500000000) {
+            emotion = "활짝 웃는 표정의";
+            clothing = this.state.gender === 'male' ? "고급 정장을 입은" : "화려한 드레스를 입은";
+        } else if (totalAssets < 0) {
+            emotion = "슬프고 우울한 표정의";
+            clothing = "낡고 허름한 옷을 입은";
+        }
+
+        const prompt = `(픽사 애니메이션 스타일), ${ageDesc} ${this.state.gender === 'male' ? '남자' : '여자'} 캐릭터, ${emotion}, ${clothing}, (스튜디오 조명), (단색 배경), (상반신 샷)`;
+        
+        // 2. UI 로딩 상태로 변경
+        this.dom.characterLoading.innerText = "캐릭터 생성 중...";
+        this.dom.characterLoading.classList.remove('hidden');
+        this.dom.characterImage.classList.add('hidden');
+        
+        try {
+            // 3. API 호출
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${this.NANO_BANANA_API_KEY}`;
+            
+            const payload = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig: {
+                    responseModalities: ['TEXT', 'IMAGE']
+                },
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API 요청 실패: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+            if (base64Data) {
+                // 4. 성공 시 이미지 표시
+                this.dom.characterImage.src = `data:image/png;base64,${base64Data}`;
+                this.dom.characterImage.classList.remove('hidden');
+                this.dom.characterLoading.classList.add('hidden');
+            } else {
+                throw new Error("API 응답에서 이미지 데이터를 찾을 수 없습니다.");
+            }
+
+        } catch (error) {
+            // 5. 실패 시 오류 메시지 표시
+            console.error("캐릭터 이미지 생성 실패:", error);
+            this.dom.characterLoading.innerText = "(캐릭터 생성 실패)";
+            this.dom.characterLoading.classList.remove('hidden');
+            this.dom.characterLoading.style.color = '#9CA3AF'; // text-gray-400
+            this.dom.characterImage.classList.add('hidden');
+        }
+    }
+}
+// js/main.js
+
+// DOM(HTML) 콘텐츠가 모두 로드되면 게임을 초기화하고 실행합니다.
+window.addEventListener('DOMContentLoaded', () => {
+    // Game 클래스의 인스턴스(실체)를 생성합니다.
+    const game = new Game();
+    
+    // 게임을 초기화합니다 (이벤트 리스너 등 설정).
+    game.init();
+});
+
+
+
+
+
+
+
+
+
+
