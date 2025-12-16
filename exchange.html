@@ -3,59 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>환율의 제왕: 누가 웃고 누가 울까?</title>
-    
-    <!-- Tailwind CSS -->
+    <title>환율 보드게임 (교실용)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
-    <!-- Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-
     <style>
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
-            background-color: #f0f9ff;
-            overflow: hidden; /* Prevent scrolling during drag */
-            touch-action: none;
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { font-family: 'Pretendard', sans-serif; background-color: #f0f4f8; overflow: hidden; }
+        
+        /* 팝업 효과 */
+        .pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
-        h1, h2, h3, button, .game-font {
-            font-family: 'Jua', sans-serif;
+
+        /* 말 이동 부드럽게 */
+        .token-transition { transition: all 0.5s ease-in-out; }
+
+        /* --- 3D 주사위 스타일 --- */
+        .scene {
+            width: 200px;
+            height: 200px;
+            perspective: 600px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .card-shadow {
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+        .cube {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: translateZ(-50px);
+            transition: transform 1s;
         }
-        .animate-bounce-short {
-            animation: bounce 0.5s infinite;
+
+        .cube.rolling {
+            animation: spinDice 0.5s infinite linear;
         }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(-5%); }
-            50% { transform: translateY(0); }
+
+        .cube__face {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border: 2px solid #ccc;
+            line-height: 100px;
+            font-size: 40px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            background: white;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .zone-gradient-good {
-            background: linear-gradient(135deg, #dcfce7 0%, #86efac 100%);
+
+        /* 주사위 눈 배치 */
+        .cube__face--1  { transform: rotateY(  0deg) translateZ(50px); }
+        .cube__face--2  { transform: rotateY( 90deg) translateZ(50px); }
+        .cube__face--3  { transform: rotateY(180deg) translateZ(50px); }
+        .cube__face--4  { transform: rotateY(-90deg) translateZ(50px); }
+        .cube__face--5  { transform: rotateX( 90deg) translateZ(50px); }
+        .cube__face--6  { transform: rotateX(-90deg) translateZ(50px); }
+
+        /* 결과에 따른 회전 각도 */
+        .show-1 { transform: translateZ(-50px) rotateY(   0deg); }
+        .show-2 { transform: translateZ(-50px) rotateY( -90deg); }
+        .show-3 { transform: translateZ(-50px) rotateY(-180deg); }
+        .show-4 { transform: translateZ(-50px) rotateY(  90deg); }
+        .show-5 { transform: translateZ(-50px) rotateX( -90deg); }
+        .show-6 { transform: translateZ(-50px) rotateX(  90deg); }
+
+        @keyframes spinDice {
+            0% { transform: translateZ(-50px) rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            100% { transform: translateZ(-50px) rotateX(360deg) rotateY(360deg) rotateZ(360deg); }
         }
-        .zone-gradient-bad {
-            background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%);
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-        .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-        }
+
+        /* 주사위 점 그리기 */
+        .dot { width: 18px; height: 18px; background: #333; border-radius: 50%; display: inline-block; }
+        .face-content { display: grid; width: 100%; height: 100%; padding: 16px; }
+        
+        /* 주사위 면별 점 배치 */
+        .face-1 { display: flex; justify-content: center; align-items: center; }
+        .face-2 { display: flex; justify-content: space-between; }
+        .face-2 .dot:nth-child(2) { align-self: flex-end; }
+        .face-3 { display: flex; justify-content: space-between; }
+        .face-3 .dot:nth-child(2) { align-self: center; }
+        .face-3 .dot:nth-child(3) { align-self: flex-end; }
+        .face-4 { display: flex; flex-wrap: wrap; align-content: space-between; justify-content: space-between; }
+        .face-5 { display: flex; flex-wrap: wrap; align-content: space-between; justify-content: space-between; }
+        .face-5 .dot:nth-child(1), .face-5 .dot:nth-child(2) { margin-bottom: 4px; } 
+        .face-5 { position: relative; }
+        .face-5 .dot:nth-child(5) { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); margin:0; }
+        .face-6 { display: flex; flex-wrap: wrap; align-content: space-between; justify-content: space-between; }
+        .face-6 .dot { margin: 0 4px; } /* 간격 조정 필요시 */
+        /* face-6 grid로 재구현 */
+        .face-grid-6 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; justify-items: center; align-items: center; height: 100%; width: 100%; padding: 10px; }
+
     </style>
 </head>
 <body>
@@ -64,450 +113,500 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- Data ---
-        const CHARACTERS = [
-            { id: 1, name: "수입업자", desc: "외국 물건을 사와서 파는 사장님", icon: "📦", type: "importer" },
-            { id: 2, name: "수출업자", desc: "한국 물건을 외국에 파는 사장님", icon: "🚢", type: "exporter" },
-            { id: 3, name: "외국인 관광객", desc: "한국으로 여행 온 외국인", icon: "📸", type: "foreign_tourist" },
-            { id: 4, name: "해외 여행객", desc: "외국으로 여행 가는 한국인", icon: "✈️", type: "korean_tourist" },
-            { id: 5, name: "유학생 (해외)", desc: "외국에서 공부하는 한국 학생", icon: "🎓", type: "study_abroad" },
-            { id: 6, name: "유학생 (국내)", desc: "한국으로 공부하러 온 외국 학생", icon: "🎒", type: "foreign_student" },
-            { id: 7, name: "외화 월급러", desc: "외국계 기업에서 달러로 월급 받음", icon: "💼", type: "dollar_salary" },
-            { id: 8, name: "원화 월급러(외)", desc: "한국 기업에서 원화로 월급 받는 외국인", icon: "👷", type: "won_salary_foreigner" },
-            { id: 9, name: "달러 투자자", desc: "달러 예금/상품에 투자한 한국인", icon: "💰", type: "dollar_investor" },
-            { id: 10, name: "원화 투자자", desc: "한국 주식/채권에 투자한 외국인", icon: "📉", type: "won_investor" },
-            { id: 11, name: "달러 빚쟁이", desc: "달러로 돈을 빌린 한국인", icon: "💸", type: "dollar_debtor" },
-            { id: 12, name: "원화 빚쟁이", desc: "원화로 돈을 빌린 외국인", icon: "💳", type: "won_debtor" }
+        // --- 아이콘 컴포넌트 ---
+        const Icons = {
+            Trophy: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17"/><path d="M14 14.66V17"/><path d="M12 22v-5"/><path d="M19 21H5a2 2 0 0 1-2-2V6.82a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2Z"/></svg>,
+            Volume2: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
+            VolumeX: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>,
+            Globe: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+            Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+            Flag: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        };
+
+        // --- 3D 주사위 컴포넌트 ---
+        const Dice3D = ({ val, isRolling }) => {
+            const diceClass = isRolling ? 'rolling' : `show-${val}`;
+            
+            return (
+                <div className="scene">
+                    <div className={`cube ${diceClass}`}>
+                        <div className="cube__face cube__face--1">
+                            <div className="face-1"><div className="dot"></div></div>
+                        </div>
+                        <div className="cube__face cube__face--2">
+                             <div className="face-2"><div className="dot"></div><div className="dot"></div></div>
+                        </div>
+                        <div className="cube__face cube__face--3">
+                             <div className="face-3"><div className="dot"></div><div className="dot"></div><div className="dot"></div></div>
+                        </div>
+                        <div className="cube__face cube__face--4">
+                             <div className="face-4"><div className="dot"></div><div className="dot"></div><div className="dot"></div><div className="dot"></div></div>
+                        </div>
+                        <div className="cube__face cube__face--5">
+                             <div className="face-5"><div className="dot"></div><div className="dot"></div><div className="dot"></div><div className="dot"></div><div className="dot"></div></div>
+                        </div>
+                        <div className="cube__face cube__face--6">
+                             <div className="face-grid-6">
+                                 <div className="dot"></div><div className="dot"></div>
+                                 <div className="dot"></div><div className="dot"></div>
+                                 <div className="dot"></div><div className="dot"></div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 데이터 설정 ---
+
+        const TEAM_CONFIG = [
+            { id: 0, name: "1팀", icon: "🐯", color: "bg-red-500", border: "border-red-600" },
+            { id: 1, name: "2팀", icon: "🐰", color: "bg-blue-500", border: "border-blue-600" },
+            { id: 2, name: "3팀", icon: "🐻", color: "bg-green-500", border: "border-green-600" },
+            { id: 3, name: "4팀", icon: "🦊", color: "bg-yellow-500", border: "border-yellow-600" },
+            { id: 4, name: "5팀", icon: "🐧", color: "bg-purple-500", border: "border-purple-600" },
+            { id: 5, name: "6팀", icon: "🐨", color: "bg-pink-500", border: "border-pink-600" },
         ];
 
-        // Logic Helper
-        const checkAdvantage = (charType, scenario) => {
-            const winnersInUp = ['exporter', 'foreign_tourist', 'dollar_salary', 'foreign_student', 'dollar_investor', 'won_debtor'];
-            if (scenario === 'UP') {
-                return winnersInUp.includes(charType);
-            } else {
-                return !winnersInUp.includes(charType);
-            }
+        // 효과음
+        const SOUNDS = {
+            roll: 'https://assets.mixkit.co/active_storage/sfx/2577/2577-preview.mp3',
+            move: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3',
+            correct: 'https://assets.mixkit.co/active_storage/sfx/2579/2579-preview.mp3',
+            wrong: 'https://assets.mixkit.co/active_storage/sfx/2580/2580-preview.mp3',
+            win: 'https://assets.mixkit.co/active_storage/sfx/2581/2581-preview.mp3',
         };
 
-        const getExplanation = (charType, scenario) => {
-            const isAdvantage = checkAdvantage(charType, scenario);
-            
-            if (scenario === 'UP') {
-                if (charType === 'exporter') return "수출 대금으로 받은 1달러를 더 많은 원화(1400원)로 바꿀 수 있어서 이익이에요!";
-                if (charType === 'importer') return "물건을 사올 때 1달러를 주기 위해 더 많은 원화(1400원)가 필요해서 손해예요.";
-                if (charType === 'foreign_tourist') return "달러를 환전하면 더 많은 원화를 받아서 쇼핑하기 좋아요!";
-                if (charType === 'korean_tourist') return "해외에서 1달러를 쓰려면 더 많은 원화를 내야 해서 여행 비용이 비싸져요.";
-                if (charType === 'study_abroad') return "부모님이 보내주신 원화로 달러를 조금밖에 못 바꿔서 생활이 힘들어요.";
-                if (charType === 'foreign_student') return "고국에서 가져온 달러가 원화로 바꾸면 큰 돈이 되어서 부자가 된 기분이에요!";
-                if (charType === 'dollar_salary') return "월급인 달러의 가치가 올라서 원화로 환전하면 보너스 받은 기분!";
-                if (charType === 'won_salary_foreigner') return "받은 원화 월급을 달러로 바꾸면 얼마 안 돼서 송금할 때 손해예요.";
-                if (charType === 'dollar_investor') return "가지고 있는 달러 자산의 원화 가치가 올라서 신나요!";
-                if (charType === 'won_investor') return "투자한 한국 자산을 팔아 달러로 바꾸려니 달러가 너무 비싸서 손해예요.";
-                if (charType === 'dollar_debtor') return "빌린 1달러를 갚기 위해 더 많은 원화를 갚아야 해서 빚이 늘어난 셈이에요.";
-                if (charType === 'won_debtor') return "적은 달러로도 원화 빚을 갚을 수 있어서 빚 갚기가 쉬워졌어요!";
-            } else {
-                 if (charType === 'exporter') return "수출 대금인 달러를 원화로 바꾸면 금액이 줄어들어 손해예요.";
-                if (charType === 'importer') return "적은 원화로도 1달러를 살 수 있어서 수입 원가가 줄어들어 이익이에요!";
-                if (charType === 'foreign_tourist') return "달러를 바꿔도 원화를 조금밖에 못 받아서 한국 물가가 비싸게 느껴져요.";
-                if (charType === 'korean_tourist') return "적은 원화로 달러를 많이 바꿀 수 있어서 면세점 쇼핑하기 좋아요!";
-                if (charType === 'study_abroad') return "같은 원화로 더 많은 달러를 환전할 수 있어서 생활비가 넉넉해요.";
-                if (charType === 'foreign_student') return "가져온 달러의 가치가 떨어져서 한국 생활비가 부족해요.";
-                if (charType === 'dollar_salary') return "월급인 달러를 원화로 바꾸면 평소보다 금액이 적어서 슬퍼요.";
-                if (charType === 'won_salary_foreigner') return "원화 월급을 달러로 바꾸면 더 많은 달러가 되어서 고향에 송금하기 좋아요!";
-                if (charType === 'dollar_investor') return "가지고 있는 달러 자산의 가치가 떨어져서 우울해요.";
-                if (charType === 'won_investor') return "한국 자산 가치가 달러 기준으로 올라서 환차익을 얻을 수 있어요!";
-                if (charType === 'dollar_debtor') return "적은 원화로 달러를 사서 갚을 수 있으니 빚 부담이 줄었어요!";
-                if (charType === 'won_debtor') return "갚아야 할 원화 빚을 위해 더 많은 달러를 환전해야 해서 손해예요.";
-            }
-            return "상황에 따라 달라져요!";
-        };
+        const BOARD_TILES = [
+            { id: 0, name: "출발", type: "start", role: "none", icon: "🚩", bg: "bg-green-100" },
+            { id: 1, name: "수입업자\n(가구판매)", type: "normal", role: "import", icon: "🛋️", bg: "bg-white" },
+            { id: 2, name: "수출업자\n(자동차)", type: "normal", role: "export", icon: "🚗", bg: "bg-white" },
+            { id: 3, name: "방한 외국인\n관광객", type: "normal", role: "export", icon: "📸", bg: "bg-white" },
+            { id: 4, name: "해외 여행\n가는 한국인", type: "normal", role: "import", icon: "✈️", bg: "bg-white" },
+            { id: 5, name: "유학 중인\n한국 학생", type: "normal", role: "import", icon: "🎓", bg: "bg-white" },
+            { id: 6, name: "보너스\n게임", type: "bonus", role: "none", icon: "🎁", bg: "bg-yellow-100" },
 
-        // --- Components ---
+            { id: 7, name: "유학 온\n외국 학생", type: "normal", role: "export", icon: "🎒", bg: "bg-white" },
+            { id: 8, name: "외국계 기업\n한국인(외화월급)", type: "normal", role: "export", icon: "💼", bg: "bg-white" },
+            { id: 9, name: "뒤로 가기", type: "back", role: "none", icon: "🔙", bg: "bg-red-100" },
 
-        function App() {
-            const [gameState, setGameState] = useState('menu'); // menu, playing, result
-            const [scenario, setScenario] = useState(null); // 'UP', 'DOWN'
-            const [score, setScore] = useState(0);
-            const [deck, setDeck] = useState([]);
-            const [currentCardIndex, setCurrentCardIndex] = useState(0);
-            const [feedback, setFeedback] = useState(null); // 'correct', 'wrong'
-            const [history, setHistory] = useState([]);
-            
-            // New States for explanation modal
-            const [showErrorModal, setShowErrorModal] = useState(false);
-            const [currentExplanation, setCurrentExplanation] = useState("");
+            { id: 10, name: "무인도", type: "island", role: "none", icon: "🏝️", bg: "bg-gray-200" },
+            { id: 11, name: "한국 기업\n외국인(원화월급)", type: "normal", role: "import", icon: "👷", bg: "bg-white" },
+            { id: 12, name: "달러 투자\n한국인", type: "normal", role: "export", icon: "💰", bg: "bg-white" },
+            { id: 13, name: "원화 투자\n외국인", type: "normal", role: "import", icon: "📉", bg: "bg-white" },
+            { id: 14, name: "달러 빚\n갚는 한국인", type: "normal", role: "import", icon: "💸", bg: "bg-white" },
+            { id: 15, name: "원화 빚\n갚는 외국인", type: "normal", role: "export", icon: "🏦", bg: "bg-white" },
 
-            const startGame = (selectedScenario) => {
-                setScenario(selectedScenario);
-                // Shuffle deck
-                const shuffled = [...CHARACTERS].sort(() => 0.5 - Math.random());
-                setDeck(shuffled);
-                setCurrentCardIndex(0);
-                setScore(0);
-                setHistory([]);
-                setGameState('playing');
-                setShowErrorModal(false);
+            { id: 16, name: "특별\n휴가", type: "rest", role: "none", icon: "🏖️", bg: "bg-blue-100" },
+            { id: 17, name: "기러기\n아빠", type: "normal", role: "import", icon: "👨‍👧‍👦", bg: "bg-white" },
+        ];
+
+        const SITUATION_CARDS = [
+            { type: "UP", label: "환율 상승 📈\n(원화 약세)", desc: "1달러가 1000원 ➔ 1500원!", color: "text-red-600" },
+            { type: "DOWN", label: "환율 하락 📉\n(원화 강세)", desc: "1달러가 1500원 ➔ 1000원!", color: "text-blue-600" },
+        ];
+
+        // --- 메인 앱 ---
+        const App = () => {
+            const [setupMode, setSetupMode] = useState(true);
+            const [teamCount, setTeamCount] = useState(2);
+            const [teams, setTeams] = useState([]);
+            const [currentTurn, setCurrentTurn] = useState(0);
+            const [gameState, setGameState] = useState('ready');
+            const [diceVal, setDiceVal] = useState(1);
+            const [currentCard, setCurrentCard] = useState(null);
+            const [feedback, setFeedback] = useState(null);
+            const [history, setHistory] = useState(["게임을 시작합니다!"]);
+            const [isMuted, setIsMuted] = useState(false);
+            const audioRef = useRef(null);
+
+            const playSound = (key) => {
+                if (!isMuted && audioRef.current) {
+                    audioRef.current.src = SOUNDS[key];
+                    audioRef.current.play().catch(e => console.log('Sound play error'));
+                }
             };
 
-            const handleSort = (direction) => { // 'left' (Bad), 'right' (Good)
-                if (feedback || showErrorModal) return; // Block double interaction
+            const addLog = (msg) => setHistory(prev => [msg, ...prev].slice(0, 1));
 
-                const currentCard = deck[currentCardIndex];
-                const isBenefited = checkAdvantage(currentCard.type, scenario);
+            const startGame = () => {
+                const newTeams = Array.from({ length: teamCount }, (_, i) => ({
+                    ...TEAM_CONFIG[i],
+                    position: 0,
+                    score: 0,
+                    isStuck: false
+                }));
+                setTeams(newTeams);
+                setSetupMode(false);
+            };
+
+            // 수동 게임 종료 함수
+            const finishGame = () => {
+                setGameState('gameover');
+                playSound('win');
+            };
+
+            const rollDice = () => {
+                if (gameState !== 'ready') return;
                 
-                const playerGuessIsBenefit = direction === 'right';
-                const isCorrect = playerGuessIsBenefit === isBenefited;
-                const explanationText = getExplanation(currentCard.type, scenario);
-
-                // Record history
-                setHistory(prev => [...prev, {
-                    ...currentCard,
-                    isCorrect,
-                    explanation: explanationText,
-                    userChoice: playerGuessIsBenefit ? "이득" : "손해",
-                    actualResult: isBenefited ? "이득" : "손해"
-                }]);
-
-                if (isCorrect) {
-                    setScore(s => s + 10);
-                    setFeedback('correct');
-                    // Correct: Move fast
-                    setTimeout(() => {
-                        proceedToNextCard();
-                    }, 800);
-                } else {
-                    setFeedback('wrong');
-                    setCurrentExplanation(explanationText);
-                    // Wrong: Show explanation modal after animation
-                    setTimeout(() => {
-                        setShowErrorModal(true);
-                    }, 600);
+                if (teams[currentTurn].isStuck) {
+                    addLog(`${teams[currentTurn].name}: 무인도에서 휴식 중...`);
+                    setTeams(prev => prev.map((t, i) => i === currentTurn ? { ...t, isStuck: false } : t));
+                    setTimeout(nextTurn, 1500);
+                    return;
                 }
+
+                setGameState('rolling');
+                playSound('roll');
+                
+                // 주사위 굴리기 애니메이션
+                let count = 0;
+                const interval = setInterval(() => {
+                    count++;
+                    if (count > 25) { 
+                        clearInterval(interval);
+                        const final = Math.ceil(Math.random() * 6);
+                        setDiceVal(final);
+                        setGameState('rolled');
+                        setTimeout(() => handleMove(final), 800); 
+                    }
+                }, 80);
             };
 
-            const proceedToNextCard = () => {
+            const handleMove = (steps) => {
+                setGameState('moving');
+                playSound('move');
+
+                const activeTeam = teams[currentTurn];
+                let nextPos = activeTeam.position + steps;
+                let looped = false;
+
+                if (nextPos >= BOARD_TILES.length) {
+                    nextPos = nextPos % BOARD_TILES.length;
+                    looped = true;
+                }
+
+                setTeams(prev => prev.map((t, i) => i === currentTurn ? { ...t, position: nextPos } : t));
+
+                setTimeout(() => {
+                    if (looped) {
+                        addLog(`🎉 출발점 통과! +5점`);
+                        updateScore(5);
+                        playSound('correct');
+                    }
+
+                    const tile = BOARD_TILES[nextPos];
+                    
+                    if (tile.type === 'back') {
+                        addLog("🔙 뒤로 가기 (2칸 후퇴)");
+                        let backPos = nextPos - 2;
+                        if (backPos < 0) backPos = BOARD_TILES.length + backPos;
+                        
+                        setTimeout(() => {
+                            setTeams(prev => prev.map((t, i) => i === currentTurn ? { ...t, position: backPos } : t));
+                            playSound('move');
+                            setTimeout(nextTurn, 1000);
+                        }, 1000);
+
+                    } else if (tile.type === 'island') {
+                        addLog("🏝️ 무인도! 다음 턴 쉽니다.");
+                        setTeams(prev => prev.map((t, i) => i === currentTurn ? { ...t, isStuck: true } : t));
+                        setTimeout(nextTurn, 1500);
+                    } else if (tile.type === 'rest') {
+                        addLog("🏖️ 특별 휴가!");
+                        setTimeout(nextTurn, 1500);
+                    } else if (tile.type === 'bonus') {
+                        addLog("🎁 보너스! +2점");
+                        updateScore(2);
+                        playSound('correct');
+                        setTimeout(nextTurn, 1500);
+                    } else if (tile.type === 'start') {
+                        setTimeout(nextTurn, 1000);
+                    } else {
+                        setGameState('card');
+                        const card = SITUATION_CARDS[Math.floor(Math.random() * SITUATION_CARDS.length)];
+                        setCurrentCard(card);
+                    }
+                }, 1000);
+            };
+
+            const updateScore = (points) => {
+                setTeams(prev => prev.map((t, i) => {
+                    if (i === currentTurn) {
+                        return { ...t, score: t.score + points };
+                    }
+                    return t;
+                }));
+            };
+
+            const checkAnswer = (choice) => {
+                const activeTeam = teams[currentTurn];
+                const tile = BOARD_TILES[activeTeam.position];
+                const card = currentCard;
+
+                let isFavorable = false;
+                let explanation = "";
+
+                if (tile.role === 'export') {
+                    if (card.type === 'UP') {
+                        isFavorable = true;
+                        explanation = "환율 상승! 달러를 원화로 바꿀 때 이득! 👍";
+                    } else {
+                        isFavorable = false;
+                        explanation = "환율 하락! 달러를 원화로 바꿀 때 손해! 😭";
+                    }
+                } else if (tile.role === 'import') {
+                    if (card.type === 'UP') {
+                        isFavorable = false;
+                        explanation = "환율 상승! 달러 살 때 돈이 더 들어요. 💸";
+                    } else {
+                        isFavorable = true;
+                        explanation = "환율 하락! 달러를 싸게 살 수 있어요! 👍";
+                    }
+                }
+
+                const correct = (choice === 'good' && isFavorable) || (choice === 'bad' && !isFavorable);
+
+                if (correct) {
+                    setFeedback({ result: "정답! ⭕", msg: "+1점", desc: explanation, isGood: true });
+                    updateScore(1);
+                    playSound('correct');
+                } else {
+                    setFeedback({ result: "땡! ❌", msg: "점수 없음", desc: explanation, isGood: false });
+                    playSound('wrong');
+                }
+                setGameState('result');
+            };
+
+            const nextTurn = () => {
                 setFeedback(null);
-                setShowErrorModal(false);
-                if (currentCardIndex + 1 < deck.length) {
-                    setCurrentCardIndex(prev => prev + 1);
-                } else {
-                    setGameState('result');
-                }
+                setCurrentCard(null);
+                setGameState('ready');
+                setCurrentTurn(prev => (prev + 1) % teams.length);
             };
 
-            return (
-                <div className="w-full h-screen relative overflow-hidden bg-slate-50">
-                    {/* Background Deco */}
-                    <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none z-0">
-                        <div className="absolute top-10 left-10 text-9xl">💸</div>
-                        <div className="absolute bottom-10 right-10 text-9xl">📈</div>
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[20rem] text-blue-200 opacity-20">₩</div>
-                    </div>
+            const getGridStyle = (idx) => {
+                let col, row;
+                if (idx <= 6) { // Top row
+                    col = idx + 1; row = 1;
+                } else if (idx <= 8) { // Right col
+                    col = 7; row = idx - 5;
+                } else if (idx <= 15) { // Bottom row
+                    col = 7 - (idx - 9); row = 4;
+                } else { // Left col
+                    col = 1; row = 4 - (idx - 15);
+                }
+                return { gridColumn: col, gridRow: row };
+            };
 
-                    <div className="relative z-10 w-full h-full flex flex-col">
-                        {/* Header */}
-                        <header className="p-4 flex justify-between items-center bg-white/80 backdrop-blur-md shadow-sm z-20">
-                            <h1 
-                                onClick={() => setGameState('menu')}
-                                className="text-xl md:text-2xl font-bold text-blue-600 flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                            >
-                                <span>💰</span> 환율의 제왕
+            // --- 렌더링 ---
+            if (setupMode) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-indigo-900 text-white p-4">
+                        <div className="bg-white/10 backdrop-blur-lg p-10 rounded-3xl shadow-2xl text-center border border-white/20 max-w-xl w-full">
+                            <h1 className="text-4xl font-black mb-2 text-yellow-400 drop-shadow-lg flex items-center justify-center gap-2">
+                                <Icons.Globe /> 환율 보드게임
                             </h1>
-                            {gameState === 'playing' && (
-                                <div className="flex items-center gap-2">
-                                    <button 
-                                        onClick={() => setGameState('menu')}
-                                        className="flex items-center gap-1 bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-xl text-sm font-bold shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
-                                    >
-                                        <span>🔄</span>
-                                        <span className="hidden sm:inline">다시하기</span>
-                                    </button>
-                                    <div className="font-bold text-lg bg-yellow-100 px-4 py-1.5 rounded-full text-yellow-700 shadow-inner min-w-[60px] text-center">
-                                        {score}점
-                                    </div>
-                                </div>
-                            )}
-                        </header>
-
-                        {/* Main Content */}
-                        <main className="flex-1 w-full max-w-lg mx-auto p-4 flex flex-col justify-center">
-                            {gameState === 'menu' && <Menu onStart={startGame} />}
-                            {gameState === 'playing' && (
-                                <GameLoop 
-                                    scenario={scenario}
-                                    card={deck[currentCardIndex]}
-                                    onSort={handleSort}
-                                    feedback={feedback}
-                                    remaining={deck.length - currentCardIndex}
-                                    total={deck.length}
-                                />
-                            )}
-                            {gameState === 'result' && (
-                                <Result 
-                                    score={score} 
-                                    history={history} 
-                                    scenario={scenario} 
-                                    onRestart={() => setGameState('menu')} 
-                                />
-                            )}
-                        </main>
-
-                        {/* Explanation Modal (Only for wrong answers) */}
-                        {showErrorModal && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay animate-fade-in">
-                                <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full animate-fade-in-up border-4 border-red-200">
-                                    <div className="text-center">
-                                        <div className="text-6xl mb-4">😢</div>
-                                        <h3 className="text-2xl font-bold text-red-500 mb-2">앗! 틀렸어요.</h3>
-                                        <div className="bg-gray-50 rounded-xl p-4 text-gray-700 text-lg leading-relaxed mb-6 break-keep">
-                                            {currentExplanation}
-                                        </div>
-                                        <button 
-                                            onClick={proceedToNextCard}
-                                            className="w-full bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-600 active:scale-95 transition-all text-lg"
-                                        >
-                                            알겠어요! (다음 문제)
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        }
-
-        function Menu({ onStart }) {
-            return (
-                <div className="flex flex-col gap-6 text-center animate-fade-in-up">
-                    <div className="mb-8">
-                        <h2 className="text-4xl font-bold text-gray-800 mb-2">환율, 누구 편일까?</h2>
-                        <p className="text-gray-500">상황을 선택하고 캐릭터를 분류해보세요!</p>
-                    </div>
-                    
-                    <button 
-                        onClick={() => onStart('UP')}
-                        className="group relative overflow-hidden bg-white p-6 rounded-2xl shadow-xl border-2 border-transparent hover:border-red-400 transition-all transform hover:-translate-y-1"
-                    >
-                        <div className="absolute top-0 left-0 w-full h-2 bg-red-400"></div>
-                        <h3 className="text-2xl font-bold text-red-500 mb-2 group-hover:scale-110 transition-transform">환율 상승! 📈</h3>
-                        <p className="text-sm text-gray-500">1달러 = 1,400원</p>
-                        <p className="text-xs text-gray-400 mt-1">(원화 가치 하락, 달러 강세)</p>
-                    </button>
-
-                    <button 
-                        onClick={() => onStart('DOWN')}
-                        className="group relative overflow-hidden bg-white p-6 rounded-2xl shadow-xl border-2 border-transparent hover:border-blue-400 transition-all transform hover:-translate-y-1"
-                    >
-                        <div className="absolute top-0 left-0 w-full h-2 bg-blue-400"></div>
-                        <h3 className="text-2xl font-bold text-blue-500 mb-2 group-hover:scale-110 transition-transform">환율 하락! 📉</h3>
-                        <p className="text-sm text-gray-500">1달러 = 1,000원</p>
-                        <p className="text-xs text-gray-400 mt-1">(원화 가치 상승, 달러 약세)</p>
-                    </button>
-                    
-                    <div className="mt-8 text-sm text-gray-400">
-                        캐릭터 카드를 드래그하거나 버튼을 눌러 분류하세요.
-                    </div>
-                </div>
-            );
-        }
-
-        function GameLoop({ scenario, card, onSort, feedback, remaining, total }) {
-            // Drag Logic
-            const [dragX, setDragX] = useState(0);
-            const cardRef = useRef(null);
-            
-            const handleTouchStart = (e) => {
-                if (feedback) return; // Prevent drag during feedback
-                const touch = e.touches[0];
-                cardRef.current.startX = touch.clientX;
-            };
-
-            const handleTouchMove = (e) => {
-                if (!cardRef.current.startX || feedback) return;
-                const touch = e.touches[0];
-                const deltaX = touch.clientX - cardRef.current.startX;
-                setDragX(deltaX);
-            };
-
-            const handleTouchEnd = () => {
-                if (feedback) return;
-                if (Math.abs(dragX) > 100) {
-                    if (dragX > 0) onSort('right'); // Right = Benefit
-                    else onSort('left'); // Left = Harm
-                }
-                setDragX(0);
-                cardRef.current.startX = null;
-            };
-            
-            // Mouse equivalents
-            const handleMouseDown = (e) => {
-                if (feedback) return;
-                cardRef.current.startX = e.clientX;
-                cardRef.current.isDragging = true;
-            };
-             const handleMouseMove = (e) => {
-                if (!cardRef.current.isDragging || feedback) return;
-                const deltaX = e.clientX - cardRef.current.startX;
-                setDragX(deltaX);
-            };
-             const handleMouseUp = () => {
-                if (!cardRef.current.isDragging || feedback) return;
-                if (Math.abs(dragX) > 100) {
-                    if (dragX > 0) onSort('right'); 
-                    else onSort('left');
-                }
-                setDragX(0);
-                cardRef.current.isDragging = false;
-            };
-
-
-            const rotation = dragX / 10;
-            const opacityBad = Math.min(Math.abs(Math.min(dragX, 0)) / 100, 1);
-            const opacityGood = Math.min(Math.abs(Math.max(dragX, 0)) / 100, 1);
-
-            return (
-                <div className="flex flex-col items-center h-full pb-10">
-                    {/* Status Bar */}
-                    <div className="w-full mb-4 flex justify-between items-center px-2">
-                        <span className="text-sm font-bold text-gray-400">남은 카드: {remaining}/{total}</span>
-                        <div className={`px-3 py-1 rounded-full text-sm font-bold border ${scenario === 'UP' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>
-                            현재 상황: {scenario === 'UP' ? '환율 상승 (￦↓ $↑)' : '환율 하락 (￦↑ $↓)'}
-                        </div>
-                    </div>
-
-                    {/* Drag Zones Indicators */}
-                    <div className="absolute inset-0 flex pointer-events-none z-0">
-                        <div className={`w-1/2 h-full flex items-center justify-start pl-4 transition-opacity duration-300 ${dragX < 0 ? 'opacity-50' : 'opacity-0'}`} style={{background: 'linear-gradient(to right, rgba(239, 68, 68, 0.2), transparent)'}}>
-                            <span className="text-4xl font-bold text-red-500 rotate-[-10deg]">😭 손해</span>
-                        </div>
-                        <div className={`w-1/2 h-full flex items-center justify-end pr-4 transition-opacity duration-300 ${dragX > 0 ? 'opacity-50' : 'opacity-0'}`} style={{background: 'linear-gradient(to left, rgba(34, 197, 94, 0.2), transparent)'}}>
-                            <span className="text-4xl font-bold text-green-500 rotate-[10deg]">😆 이득</span>
-                        </div>
-                    </div>
-
-                    {/* Card Area */}
-                    <div className="relative w-full max-w-[320px] aspect-[3/4] flex items-center justify-center">
-                        {/* Current Card */}
-                         <div 
-                            ref={cardRef}
-                            className={`absolute w-full h-full bg-white rounded-3xl card-shadow flex flex-col items-center justify-center p-6 cursor-grab active:cursor-grabbing select-none transition-transform duration-75 border-4 ${feedback === 'correct' ? 'border-green-400 scale-105' : feedback === 'wrong' ? 'border-red-400 shake' : 'border-white'}`}
-                            style={{ transform: `translateX(${dragX}px) rotate(${rotation}deg)` }}
-                            onTouchStart={handleTouchStart}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleTouchEnd}
-                            onMouseDown={handleMouseDown}
-                            onMouseMove={handleMouseMove}
-                            onMouseUp={handleMouseUp}
-                            onMouseLeave={handleMouseUp}
-                        >
-                            {/* Feedback Overlay (for animation before modal) */}
-                            {feedback && (
-                                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 rounded-2xl">
-                                    <div className={`text-6xl animate-bounce ${feedback === 'correct' ? 'text-green-500' : 'text-red-500'}`}>
-                                        {feedback === 'correct' ? '⭕' : '❌'}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="w-32 h-32 bg-gray-50 rounded-full flex items-center justify-center text-7xl mb-6 shadow-inner">
-                                {card.icon}
-                            </div>
-                            <h3 className="text-3xl font-bold text-gray-800 mb-2 text-center break-keep">{card.name}</h3>
-                            <p className="text-center text-gray-500 leading-relaxed word-keep break-keep">{card.desc}</p>
+                            <p className="text-lg text-indigo-200 mb-8">교실 대항전 모드</p>
                             
-                            <div className="mt-8 text-xs text-gray-400 font-mono">DRAG ME!</div>
+                            <div className="mb-8">
+                                <label className="block text-xl font-bold mb-4">참여 팀 수</label>
+                                <div className="flex justify-center gap-3">
+                                    {[2, 3, 4, 5, 6].map(num => (
+                                        <button
+                                            key={num}
+                                            onClick={() => setTeamCount(num)}
+                                            className={`w-14 h-14 rounded-xl text-2xl font-bold transition-all ${teamCount === num ? 'bg-yellow-400 text-indigo-900 scale-110 shadow-lg ring-4 ring-yellow-200' : 'bg-indigo-800 hover:bg-indigo-700'}`}
+                                        >
+                                            {num}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <button onClick={startGame} className="w-full bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 py-5 rounded-2xl text-2xl font-black shadow-xl transition transform active:scale-95">
+                                게임 시작 🚀
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="h-screen flex flex-col bg-[#e0f7fa] overflow-hidden relative select-none">
+                    <audio ref={audioRef} className="hidden" />
+
+                    {/* 상단 점수판 */}
+                    <div className="bg-white shadow-md p-2 flex justify-between items-center z-10 px-4 h-16">
+                        <div className="flex items-center gap-2">
+                             <button 
+                                onClick={finishGame}
+                                className="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm md:text-base shadow-sm active:scale-95 transition flex items-center gap-2"
+                             >
+                                <Icons.Flag /> 경기 종료
+                             </button>
+                             <button onClick={() => setIsMuted(!isMuted)} className="text-slate-400 hover:text-slate-600">
+                                {isMuted ? <Icons.VolumeX /> : <Icons.Volume2 />}
+                            </button>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto items-center no-scrollbar">
+                            {teams.map((team, idx) => (
+                                <div key={idx} className={`flex items-center gap-1 px-3 py-1 rounded-full border-2 transition-all ${idx === currentTurn ? 'bg-yellow-50 border-yellow-400 scale-105 shadow-md ring-2 ring-yellow-200' : 'bg-slate-50 border-slate-200 opacity-60'}`}>
+                                    <span className="text-xl">{team.icon}</span>
+                                    <span className="font-bold text-slate-700 text-sm">{team.name}</span>
+                                    <span className="bg-slate-800 text-white px-2 rounded text-sm font-mono">{team.score}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Control Buttons (Mobile Fallback / Accessibility) */}
-                    <div className="w-full max-w-[320px] flex justify-between gap-4 mt-8 z-10">
-                        <button 
-                            onClick={() => onSort('left')}
-                            disabled={!!feedback}
-                            className="flex-1 bg-white border-2 border-red-100 py-4 rounded-xl shadow-sm hover:bg-red-50 active:scale-95 transition-all flex flex-col items-center gap-1 group disabled:opacity-50"
-                        >
-                            <span className="text-2xl group-hover:-translate-x-1 transition-transform">📉</span>
-                            <span className="font-bold text-red-500">불리해요</span>
-                        </button>
-                        <button 
-                            onClick={() => onSort('right')}
-                            disabled={!!feedback}
-                            className="flex-1 bg-white border-2 border-green-100 py-4 rounded-xl shadow-sm hover:bg-green-50 active:scale-95 transition-all flex flex-col items-center gap-1 group disabled:opacity-50"
-                        >
-                            <span className="text-2xl group-hover:translate-x-1 transition-transform">📈</span>
-                            <span className="font-bold text-green-500">유리해요</span>
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
-        function Result({ score, history, scenario, onRestart }) {
-            return (
-                <div className="flex flex-col h-full animate-fade-in pb-8">
-                    <div className="text-center mb-6">
-                        <h2 className="text-3xl font-bold text-gray-800">게임 종료!</h2>
-                        <div className="text-5xl font-black text-blue-600 my-2">{score}점</div>
-                        <p className="text-gray-500">
-                            {score === 120 ? "환율 전문가시네요! 🏆" : 
-                             score >= 80 ? "경제 감각이 뛰어나요! 🥈" : "조금 더 공부해볼까요? 📚"}
-                        </p>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-                        {history.map((item, idx) => (
-                            <div key={idx} className={`p-4 rounded-xl border-l-4 shadow-sm bg-white ${item.isCorrect ? 'border-green-400' : 'border-red-400'}`}>
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-2xl">{item.icon}</span>
-                                        <span className="font-bold text-gray-800">{item.name}</span>
-                                    </div>
-                                    <span className={`text-xs font-bold px-2 py-1 rounded ${item.isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                        {item.isCorrect ? '정답' : '오답'}
+                    {/* 게임 보드 */}
+                    <div className="flex-1 p-2 relative flex items-center justify-center">
+                        <div className="w-full max-w-[1400px] aspect-[16/9] grid grid-cols-7 grid-rows-4 gap-1 md:gap-2 relative">
+                            
+                            {/* 중앙 정보판 */}
+                            <div className="col-start-2 col-end-7 row-start-2 row-end-4 bg-white/60 rounded-3xl flex flex-col items-center justify-center border-4 border-dashed border-indigo-200 relative">
+                                <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+                                    <Icons.Globe />
+                                </div>
+                                <h1 className="text-3xl md:text-5xl font-black text-indigo-900 tracking-tight mb-2 z-10">환율 보드게임</h1>
+                                <div className="bg-white/80 px-6 py-2 rounded-full shadow-sm z-10 border border-indigo-100">
+                                    <span className="text-lg md:text-xl font-bold text-slate-700 animate-pulse">
+                                        📢 {history[0]}
                                     </span>
                                 </div>
-                                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg leading-relaxed">
-                                    <span className="font-bold text-blue-600 block mb-1">왜 {item.actualResult}일까?</span>
-                                    {item.explanation}
-                                </div>
                             </div>
-                        ))}
+
+                            {/* 칸 렌더링 */}
+                            {BOARD_TILES.map((tile, idx) => (
+                                <div 
+                                    key={idx}
+                                    style={getGridStyle(idx)}
+                                    className={`relative border-2 md:border-4 rounded-xl flex flex-col items-center justify-center text-center p-1 shadow-sm transition-colors ${tile.bg} ${idx === teams[currentTurn].position ? 'border-yellow-400 bg-yellow-50 ring-2 ring-yellow-200' : 'border-slate-300'}`}
+                                >
+                                    <div className="text-2xl md:text-3xl mb-1">{tile.icon}</div>
+                                    <div className="font-bold text-[10px] md:text-xs text-slate-800 break-keep leading-tight">{tile.name}</div>
+                                    
+                                    {/* 말 표시 */}
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div className="grid grid-cols-2 gap-0.5 md:gap-1 p-1 w-full h-full content-center justify-items-center">
+                                            {teams.map((team, tIdx) => (
+                                                team.position === idx && (
+                                                    <div key={tIdx} className={`w-6 h-6 md:w-10 md:h-10 rounded-full shadow-lg flex items-center justify-center text-sm md:text-xl border-2 border-white token-transition ${team.color} z-10`} style={{ transform: tIdx === currentTurn ? 'scale(1.2) translateY(-5px)' : 'scale(1)' }}>
+                                                        {team.icon}
+                                                    </div>
+                                                )
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    <button 
-                        onClick={onRestart}
-                        className="w-full mt-4 bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all"
-                    >
-                        다시 하기
-                    </button>
+                    {/* 하단 컨트롤 (Roll Button) */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+                        {gameState === 'ready' && (
+                             <button 
+                                onClick={rollDice}
+                                className={`flex flex-col items-center justify-center w-24 h-24 md:w-32 md:h-32 rounded-full shadow-2xl border-4 md:border-8 border-white transition-transform hover:scale-105 active:scale-95 ${teams[currentTurn].color} animate-bounce`}
+                            >
+                                <span className="text-3xl md:text-4xl mb-1">🎲</span>
+                                <span className="text-white font-black text-sm md:text-lg">굴리기</span>
+                            </button>
+                        )}
+                    </div>
+
+                    {/* --- 오버레이 화면들 --- */}
+
+                    {/* 1. 주사위 굴리는 화면 (3D 주사위) */}
+                    {(gameState === 'rolling' || gameState === 'rolled') && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+                            <div className="text-center pop-in flex flex-col items-center">
+                                <div className="text-white text-2xl font-bold mb-10">{teams[currentTurn].name} 차례!</div>
+                                <Dice3D val={diceVal} isRolling={gameState === 'rolling'} />
+                                {gameState === 'rolled' && <div className="mt-12 text-5xl font-black text-yellow-400 animate-bounce">{diceVal}</div>}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 2. 카드 등장 */}
+                    {gameState === 'card' && currentCard && (
+                        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full text-center shadow-2xl border-8 border-indigo-100 pop-in">
+                                <h2 className="text-xl md:text-2xl font-bold text-slate-500 mb-4">🔔 상황 발생!</h2>
+                                <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-6 mb-6">
+                                    <div className={`text-2xl md:text-4xl font-black mb-2 ${currentCard.color}`}>{currentCard.label}</div>
+                                    <p className="text-lg md:text-xl text-slate-600">{currentCard.desc}</p>
+                                </div>
+                                <div className="text-xl md:text-2xl font-bold text-slate-800 mb-6 bg-yellow-100 py-4 rounded-xl shadow-sm">
+                                    {teams[currentTurn].icon} <span className="text-indigo-700 underline underline-offset-4 decoration-4 decoration-indigo-300">
+                                        {BOARD_TILES[teams[currentTurn].position].name.replace('\n', ' ')}
+                                    </span>에게 유리할까요?
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button onClick={() => checkAnswer('good')} className="bg-blue-100 hover:bg-blue-200 text-blue-700 py-4 md:py-6 rounded-2xl text-xl md:text-2xl font-bold border-b-4 border-blue-300 active:translate-y-1">
+                                        👍 유리해요
+                                    </button>
+                                    <button onClick={() => checkAnswer('bad')} className="bg-red-100 hover:bg-red-200 text-red-700 py-4 md:py-6 rounded-2xl text-xl md:text-2xl font-bold border-b-4 border-red-300 active:translate-y-1">
+                                        👎 불리해요
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 3. 결과 화면 */}
+                    {gameState === 'result' && feedback && (
+                        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={nextTurn}>
+                            <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl pop-in cursor-pointer border-4 border-white">
+                                <div className="text-6xl md:text-8xl mb-4">{feedback.isGood ? '🎉' : '💥'}</div>
+                                <h2 className="text-3xl md:text-4xl font-black mb-2 text-indigo-900">{feedback.result}</h2>
+                                <p className="text-xl md:text-2xl font-bold text-pink-500 mb-6">{feedback.msg}</p>
+                                <div className="bg-slate-100 p-4 rounded-xl text-left text-base md:text-lg text-slate-700 font-medium">
+                                    💡 {feedback.desc}
+                                </div>
+                                <p className="mt-6 text-slate-400 text-sm animate-pulse">화면을 클릭하면 넘어갑니다</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 4. 최종 결과 순위표 */}
+                    {gameState === 'gameover' && (
+                        <div className="fixed inset-0 bg-indigo-900/95 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-[2rem] p-8 max-w-2xl w-full text-center shadow-2xl pop-in overflow-hidden relative">
+                                <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500"></div>
+                                <div className="mx-auto text-yellow-400 mb-4 animate-bounce w-20 h-20"><Icons.Trophy /></div>
+                                <h1 className="text-4xl md:text-5xl font-black mb-8 text-indigo-900">최종 순위 발표</h1>
+                                
+                                <div className="grid gap-3 mb-8 overflow-y-auto max-h-[50vh]">
+                                    {[...teams].sort((a, b) => b.score - a.score).map((team, idx) => (
+                                        <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border-2 ${idx === 0 ? 'bg-yellow-50 border-yellow-400 scale-[1.02] shadow-lg ring-4 ring-yellow-100 z-10' : 'bg-slate-50 border-slate-200'}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl font-bold text-white ${idx === 0 ? 'bg-yellow-400' : idx === 1 ? 'bg-slate-300' : idx === 2 ? 'bg-amber-600' : 'bg-slate-200 text-slate-500'}`}>
+                                                    {idx + 1}
+                                                </div>
+                                                <div className="flex flex-col items-start">
+                                                    <span className="text-2xl md:text-3xl">{team.icon}</span>
+                                                </div>
+                                                <span className="font-bold text-lg md:text-xl text-slate-700">{team.name}</span>
+                                            </div>
+                                            <div className="text-2xl md:text-3xl font-black text-indigo-600">{team.score}점</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <button onClick={() => window.location.reload()} className="w-full bg-indigo-600 text-white py-4 rounded-xl text-xl font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-2 shadow-lg">
+                                    <Icons.Refresh /> 새로운 게임 시작
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
-        }
+        };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-    
-    <style>
-        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0) rotate(-1deg); }
-            20%, 80% { transform: translate3d(2px, 0, 0) rotate(2deg); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0) rotate(-4deg); }
-            40%, 60% { transform: translate3d(4px, 0, 0) rotate(4deg); }
-        }
-        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
-        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Custom Scrollbar */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    </style>
 </body>
 </html>
