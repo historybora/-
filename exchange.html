@@ -52,6 +52,10 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.5);
         }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
     </style>
 </head>
 <body>
@@ -77,19 +81,8 @@
         ];
 
         // Logic Helper
-        // Scenario: 'UP' (Rate Rises, Won Weak), 'DOWN' (Rate Falls, Won Strong)
         const checkAdvantage = (charType, scenario) => {
             const winnersInUp = ['exporter', 'foreign_tourist', 'dollar_salary', 'foreign_student', 'dollar_investor', 'won_debtor'];
-            // logic: 
-            // Exporter: Gets dollars, converts to MORE won. (Good)
-            // Foreign Tourist: 1 Dollar changes to MORE won. Cheap travel. (Good)
-            // Dollar Salary: Earns dollars, converts to MORE won. (Good)
-            // Foreign Student: Brings dollars, gets MORE won. (Good)
-            // Dollar Investor: Value of dollar asset goes UP. (Good)
-            // Won Debtor (Foreigner): Needs FEWER dollars to pay back won debt. (Good)
-
-            // Winners in Down are the opposite (Importers, etc)
-            
             if (scenario === 'UP') {
                 return winnersInUp.includes(charType);
             } else {
@@ -99,7 +92,6 @@
 
         const getExplanation = (charType, scenario) => {
             const isAdvantage = checkAdvantage(charType, scenario);
-            const action = scenario === 'UP' ? "환율 상승 (1$ = 1400원)" : "환율 하락 (1$ = 1000원)";
             
             if (scenario === 'UP') {
                 if (charType === 'exporter') return "수출 대금으로 받은 1달러를 더 많은 원화(1400원)로 바꿀 수 있어서 이익이에요!";
@@ -115,7 +107,6 @@
                 if (charType === 'dollar_debtor') return "빌린 1달러를 갚기 위해 더 많은 원화를 갚아야 해서 빚이 늘어난 셈이에요.";
                 if (charType === 'won_debtor') return "적은 달러로도 원화 빚을 갚을 수 있어서 빚 갚기가 쉬워졌어요!";
             } else {
-                // Scenario DOWN
                  if (charType === 'exporter') return "수출 대금인 달러를 원화로 바꾸면 금액이 줄어들어 손해예요.";
                 if (charType === 'importer') return "적은 원화로도 1달러를 살 수 있어서 수입 원가가 줄어들어 이익이에요!";
                 if (charType === 'foreign_tourist') return "달러를 바꿔도 원화를 조금밖에 못 받아서 한국 물가가 비싸게 느껴져요.";
@@ -142,6 +133,10 @@
             const [currentCardIndex, setCurrentCardIndex] = useState(0);
             const [feedback, setFeedback] = useState(null); // 'correct', 'wrong'
             const [history, setHistory] = useState([]);
+            
+            // New States for explanation modal
+            const [showErrorModal, setShowErrorModal] = useState(false);
+            const [currentExplanation, setCurrentExplanation] = useState("");
 
             const startGame = (selectedScenario) => {
                 setScenario(selectedScenario);
@@ -152,41 +147,53 @@
                 setScore(0);
                 setHistory([]);
                 setGameState('playing');
+                setShowErrorModal(false);
             };
 
             const handleSort = (direction) => { // 'left' (Bad), 'right' (Good)
+                if (feedback || showErrorModal) return; // Block double interaction
+
                 const currentCard = deck[currentCardIndex];
                 const isBenefited = checkAdvantage(currentCard.type, scenario);
                 
-                // Logic: Left is Bad (Harm), Right is Good (Benefit)
                 const playerGuessIsBenefit = direction === 'right';
-                
                 const isCorrect = playerGuessIsBenefit === isBenefited;
-
-                if (isCorrect) {
-                    setScore(s => s + 10);
-                    setFeedback('correct');
-                } else {
-                    setFeedback('wrong');
-                }
+                const explanationText = getExplanation(currentCard.type, scenario);
 
                 // Record history
                 setHistory(prev => [...prev, {
                     ...currentCard,
                     isCorrect,
-                    explanation: getExplanation(currentCard.type, scenario),
+                    explanation: explanationText,
                     userChoice: playerGuessIsBenefit ? "이득" : "손해",
                     actualResult: isBenefited ? "이득" : "손해"
                 }]);
 
-                setTimeout(() => {
-                    setFeedback(null);
-                    if (currentCardIndex + 1 < deck.length) {
-                        setCurrentCardIndex(prev => prev + 1);
-                    } else {
-                        setGameState('result');
-                    }
-                }, 800);
+                if (isCorrect) {
+                    setScore(s => s + 10);
+                    setFeedback('correct');
+                    // Correct: Move fast
+                    setTimeout(() => {
+                        proceedToNextCard();
+                    }, 800);
+                } else {
+                    setFeedback('wrong');
+                    setCurrentExplanation(explanationText);
+                    // Wrong: Show explanation modal after animation
+                    setTimeout(() => {
+                        setShowErrorModal(true);
+                    }, 600);
+                }
+            };
+
+            const proceedToNextCard = () => {
+                setFeedback(null);
+                setShowErrorModal(false);
+                if (currentCardIndex + 1 < deck.length) {
+                    setCurrentCardIndex(prev => prev + 1);
+                } else {
+                    setGameState('result');
+                }
             };
 
             return (
@@ -233,6 +240,27 @@
                                 />
                             )}
                         </main>
+
+                        {/* Explanation Modal (Only for wrong answers) */}
+                        {showErrorModal && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay animate-fade-in">
+                                <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full animate-fade-in-up border-4 border-red-200">
+                                    <div className="text-center">
+                                        <div className="text-6xl mb-4">😢</div>
+                                        <h3 className="text-2xl font-bold text-red-500 mb-2">앗! 틀렸어요.</h3>
+                                        <div className="bg-gray-50 rounded-xl p-4 text-gray-700 text-lg leading-relaxed mb-6 break-keep">
+                                            {currentExplanation}
+                                        </div>
+                                        <button 
+                                            onClick={proceedToNextCard}
+                                            className="w-full bg-red-500 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-600 active:scale-95 transition-all text-lg"
+                                        >
+                                            알겠어요! (다음 문제)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -279,18 +307,20 @@
             const cardRef = useRef(null);
             
             const handleTouchStart = (e) => {
+                if (feedback) return; // Prevent drag during feedback
                 const touch = e.touches[0];
                 cardRef.current.startX = touch.clientX;
             };
 
             const handleTouchMove = (e) => {
-                if (!cardRef.current.startX) return;
+                if (!cardRef.current.startX || feedback) return;
                 const touch = e.touches[0];
                 const deltaX = touch.clientX - cardRef.current.startX;
                 setDragX(deltaX);
             };
 
             const handleTouchEnd = () => {
+                if (feedback) return;
                 if (Math.abs(dragX) > 100) {
                     if (dragX > 0) onSort('right'); // Right = Benefit
                     else onSort('left'); // Left = Harm
@@ -299,18 +329,19 @@
                 cardRef.current.startX = null;
             };
             
-            // Mouse equivalents for desktop testing
+            // Mouse equivalents
             const handleMouseDown = (e) => {
+                if (feedback) return;
                 cardRef.current.startX = e.clientX;
                 cardRef.current.isDragging = true;
             };
              const handleMouseMove = (e) => {
-                if (!cardRef.current.isDragging) return;
+                if (!cardRef.current.isDragging || feedback) return;
                 const deltaX = e.clientX - cardRef.current.startX;
                 setDragX(deltaX);
             };
              const handleMouseUp = () => {
-                if (!cardRef.current.isDragging) return;
+                if (!cardRef.current.isDragging || feedback) return;
                 if (Math.abs(dragX) > 100) {
                     if (dragX > 0) onSort('right'); 
                     else onSort('left');
@@ -359,7 +390,7 @@
                             onMouseUp={handleMouseUp}
                             onMouseLeave={handleMouseUp}
                         >
-                            {/* Feedback Overlay */}
+                            {/* Feedback Overlay (for animation before modal) */}
                             {feedback && (
                                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 rounded-2xl">
                                     <div className={`text-6xl animate-bounce ${feedback === 'correct' ? 'text-green-500' : 'text-red-500'}`}>
@@ -382,14 +413,16 @@
                     <div className="w-full max-w-[320px] flex justify-between gap-4 mt-8 z-10">
                         <button 
                             onClick={() => onSort('left')}
-                            className="flex-1 bg-white border-2 border-red-100 py-4 rounded-xl shadow-sm hover:bg-red-50 active:scale-95 transition-all flex flex-col items-center gap-1 group"
+                            disabled={!!feedback}
+                            className="flex-1 bg-white border-2 border-red-100 py-4 rounded-xl shadow-sm hover:bg-red-50 active:scale-95 transition-all flex flex-col items-center gap-1 group disabled:opacity-50"
                         >
                             <span className="text-2xl group-hover:-translate-x-1 transition-transform">📉</span>
                             <span className="font-bold text-red-500">불리해요</span>
                         </button>
                         <button 
                             onClick={() => onSort('right')}
-                            className="flex-1 bg-white border-2 border-green-100 py-4 rounded-xl shadow-sm hover:bg-green-50 active:scale-95 transition-all flex flex-col items-center gap-1 group"
+                            disabled={!!feedback}
+                            className="flex-1 bg-white border-2 border-green-100 py-4 rounded-xl shadow-sm hover:bg-green-50 active:scale-95 transition-all flex flex-col items-center gap-1 group disabled:opacity-50"
                         >
                             <span className="text-2xl group-hover:translate-x-1 transition-transform">📈</span>
                             <span className="font-bold text-green-500">유리해요</span>
