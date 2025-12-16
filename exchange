@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>환율의 제왕: 누가 웃고 누가 울까?</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f9ff;
+            overflow: hidden; /* Prevent scrolling during drag */
+            touch-action: none;
+        }
+        h1, h2, h3, button, .game-font {
+            font-family: 'Jua', sans-serif;
+        }
+        .card-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .animate-bounce-short {
+            animation: bounce 0.5s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-5%); }
+            50% { transform: translateY(0); }
+        }
+        .zone-gradient-good {
+            background: linear-gradient(135deg, #dcfce7 0%, #86efac 100%);
+        }
+        .zone-gradient-bad {
+            background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- Data ---
+        const CHARACTERS = [
+            { id: 1, name: "수입업자", desc: "외국 물건을 사와서 파는 사장님", icon: "📦", type: "importer" },
+            { id: 2, name: "수출업자", desc: "한국 물건을 외국에 파는 사장님", icon: "🚢", type: "exporter" },
+            { id: 3, name: "외국인 관광객", desc: "한국으로 여행 온 외국인", icon: "📸", type: "foreign_tourist" },
+            { id: 4, name: "해외 여행객", desc: "외국으로 여행 가는 한국인", icon: "✈️", type: "korean_tourist" },
+            { id: 5, name: "유학생 (해외)", desc: "외국에서 공부하는 한국 학생", icon: "🎓", type: "study_abroad" },
+            { id: 6, name: "유학생 (국내)", desc: "한국으로 공부하러 온 외국 학생", icon: "🎒", type: "foreign_student" },
+            { id: 7, name: "외화 월급러", desc: "외국계 기업에서 달러로 월급 받음", icon: "💼", type: "dollar_salary" },
+            { id: 8, name: "원화 월급러(외)", desc: "한국 기업에서 원화로 월급 받는 외국인", icon: "👷", type: "won_salary_foreigner" },
+            { id: 9, name: "달러 투자자", desc: "달러 예금/상품에 투자한 한국인", icon: "💰", type: "dollar_investor" },
+            { id: 10, name: "원화 투자자", desc: "한국 주식/채권에 투자한 외국인", icon: "📉", type: "won_investor" },
+            { id: 11, name: "달러 빚쟁이", desc: "달러로 돈을 빌린 한국인", icon: "💸", type: "dollar_debtor" },
+            { id: 12, name: "원화 빚쟁이", desc: "원화로 돈을 빌린 외국인", icon: "💳", type: "won_debtor" }
+        ];
+
+        // Logic Helper
+        // Scenario: 'UP' (Rate Rises, Won Weak), 'DOWN' (Rate Falls, Won Strong)
+        const checkAdvantage = (charType, scenario) => {
+            const winnersInUp = ['exporter', 'foreign_tourist', 'dollar_salary', 'foreign_student', 'dollar_investor', 'won_debtor'];
+            // logic: 
+            // Exporter: Gets dollars, converts to MORE won. (Good)
+            // Foreign Tourist: 1 Dollar changes to MORE won. Cheap travel. (Good)
+            // Dollar Salary: Earns dollars, converts to MORE won. (Good)
+            // Foreign Student: Brings dollars, gets MORE won. (Good)
+            // Dollar Investor: Value of dollar asset goes UP. (Good)
+            // Won Debtor (Foreigner): Needs FEWER dollars to pay back won debt. (Good)
+
+            // Winners in Down are the opposite (Importers, etc)
+            
+            if (scenario === 'UP') {
+                return winnersInUp.includes(charType);
+            } else {
+                return !winnersInUp.includes(charType);
+            }
+        };
+
+        const getExplanation = (charType, scenario) => {
+            const isAdvantage = checkAdvantage(charType, scenario);
+            const action = scenario === 'UP' ? "환율 상승 (1$ = 1400원)" : "환율 하락 (1$ = 1000원)";
+            
+            if (scenario === 'UP') {
+                if (charType === 'exporter') return "수출 대금으로 받은 1달러를 더 많은 원화(1400원)로 바꿀 수 있어서 이익이에요!";
+                if (charType === 'importer') return "물건을 사올 때 1달러를 주기 위해 더 많은 원화(1400원)가 필요해서 손해예요.";
+                if (charType === 'foreign_tourist') return "달러를 환전하면 더 많은 원화를 받아서 쇼핑하기 좋아요!";
+                if (charType === 'korean_tourist') return "해외에서 1달러를 쓰려면 더 많은 원화를 내야 해서 여행 비용이 비싸져요.";
+                if (charType === 'study_abroad') return "부모님이 보내주신 원화로 달러를 조금밖에 못 바꿔서 생활이 힘들어요.";
+                if (charType === 'foreign_student') return "고국에서 가져온 달러가 원화로 바꾸면 큰 돈이 되어서 부자가 된 기분이에요!";
+                if (charType === 'dollar_salary') return "월급인 달러의 가치가 올라서 원화로 환전하면 보너스 받은 기분!";
+                if (charType === 'won_salary_foreigner') return "받은 원화 월급을 달러로 바꾸면 얼마 안 돼서 송금할 때 손해예요.";
+                if (charType === 'dollar_investor') return "가지고 있는 달러 자산의 원화 가치가 올라서 신나요!";
+                if (charType === 'won_investor') return "투자한 한국 자산을 팔아 달러로 바꾸려니 달러가 너무 비싸서 손해예요.";
+                if (charType === 'dollar_debtor') return "빌린 1달러를 갚기 위해 더 많은 원화를 갚아야 해서 빚이 늘어난 셈이에요.";
+                if (charType === 'won_debtor') return "적은 달러로도 원화 빚을 갚을 수 있어서 빚 갚기가 쉬워졌어요!";
+            } else {
+                // Scenario DOWN
+                 if (charType === 'exporter') return "수출 대금인 달러를 원화로 바꾸면 금액이 줄어들어 손해예요.";
+                if (charType === 'importer') return "적은 원화로도 1달러를 살 수 있어서 수입 원가가 줄어들어 이익이에요!";
+                if (charType === 'foreign_tourist') return "달러를 바꿔도 원화를 조금밖에 못 받아서 한국 물가가 비싸게 느껴져요.";
+                if (charType === 'korean_tourist') return "적은 원화로 달러를 많이 바꿀 수 있어서 면세점 쇼핑하기 좋아요!";
+                if (charType === 'study_abroad') return "같은 원화로 더 많은 달러를 환전할 수 있어서 생활비가 넉넉해요.";
+                if (charType === 'foreign_student') return "가져온 달러의 가치가 떨어져서 한국 생활비가 부족해요.";
+                if (charType === 'dollar_salary') return "월급인 달러를 원화로 바꾸면 평소보다 금액이 적어서 슬퍼요.";
+                if (charType === 'won_salary_foreigner') return "원화 월급을 달러로 바꾸면 더 많은 달러가 되어서 고향에 송금하기 좋아요!";
+                if (charType === 'dollar_investor') return "가지고 있는 달러 자산의 가치가 떨어져서 우울해요.";
+                if (charType === 'won_investor') return "한국 자산 가치가 달러 기준으로 올라서 환차익을 얻을 수 있어요!";
+                if (charType === 'dollar_debtor') return "적은 원화로 달러를 사서 갚을 수 있으니 빚 부담이 줄었어요!";
+                if (charType === 'won_debtor') return "갚아야 할 원화 빚을 위해 더 많은 달러를 환전해야 해서 손해예요.";
+            }
+            return "상황에 따라 달라져요!";
+        };
+
+        // --- Components ---
+
+        function App() {
+            const [gameState, setGameState] = useState('menu'); // menu, playing, result
+            const [scenario, setScenario] = useState(null); // 'UP', 'DOWN'
+            const [score, setScore] = useState(0);
+            const [deck, setDeck] = useState([]);
+            const [currentCardIndex, setCurrentCardIndex] = useState(0);
+            const [feedback, setFeedback] = useState(null); // 'correct', 'wrong'
+            const [history, setHistory] = useState([]);
+
+            const startGame = (selectedScenario) => {
+                setScenario(selectedScenario);
+                // Shuffle deck
+                const shuffled = [...CHARACTERS].sort(() => 0.5 - Math.random());
+                setDeck(shuffled);
+                setCurrentCardIndex(0);
+                setScore(0);
+                setHistory([]);
+                setGameState('playing');
+            };
+
+            const handleSort = (direction) => { // 'left' (Bad), 'right' (Good)
+                const currentCard = deck[currentCardIndex];
+                const isBenefited = checkAdvantage(currentCard.type, scenario);
+                
+                // Logic: Left is Bad (Harm), Right is Good (Benefit)
+                const playerGuessIsBenefit = direction === 'right';
+                
+                const isCorrect = playerGuessIsBenefit === isBenefited;
+
+                if (isCorrect) {
+                    setScore(s => s + 10);
+                    setFeedback('correct');
+                } else {
+                    setFeedback('wrong');
+                }
+
+                // Record history
+                setHistory(prev => [...prev, {
+                    ...currentCard,
+                    isCorrect,
+                    explanation: getExplanation(currentCard.type, scenario),
+                    userChoice: playerGuessIsBenefit ? "이득" : "손해",
+                    actualResult: isBenefited ? "이득" : "손해"
+                }]);
+
+                setTimeout(() => {
+                    setFeedback(null);
+                    if (currentCardIndex + 1 < deck.length) {
+                        setCurrentCardIndex(prev => prev + 1);
+                    } else {
+                        setGameState('result');
+                    }
+                }, 800);
+            };
+
+            return (
+                <div className="w-full h-screen relative overflow-hidden bg-slate-50">
+                    {/* Background Deco */}
+                    <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none z-0">
+                        <div className="absolute top-10 left-10 text-9xl">💸</div>
+                        <div className="absolute bottom-10 right-10 text-9xl">📈</div>
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[20rem] text-blue-200 opacity-20">₩</div>
+                    </div>
+
+                    <div className="relative z-10 w-full h-full flex flex-col">
+                        {/* Header */}
+                        <header className="p-4 flex justify-between items-center bg-white/80 backdrop-blur-md shadow-sm">
+                            <h1 className="text-xl md:text-2xl font-bold text-blue-600 flex items-center gap-2">
+                                <span>💰</span> 환율의 제왕
+                            </h1>
+                            {gameState === 'playing' && (
+                                <div className="font-bold text-lg bg-yellow-100 px-4 py-1 rounded-full text-yellow-700 shadow-inner">
+                                    점수: {score}
+                                </div>
+                            )}
+                        </header>
+
+                        {/* Main Content */}
+                        <main className="flex-1 w-full max-w-lg mx-auto p-4 flex flex-col justify-center">
+                            {gameState === 'menu' && <Menu onStart={startGame} />}
+                            {gameState === 'playing' && (
+                                <GameLoop 
+                                    scenario={scenario}
+                                    card={deck[currentCardIndex]}
+                                    onSort={handleSort}
+                                    feedback={feedback}
+                                    remaining={deck.length - currentCardIndex}
+                                    total={deck.length}
+                                />
+                            )}
+                            {gameState === 'result' && (
+                                <Result 
+                                    score={score} 
+                                    history={history} 
+                                    scenario={scenario} 
+                                    onRestart={() => setGameState('menu')} 
+                                />
+                            )}
+                        </main>
+                    </div>
+                </div>
+            );
+        }
+
+        function Menu({ onStart }) {
+            return (
+                <div className="flex flex-col gap-6 text-center animate-fade-in-up">
+                    <div className="mb-8">
+                        <h2 className="text-4xl font-bold text-gray-800 mb-2">환율, 누구 편일까?</h2>
+                        <p className="text-gray-500">상황을 선택하고 캐릭터를 분류해보세요!</p>
+                    </div>
+                    
+                    <button 
+                        onClick={() => onStart('UP')}
+                        className="group relative overflow-hidden bg-white p-6 rounded-2xl shadow-xl border-2 border-transparent hover:border-red-400 transition-all transform hover:-translate-y-1"
+                    >
+                        <div className="absolute top-0 left-0 w-full h-2 bg-red-400"></div>
+                        <h3 className="text-2xl font-bold text-red-500 mb-2 group-hover:scale-110 transition-transform">환율 상승! 📈</h3>
+                        <p className="text-sm text-gray-500">1달러 = 1,400원</p>
+                        <p className="text-xs text-gray-400 mt-1">(원화 가치 하락, 달러 강세)</p>
+                    </button>
+
+                    <button 
+                        onClick={() => onStart('DOWN')}
+                        className="group relative overflow-hidden bg-white p-6 rounded-2xl shadow-xl border-2 border-transparent hover:border-blue-400 transition-all transform hover:-translate-y-1"
+                    >
+                        <div className="absolute top-0 left-0 w-full h-2 bg-blue-400"></div>
+                        <h3 className="text-2xl font-bold text-blue-500 mb-2 group-hover:scale-110 transition-transform">환율 하락! 📉</h3>
+                        <p className="text-sm text-gray-500">1달러 = 1,000원</p>
+                        <p className="text-xs text-gray-400 mt-1">(원화 가치 상승, 달러 약세)</p>
+                    </button>
+                    
+                    <div className="mt-8 text-sm text-gray-400">
+                        캐릭터 카드를 드래그하거나 버튼을 눌러 분류하세요.
+                    </div>
+                </div>
+            );
+        }
+
+        function GameLoop({ scenario, card, onSort, feedback, remaining, total }) {
+            // Drag Logic
+            const [dragX, setDragX] = useState(0);
+            const cardRef = useRef(null);
+            
+            const handleTouchStart = (e) => {
+                const touch = e.touches[0];
+                cardRef.current.startX = touch.clientX;
+            };
+
+            const handleTouchMove = (e) => {
+                if (!cardRef.current.startX) return;
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - cardRef.current.startX;
+                setDragX(deltaX);
+            };
+
+            const handleTouchEnd = () => {
+                if (Math.abs(dragX) > 100) {
+                    if (dragX > 0) onSort('right'); // Right = Benefit
+                    else onSort('left'); // Left = Harm
+                }
+                setDragX(0);
+                cardRef.current.startX = null;
+            };
+            
+            // Mouse equivalents for desktop testing
+            const handleMouseDown = (e) => {
+                cardRef.current.startX = e.clientX;
+                cardRef.current.isDragging = true;
+            };
+             const handleMouseMove = (e) => {
+                if (!cardRef.current.isDragging) return;
+                const deltaX = e.clientX - cardRef.current.startX;
+                setDragX(deltaX);
+            };
+             const handleMouseUp = () => {
+                if (!cardRef.current.isDragging) return;
+                if (Math.abs(dragX) > 100) {
+                    if (dragX > 0) onSort('right'); 
+                    else onSort('left');
+                }
+                setDragX(0);
+                cardRef.current.isDragging = false;
+            };
+
+
+            const rotation = dragX / 10;
+            const opacityBad = Math.min(Math.abs(Math.min(dragX, 0)) / 100, 1);
+            const opacityGood = Math.min(Math.abs(Math.max(dragX, 0)) / 100, 1);
+
+            return (
+                <div className="flex flex-col items-center h-full pb-10">
+                    {/* Status Bar */}
+                    <div className="w-full mb-4 flex justify-between items-center px-2">
+                        <span className="text-sm font-bold text-gray-400">남은 카드: {remaining}/{total}</span>
+                        <div className={`px-3 py-1 rounded-full text-sm font-bold border ${scenario === 'UP' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>
+                            현재 상황: {scenario === 'UP' ? '환율 상승 (￦↓ $↑)' : '환율 하락 (￦↑ $↓)'}
+                        </div>
+                    </div>
+
+                    {/* Drag Zones Indicators */}
+                    <div className="absolute inset-0 flex pointer-events-none z-0">
+                        <div className={`w-1/2 h-full flex items-center justify-start pl-4 transition-opacity duration-300 ${dragX < 0 ? 'opacity-50' : 'opacity-0'}`} style={{background: 'linear-gradient(to right, rgba(239, 68, 68, 0.2), transparent)'}}>
+                            <span className="text-4xl font-bold text-red-500 rotate-[-10deg]">😭 손해</span>
+                        </div>
+                        <div className={`w-1/2 h-full flex items-center justify-end pr-4 transition-opacity duration-300 ${dragX > 0 ? 'opacity-50' : 'opacity-0'}`} style={{background: 'linear-gradient(to left, rgba(34, 197, 94, 0.2), transparent)'}}>
+                            <span className="text-4xl font-bold text-green-500 rotate-[10deg]">😆 이득</span>
+                        </div>
+                    </div>
+
+                    {/* Card Area */}
+                    <div className="relative w-full max-w-[320px] aspect-[3/4] flex items-center justify-center">
+                        {/* Current Card */}
+                         <div 
+                            ref={cardRef}
+                            className={`absolute w-full h-full bg-white rounded-3xl card-shadow flex flex-col items-center justify-center p-6 cursor-grab active:cursor-grabbing select-none transition-transform duration-75 border-4 ${feedback === 'correct' ? 'border-green-400 scale-105' : feedback === 'wrong' ? 'border-red-400 shake' : 'border-white'}`}
+                            style={{ transform: `translateX(${dragX}px) rotate(${rotation}deg)` }}
+                            onTouchStart={handleTouchStart}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
+                        >
+                            {/* Feedback Overlay */}
+                            {feedback && (
+                                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 rounded-2xl">
+                                    <div className={`text-6xl animate-bounce ${feedback === 'correct' ? 'text-green-500' : 'text-red-500'}`}>
+                                        {feedback === 'correct' ? '⭕' : '❌'}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="w-32 h-32 bg-gray-50 rounded-full flex items-center justify-center text-7xl mb-6 shadow-inner">
+                                {card.icon}
+                            </div>
+                            <h3 className="text-3xl font-bold text-gray-800 mb-2 text-center break-keep">{card.name}</h3>
+                            <p className="text-center text-gray-500 leading-relaxed word-keep break-keep">{card.desc}</p>
+                            
+                            <div className="mt-8 text-xs text-gray-400 font-mono">DRAG ME!</div>
+                        </div>
+                    </div>
+
+                    {/* Control Buttons (Mobile Fallback / Accessibility) */}
+                    <div className="w-full max-w-[320px] flex justify-between gap-4 mt-8 z-10">
+                        <button 
+                            onClick={() => onSort('left')}
+                            className="flex-1 bg-white border-2 border-red-100 py-4 rounded-xl shadow-sm hover:bg-red-50 active:scale-95 transition-all flex flex-col items-center gap-1 group"
+                        >
+                            <span className="text-2xl group-hover:-translate-x-1 transition-transform">📉</span>
+                            <span className="font-bold text-red-500">불리해요</span>
+                        </button>
+                        <button 
+                            onClick={() => onSort('right')}
+                            className="flex-1 bg-white border-2 border-green-100 py-4 rounded-xl shadow-sm hover:bg-green-50 active:scale-95 transition-all flex flex-col items-center gap-1 group"
+                        >
+                            <span className="text-2xl group-hover:translate-x-1 transition-transform">📈</span>
+                            <span className="font-bold text-green-500">유리해요</span>
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        function Result({ score, history, scenario, onRestart }) {
+            return (
+                <div className="flex flex-col h-full animate-fade-in pb-8">
+                    <div className="text-center mb-6">
+                        <h2 className="text-3xl font-bold text-gray-800">게임 종료!</h2>
+                        <div className="text-5xl font-black text-blue-600 my-2">{score}점</div>
+                        <p className="text-gray-500">
+                            {score === 120 ? "환율 전문가시네요! 🏆" : 
+                             score >= 80 ? "경제 감각이 뛰어나요! 🥈" : "조금 더 공부해볼까요? 📚"}
+                        </p>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                        {history.map((item, idx) => (
+                            <div key={idx} className={`p-4 rounded-xl border-l-4 shadow-sm bg-white ${item.isCorrect ? 'border-green-400' : 'border-red-400'}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl">{item.icon}</span>
+                                        <span className="font-bold text-gray-800">{item.name}</span>
+                                    </div>
+                                    <span className={`text-xs font-bold px-2 py-1 rounded ${item.isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                        {item.isCorrect ? '정답' : '오답'}
+                                    </span>
+                                </div>
+                                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg leading-relaxed">
+                                    <span className="font-bold text-blue-600 block mb-1">왜 {item.actualResult}일까?</span>
+                                    {item.explanation}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <button 
+                        onClick={onRestart}
+                        className="w-full mt-4 bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all"
+                    >
+                        다시 하기
+                    </button>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    
+    <style>
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0) rotate(-1deg); }
+            20%, 80% { transform: translate3d(2px, 0, 0) rotate(2deg); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0) rotate(-4deg); }
+            40%, 60% { transform: translate3d(4px, 0, 0) rotate(4deg); }
+        }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</body>
+</html>
