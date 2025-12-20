@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- 모바일에서도 PC 화면 전체(1600px)를 축소해서 보여줌 -->
+    <!-- 뷰포트 1600px 고정: 모바일에서도 PC 비율 유지 -->
     <meta name="viewport" content="width=1600, user-scalable=yes">
     <title>우당탕탕 환율 대모험</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,9 +15,11 @@
         body { 
             font-family: 'Pretendard', sans-serif; 
             background-color: #e0f2fe; 
-            overflow: hidden; 
-            min-width: 1600px;
-            min-height: 100vh;
+            overflow: hidden; /* 스크롤 방지 */
+            min-width: 1600px; /* 가로 고정 */
+            height: 100dvh; /* 모바일 브라우저 UI 고려한 높이 */
+            margin: 0;
+            padding: 0;
         }
         
         .pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
@@ -92,7 +94,6 @@
         .title-gradient { background: linear-gradient(to right, #ec4899, #ef4444, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .bill-won { display: inline-block; background-color: #86efac; color: #14532d; border: 2px solid #166534; padding: 0 4px; font-weight: bold; font-size: 0.8em; border-radius: 4px; vertical-align: middle; line-height: 1.2; }
         .bill-dollar { display: inline-block; font-size: 1.2em; vertical-align: middle; }
-        
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -449,7 +450,7 @@
                     <audio ref={bgmRef} src={SOUNDS.bgm} loop className="hidden" />
 
                     {/* 상단바 */}
-                    <div className="bg-white/80 backdrop-blur-md shadow-xl p-4 flex justify-between items-center z-10 px-8 h-24 border-b-4 border-white">
+                    <div className="bg-white/80 backdrop-blur-md shadow-xl p-4 flex justify-between items-center z-10 px-8 h-20 md:h-24 border-b-4 border-white shrink-0">
                         <div className="flex items-center gap-6">
                              <button onClick={finishGame} className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-2xl font-black text-2xl shadow-lg transition flex items-center gap-3 hover:scale-105 whitespace-nowrap"><Icons.Flag /> 경기 종료</button>
                              <button onClick={() => setIsMuted(!isMuted)} className="text-slate-400 hover:text-slate-600 transition hover:scale-110">{isMuted ? <Icons.VolumeX /> : <Icons.Volume2 />}</button>
@@ -465,9 +466,9 @@
                         </div>
                     </div>
 
-                    {/* 보드판 */}
-                    <div className="flex-1 p-6 flex items-center justify-center">
-                        <div className="w-full h-full max-w-[1800px] grid grid-cols-7 grid-rows-4 gap-3 relative">
+                    {/* 보드판 영역 (가변 높이, 최소 높이 없음, 중앙 정렬) */}
+                    <div className="flex-1 flex items-center justify-center p-4 md:p-6 min-h-0 overflow-hidden relative">
+                        <div className="w-full h-full max-w-[1800px] grid grid-cols-7 grid-rows-4 gap-3 relative max-h-full">
                             <div className="col-start-2 col-end-7 row-start-2 row-end-4 bg-white/70 backdrop-blur-sm rounded-[3rem] flex flex-col items-center justify-center border-8 border-dashed border-indigo-200">
                                 <h1 className="text-8xl font-black text-indigo-900/10 tracking-tight mb-4 select-none whitespace-nowrap">💵 우당탕탕 환율 대모험 🌏</h1>
                                 <div className="text-3xl font-bold text-slate-500 mb-8 bg-white/80 px-8 py-2 rounded-full border border-slate-300 shadow-sm">
@@ -505,9 +506,10 @@
                         )}
                     </div>
 
+                    {/* 오버레이들 */}
                     {showIslandPopup && (
                         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full text-center shadow-2xl pop-in max-h-[95vh] overflow-y-auto">
+                            <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full text-center shadow-2xl pop-in max-h-[90vh] overflow-y-auto">
                                 <div className="text-[8rem] mb-6">🏝️</div>
                                 <h2 className="text-5xl font-black text-slate-800 mb-6">무인도 도착!</h2>
                                 <p className="text-3xl text-slate-600 font-bold mb-10">이번 턴은 쉬어갑니다 💤</p>
@@ -528,7 +530,7 @@
 
                     {gameState === 'bonus' && bonusQuiz && (
                         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-[3rem] p-8 max-w-3xl w-full text-center shadow-2xl border-[10px] border-yellow-300 pop-in relative max-h-[95vh] overflow-y-auto">
+                            <div className="bg-white rounded-[3rem] p-8 max-w-3xl w-full text-center shadow-2xl border-[10px] border-yellow-300 pop-in relative overflow-hidden max-h-[95vh] overflow-y-auto">
                                 <div className="absolute top-0 left-0 w-full h-8 bg-yellow-300"></div>
                                 <h2 className="text-5xl font-black text-indigo-900 mb-8 mt-4">🎁 보너스 넌센스 퀴즈!</h2>
                                 <div className="bg-indigo-50 p-8 rounded-[2rem] border-4 border-indigo-100 mb-8">
@@ -583,7 +585,7 @@
 
                     {gameState === 'gameover' && (
                         <div className="fixed inset-0 bg-indigo-900/95 z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-[3rem] p-8 max-w-6xl w-full text-center shadow-2xl pop-in relative max-h-[95vh] overflow-y-auto flex flex-col">
+                            <div className="bg-white rounded-[3rem] p-8 max-w-6xl w-full text-center shadow-2xl pop-in relative overflow-hidden h-[85vh] flex flex-col">
                                 <div className="absolute top-0 left-0 w-full h-6 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500"></div>
                                 <h1 className="text-6xl font-black mb-6 text-indigo-900 mt-4">🏆 경기 결과 발표 🏆</h1>
                                 <div className="flex-1 flex items-end justify-center gap-6 pb-8">
