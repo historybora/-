@@ -2,15 +2,24 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>우당탕탕 환율 대모험</title>
+    <!-- 핵심 변경 사항: 뷰포트를 1600px로 고정하여 모바일에서도 PC 화면 전체가 축소되어 보이게 함 -->
+    <meta name="viewport" content="width=1600, user-scalable=yes">
+    <title>우당탕탕 환율 대모험 (PC뷰)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        body { font-family: 'Pretendard', sans-serif; background-color: #e0f2fe; overflow: hidden; }
+        
+        /* PC 레이아웃 강제 유지를 위한 최소 너비 설정 */
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background-color: #e0f2fe; 
+            overflow: hidden; /* 스크롤 방지 */
+            min-width: 1600px; /* PC 해상도 고정 */
+            min-height: 100vh;
+        }
         
         .pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes popIn {
@@ -626,3 +635,4 @@
     </script>
 </body>
 </html>
+
