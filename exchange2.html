@@ -2,8 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- 핵심: 1600px 고정 뷰포트로 모바일에서 자동 축소(꽉 찬 화면) 유도 -->
-    <meta name="viewport" content="width=1600, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>우당탕탕 환율 대모험</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -12,73 +11,92 @@
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         
-        /* PC 해상도 강제 고정 및 배경 설정 */
-        html, body {
+        /* 화면 꽉 채우기 기본 설정 */
+        html, body, #root {
+            width: 100%;
+            height: 100%;
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
-            min-width: 1600px; /* 가로 고정 */
-            min-height: 100vh;
+            overflow: hidden; /* 스크롤 방지 */
             font-family: 'Pretendard', sans-serif;
-            background-color: #fffbeb;
-            background-image: radial-gradient(#fcd34d 2px, transparent 2px);
-            background-size: 40px 40px;
-            overflow: hidden; /* 기본 스크롤 방지 */
+            background-color: #fffbeb; /* 배경색 */
         }
 
-        #root {
-            width: 100%;
-            height: 100%;
+        /* 배경 패턴 (반응형 대응) */
+        .bg-pattern {
+            background-image: radial-gradient(#fcd34d 2px, transparent 2px);
+            background-size: 3vmin 3vmin; /* 패턴 크기도 화면에 비례 */
         }
 
         /* 팝업 애니메이션 */
-        .pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .pop-in { animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-        .rise-up { animation: riseUp 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; transform: translateY(100%); opacity: 0; }
-        @keyframes riseUp { 0% { transform: translateY(100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        .rise-up { animation: riseUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; transform: translateY(100%); opacity: 0; }
+        @keyframes riseUp { to { transform: translateY(0); opacity: 1; } }
 
-        .token-transition { transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .token-transition { transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
-        /* 3D 주사위 스타일 */
-        .scene { width: 150px; height: 150px; perspective: 600px; display: flex; justify-content: center; align-items: center; }
-        .cube { width: 100px; height: 100px; position: relative; transform-style: preserve-3d; transform: translateZ(-50px); transition: transform 1s; }
+        /* 반응형 텍스트 크기 유틸리티 */
+        .text-responsive-xs { font-size: 1.5vmin; }
+        .text-responsive-sm { font-size: 2vmin; }
+        .text-responsive-base { font-size: 2.5vmin; }
+        .text-responsive-lg { font-size: 3vmin; }
+        .text-responsive-xl { font-size: 4vmin; }
+        .text-responsive-2xl { font-size: 5vmin; }
+        .text-responsive-3xl { font-size: 6vmin; }
+        .text-responsive-4xl { font-size: 8vmin; }
+
+        /* 3D 주사위 (반응형 크기) */
+        .scene { width: 15vmin; height: 15vmin; perspective: 600px; display: flex; justify-content: center; align-items: center; }
+        .cube { width: 10vmin; height: 10vmin; position: relative; transform-style: preserve-3d; transform: translateZ(-5vmin); transition: transform 1s; }
         .cube.rolling { animation: spinDice 0.6s infinite linear; }
-        .cube__face { position: absolute; width: 100px; height: 100px; border: 4px solid #e5e7eb; background: white; border-radius: 16px; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 0 20px rgba(0,0,0,0.1); }
-        .cube__face--1  { transform: rotateY(  0deg) translateZ(50px); }
-        .cube__face--2  { transform: rotateY( 90deg) translateZ(50px); }
-        .cube__face--3  { transform: rotateY(180deg) translateZ(50px); }
-        .cube__face--4  { transform: rotateY(-90deg) translateZ(50px); }
-        .cube__face--5  { transform: rotateX( 90deg) translateZ(50px); }
-        .cube__face--6  { transform: rotateX(-90deg) translateZ(50px); }
-        .show-1 { transform: translateZ(-50px) rotateY(   0deg); }
-        .show-2 { transform: translateZ(-50px) rotateY( -90deg); }
-        .show-3 { transform: translateZ(-50px) rotateY(-180deg); }
-        .show-4 { transform: translateZ(-50px) rotateY(  90deg); }
-        .show-5 { transform: translateZ(-50px) rotateX( -90deg); }
-        .show-6 { transform: translateZ(-50px) rotateX(  90deg); }
-        @keyframes spinDice { 0% { transform: translateZ(-50px) rotateX(0deg) rotateY(0deg) rotateZ(0deg); } 100% { transform: translateZ(-50px) rotateX(360deg) rotateY(360deg) rotateZ(360deg); } }
         
-        .dot { width: 20px; height: 20px; background: #1e293b; border-radius: 50%; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.4); }
+        .cube__face {
+            position: absolute; width: 10vmin; height: 10vmin;
+            border: 0.4vmin solid #e5e7eb; background: white; border-radius: 1.5vmin;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: inset 0 0 2vmin rgba(0,0,0,0.1);
+        }
+
+        /* 주사위 면 위치 (vmin 단위로 변경) */
+        .cube__face--1  { transform: rotateY(  0deg) translateZ(5vmin); }
+        .cube__face--2  { transform: rotateY( 90deg) translateZ(5vmin); }
+        .cube__face--3  { transform: rotateY(180deg) translateZ(5vmin); }
+        .cube__face--4  { transform: rotateY(-90deg) translateZ(5vmin); }
+        .cube__face--5  { transform: rotateX( 90deg) translateZ(5vmin); }
+        .cube__face--6  { transform: rotateX(-90deg) translateZ(5vmin); }
+
+        .show-1 { transform: translateZ(-5vmin) rotateY(   0deg); }
+        .show-2 { transform: translateZ(-5vmin) rotateY( -90deg); }
+        .show-3 { transform: translateZ(-5vmin) rotateY(-180deg); }
+        .show-4 { transform: translateZ(-5vmin) rotateY(  90deg); }
+        .show-5 { transform: translateZ(-5vmin) rotateX( -90deg); }
+        .show-6 { transform: translateZ(-5vmin) rotateX(  90deg); }
+
+        @keyframes spinDice { 0% { transform: translateZ(-5vmin) rotateX(0deg) rotateY(0deg) rotateZ(0deg); } 100% { transform: translateZ(-5vmin) rotateX(360deg) rotateY(360deg) rotateZ(360deg); } }
+        
+        .dot { width: 2vmin; height: 2vmin; background: #1e293b; border-radius: 50%; box-shadow: inset 0.1vmin 0.1vmin 0.3vmin rgba(0,0,0,0.4); }
+        
+        /* 주사위 내부 배치 (Flex/Grid) */
         .face-1 { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; }
-        .face-2 { display: flex; justify-content: space-between; padding: 16px; width: 100%; height: 100%; }
+        .face-2 { display: flex; justify-content: space-between; padding: 1.5vmin; width: 100%; height: 100%; }
         .face-2 .dot:nth-child(2) { align-self: flex-end; }
-        .face-3 { display: flex; justify-content: space-between; padding: 16px; width: 100%; height: 100%; }
+        .face-3 { display: flex; justify-content: space-between; padding: 1.5vmin; width: 100%; height: 100%; }
         .face-3 .dot:nth-child(2) { align-self: center; }
         .face-3 .dot:nth-child(3) { align-self: flex-end; }
-        .face-4 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; padding: 16px; width: 100%; height: 100%; justify-items: center; align-items: center; }
+        .face-4 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; padding: 1.5vmin; width: 100%; height: 100%; justify-items: center; align-items: center; }
         .face-5 { position: relative; width: 100%; height: 100%; }
         .face-5 .dot { position: absolute; }
-        .face-5 .dot:nth-child(1) { top: 16px; left: 16px; }
-        .face-5 .dot:nth-child(2) { top: 16px; right: 16px; }
+        .face-5 .dot:nth-child(1) { top: 1.5vmin; left: 1.5vmin; }
+        .face-5 .dot:nth-child(2) { top: 1.5vmin; right: 1.5vmin; }
         .face-5 .dot:nth-child(3) { top: 50%; left: 50%; transform: translate(-50%, -50%); }
-        .face-5 .dot:nth-child(4) { bottom: 16px; left: 16px; }
-        .face-5 .dot:nth-child(5) { bottom: 16px; right: 16px; }
-        .face-6 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 8px; padding: 12px; width: 100%; height: 100%; justify-items: center; align-items: center; }
+        .face-5 .dot:nth-child(4) { bottom: 1.5vmin; left: 1.5vmin; }
+        .face-5 .dot:nth-child(5) { bottom: 1.5vmin; right: 1.5vmin; }
+        .face-6 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 0.8vmin; padding: 1.2vmin; width: 100%; height: 100%; justify-items: center; align-items: center; }
 
         .title-gradient { background: linear-gradient(to right, #ec4899, #ef4444, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .bill-won { display: inline-block; background-color: #86efac; color: #14532d; border: 2px solid #166534; padding: 0 4px; font-weight: bold; font-size: 0.8em; border-radius: 4px; vertical-align: middle; line-height: 1.2; }
+        .bill-won { display: inline-block; background-color: #86efac; color: #14532d; border: 0.2vmin solid #166534; padding: 0 0.4vmin; font-weight: bold; font-size: 0.8em; border-radius: 0.4vmin; vertical-align: middle; line-height: 1.2; }
         .bill-dollar { display: inline-block; font-size: 1.2em; vertical-align: middle; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -90,17 +108,17 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useLayoutEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         // --- 아이콘 ---
         const Icons = {
             Trophy: () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full"><path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" /></svg>,
-            Volume2: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
-            VolumeX: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>,
-            Flag: () => <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>,
-            Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
-            Maximize: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>,
-            Minimize: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+            Volume2: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
+            VolumeX: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>,
+            Flag: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>,
+            Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+            Maximize: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>,
+            Minimize: () => <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
         };
 
         const Dice3D = ({ val, isRolling }) => {
@@ -120,12 +138,12 @@
         };
 
         const TEAM_CONFIG = [
-            { id: 0, name: "1팀", icon: "🐯", color: "bg-red-500", border: "border-red-600", light: "bg-red-100" },
-            { id: 1, name: "2팀", icon: "🐰", color: "bg-blue-500", border: "border-blue-600", light: "bg-blue-100" },
-            { id: 2, name: "3팀", icon: "🐻", color: "bg-green-500", border: "border-green-600", light: "bg-green-100" },
-            { id: 3, name: "4팀", icon: "🦊", color: "bg-yellow-500", border: "border-yellow-600", light: "bg-yellow-100" },
-            { id: 4, name: "5팀", icon: "🐧", color: "bg-purple-500", border: "border-purple-600", light: "bg-purple-100" },
-            { id: 5, name: "6팀", icon: "🐨", color: "bg-pink-500", border: "border-pink-600", light: "bg-pink-100" },
+            { id: 0, name: "1팀", icon: "🐯", color: "bg-red-500", border: "border-red-600" },
+            { id: 1, name: "2팀", icon: "🐰", color: "bg-blue-500", border: "border-blue-600" },
+            { id: 2, name: "3팀", icon: "🐻", color: "bg-green-500", border: "border-green-600" },
+            { id: 3, name: "4팀", icon: "🦊", color: "bg-yellow-500", border: "border-yellow-600" },
+            { id: 4, name: "5팀", icon: "🐧", color: "bg-purple-500", border: "border-purple-600" },
+            { id: 5, name: "6팀", icon: "🐨", color: "bg-pink-500", border: "border-pink-600" },
         ];
 
         const SOUNDS = {
@@ -154,52 +172,23 @@
 
         const BOARD_TILES = [
             { id: 0, name: "출발", type: "start", role: "none", icon: "🚩", scene: "🏁", desc: "시작!", bg: "bg-green-200" },
-            { id: 1, name: "수입 가구점\n사장님", type: "normal", role: "import", icon: "🛋️", 
-              scene: <span>{DollarBill} ➡️ 🛋️</span>, 
-              desc: "달러를 주고 외국 소파를 사와요.", bg: "bg-white" },
-            { id: 2, name: "자동차\n수출 기업", type: "normal", role: "export", icon: "🚗", 
-              scene: <span>🚗 ➡️ {DollarBill}</span>, 
-              desc: "자동차를 팔고 달러를 벌어요.", bg: "bg-white" },
-            { id: 3, name: "방한 외국인\n관광객", type: "normal", role: "export", icon: "📸", 
-              scene: <span>📸 ➡️ {DollarBill}</span>, 
-              desc: <span>한국에 놀러와서<br/>달러를 써요.</span>, bg: "bg-white" },
-            { id: 4, name: "해외 여행\n가는 한국인", type: "normal", role: "import", icon: "✈️", 
-              scene: <span>{DollarBill} ➡️ ✈️</span>, 
-              desc: "해외여행 가서 달러를 써요.", bg: "bg-white" },
-            { id: 5, name: "유학 중인\n한국 학생", type: "normal", role: "import", icon: "🎓", 
-              scene: <span>{DollarBill} ➡️ 🏫</span>, 
-              desc: "미국 학교에 달러로 학비를 내요.", bg: "bg-white" },
+            { id: 1, name: "수입 가구점\n사장님", type: "normal", role: "import", icon: "🛋️", scene: <span>{DollarBill} ➡️ 🛋️</span>, desc: "달러를 주고 외국 소파를 사와요.", bg: "bg-white" },
+            { id: 2, name: "자동차\n수출 기업", type: "normal", role: "export", icon: "🚗", scene: <span>🚗 ➡️ {DollarBill}</span>, desc: "자동차를 팔고 달러를 벌어요.", bg: "bg-white" },
+            { id: 3, name: "방한 외국인\n관광객", type: "normal", role: "export", icon: "📸", scene: <span>📸 ➡️ {DollarBill}</span>, desc: <span>한국에 놀러와서<br/>달러를 써요.</span>, bg: "bg-white" },
+            { id: 4, name: "해외 여행\n가는 한국인", type: "normal", role: "import", icon: "✈️", scene: <span>{DollarBill} ➡️ ✈️</span>, desc: "해외여행 가서 달러를 써요.", bg: "bg-white" },
+            { id: 5, name: "유학 중인\n한국 학생", type: "normal", role: "import", icon: "🎓", scene: <span>{DollarBill} ➡️ 🏫</span>, desc: "미국 학교에 달러로 학비를 내요.", bg: "bg-white" },
             { id: 6, name: "보너스\n게임", type: "bonus", role: "none", icon: "🎁", scene: "🎉🎁🎉", desc: "넌센스 퀴즈! 점수 2배!", bg: "bg-yellow-100" },
-
-            { id: 7, name: "유학 온\n외국 학생", type: "normal", role: "export", icon: "🎒", 
-              scene: <span>🎒 ➡️ {DollarBill}</span>, 
-              desc: "한국에서 달러를 원화로 바꿔써요.", bg: "bg-white" },
-            { id: 8, name: "외국계 기업\n한국인 직원", type: "normal", role: "export", icon: "💼", 
-              scene: <span>💼 ➡️ {DollarBill}</span>, 
-              desc: "월급을 달러로 받아요.", bg: "bg-white" },
+            { id: 7, name: "유학 온\n외국 학생", type: "normal", role: "export", icon: "🎒", scene: <span>🎒 ➡️ {DollarBill}</span>, desc: "한국에서 달러를 원화로 바꿔써요.", bg: "bg-white" },
+            { id: 8, name: "외국계 기업\n한국인 직원", type: "normal", role: "export", icon: "💼", scene: <span>💼 ➡️ {DollarBill}</span>, desc: "월급을 달러로 받아요.", bg: "bg-white" },
             { id: 9, name: "뒤로 가기", type: "back", role: "none", icon: "🔙", scene: "🔙🏃‍♂️💨", desc: "뒤로 두 칸 이동!", bg: "bg-red-200" },
-
             { id: 10, name: "무인도", type: "island", role: "none", icon: "🏝️", scene: "🏝️🆘💤", desc: "한 턴 쉬어가세요.", bg: "bg-gray-300" },
-            { id: 11, name: "한국 기업\n외국인 직원", type: "normal", role: "import", icon: "👷", 
-              scene: <span>{WonBill} ➡️ 🏠</span>, 
-              desc: "한국 돈(원화)을 고향으로 보내요.", bg: "bg-white" },
-            { id: 12, name: "달러 투자\n한국인", type: "normal", role: "export", icon: "💰", 
-              scene: <span>{DollarBill} 📈</span>, 
-              desc: "가지고 있는 달러 가치가 오를까요?", bg: "bg-white" },
-            { id: 13, name: "원화 투자\n외국인", type: "normal", role: "import", icon: "📉", 
-              scene: <span>{WonBill} 📉</span>, 
-              desc: "한국 주식(원화)에 투자했어요.", bg: "bg-white" },
-            { id: 14, name: "달러 빚\n갚는 한국인", type: "normal", role: "import", icon: "💸", 
-              scene: <span>{DollarBill} ➡️ 🏦</span>, 
-              desc: "빌린 달러를 갚아야 해요.", bg: "bg-white" },
-            { id: 15, name: "원화 빚\n갚는 외국인", type: "normal", role: "export", icon: "🏦", 
-              scene: <span>{WonBill} ➡️ 🏦</span>, 
-              desc: "빌린 원화를 갚아야 해요.", bg: "bg-white" },
-
+            { id: 11, name: "한국 기업\n외국인 직원", type: "normal", role: "import", icon: "👷", scene: <span>{WonBill} ➡️ 🏠</span>, desc: "한국 돈(원화)을 고향으로 보내요.", bg: "bg-white" },
+            { id: 12, name: "달러 투자\n한국인", type: "normal", role: "export", icon: "💰", scene: <span>{DollarBill} 📈</span>, desc: "가지고 있는 달러 가치가 오를까요?", bg: "bg-white" },
+            { id: 13, name: "원화 투자\n외국인", type: "normal", role: "import", icon: "📉", scene: <span>{WonBill} 📉</span>, desc: "한국 주식(원화)에 투자했어요.", bg: "bg-white" },
+            { id: 14, name: "달러 빚\n갚는 한국인", type: "normal", role: "import", icon: "💸", scene: <span>{DollarBill} ➡️ 🏦</span>, desc: "빌린 달러를 갚아야 해요.", bg: "bg-white" },
+            { id: 15, name: "원화 빚\n갚는 외국인", type: "normal", role: "export", icon: "🏦", scene: <span>{WonBill} ➡️ 🏦</span>, desc: "빌린 원화를 갚아야 해요.", bg: "bg-white" },
             { id: 16, name: "특별 휴가", type: "rest", role: "none", icon: "🏖️", scene: "🏖️🍹😎", desc: "푹 쉬세요!", bg: "bg-blue-200" },
-            { id: 17, name: "기러기 아빠\n(송금)", type: "normal", role: "import", icon: "👨‍👧‍👦", 
-              scene: <span>{DollarBill} ➡️ 🛫</span>, 
-              desc: "유학 간 자녀에게 달러를 보내요.", bg: "bg-white" },
+            { id: 17, name: "기러기 아빠\n(송금)", type: "normal", role: "import", icon: "👨‍👧‍👦", scene: <span>{DollarBill} ➡️ 🛫</span>, desc: "유학 간 자녀에게 달러를 보내요.", bg: "bg-white" },
         ];
 
         const SITUATION_CARDS = [
@@ -207,6 +196,7 @@
             { type: "DOWN", label: "환율 하락 📉", subLabel: "(원화 강세)", desc: <span>1달러 1500원<br/>➔ 1000원!</span>, detail: "달러의 가치가 싸졌어요!", color: "text-blue-600" },
         ];
 
+        // --- 앱 ---
         const App = () => {
             const [setupMode, setSetupMode] = useState(true);
             const [teamCount, setTeamCount] = useState(2);
@@ -229,7 +219,7 @@
                 if (bgmRef.current) {
                     if (!isMuted) {
                         bgmRef.current.volume = 0.2;
-                        bgmRef.current.play().catch(e => console.log("BGM play failed:", e));
+                        bgmRef.current.play().catch(e => console.log("BGM error:", e));
                     } else {
                         bgmRef.current.pause();
                     }
@@ -245,7 +235,6 @@
                 } catch (e) {}
             };
 
-            // 전체화면 토글 함수
             const toggleFullscreen = () => {
                 if (!document.fullscreenElement) {
                     document.documentElement.requestFullscreen().catch((e) => console.log(e));
@@ -269,6 +258,7 @@
                 playSound('fanfare');
             };
 
+            // Game Logic Functions (Simplified for brevity as logic is same)
             const rollDice = () => {
                 if (gameState !== 'ready') return;
                 if (teams[currentTurn].isStuck) {
@@ -395,210 +385,207 @@
                 return { gridColumn: col, gridRow: row };
             };
 
+            // --- 렌더링 ---
             return (
                 <div className="w-full h-full flex flex-col bg-pattern overflow-hidden select-none relative">
                     <audio ref={bgmRef} src={SOUNDS.bgm} loop className="hidden" />
 
-                    {setupMode ? (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-sky-300 via-rose-200 to-amber-100 text-slate-800 p-8 relative overflow-hidden">
-                            <div className="absolute top-8 right-8 text-slate-500 font-bold text-3xl z-20">보라쌤과 사회를 보라</div>
-                            <div className="bg-white/60 backdrop-blur-xl p-16 rounded-[4rem] shadow-[0_0_60px_rgba(255,255,255,0.8)] text-center border-4 border-white max-w-4xl w-full z-10 pop-in">
-                                <h1 className="text-7xl font-black mb-10 drop-shadow-sm flex items-center justify-center gap-6">
+                    {/* Setup Screen */}
+                    {setupMode && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-sky-300 via-rose-200 to-amber-100 p-4">
+                            <div className="absolute top-[2vmin] right-[2vmin] text-slate-500 font-bold text-responsive-lg z-20">보라쌤과 사회를 보라</div>
+                            <div className="bg-white/60 backdrop-blur-xl p-[4vmin] rounded-[3vmin] shadow-xl text-center border-4 border-white w-[80vw] max-w-[800px] pop-in">
+                                <h1 className="text-responsive-4xl font-black mb-[4vmin] drop-shadow-sm flex items-center justify-center gap-4">
                                     💵 <span className="title-gradient">우당탕탕<br/>환율 대모험</span> 🌏
                                 </h1>
-                                <p className="text-4xl text-slate-600 mb-16 font-bold">우리 반 최고의 경제왕 팀은 누구?</p>
-                                <div className="mb-16">
-                                    <label className="block text-5xl font-bold mb-10 text-slate-700">참여 팀 수 선택</label>
-                                    <div className="flex justify-center gap-8">
+                                <p className="text-responsive-xl text-slate-600 mb-[6vmin] font-bold">우리 반 최고의 경제왕 팀은 누구?</p>
+                                <div className="mb-[6vmin]">
+                                    <label className="block text-responsive-2xl font-bold mb-[4vmin] text-slate-700">참여 팀 수 선택</label>
+                                    <div className="flex justify-center gap-[2vmin]">
                                         {[2, 3, 4, 5, 6].map(num => (
-                                            <button key={num} onClick={() => setTeamCount(num)} className={`w-28 h-28 rounded-3xl text-6xl font-bold transition-all ${teamCount === num ? 'bg-yellow-400 text-white scale-125 shadow-xl ring-8 ring-yellow-200' : 'bg-white hover:bg-slate-100 hover:scale-110 shadow-md'}`}>{num}</button>
+                                            <button key={num} onClick={() => setTeamCount(num)} className={`w-[8vmin] h-[8vmin] rounded-[2vmin] text-responsive-2xl font-bold transition-all ${teamCount === num ? 'bg-yellow-400 text-white scale-125 shadow-xl ring-4 ring-yellow-200' : 'bg-white hover:bg-slate-100 hover:scale-110 shadow-md'}`}>{num}</button>
                                         ))}
                                     </div>
                                 </div>
-                                <button onClick={startGame} className="w-full bg-gradient-to-r from-pink-500 to-yellow-500 py-12 rounded-[2rem] text-6xl font-black text-white shadow-2xl hover:scale-105 hover:shadow-pink-300/50 transition duration-300">게임 시작하기 🚀</button>
+                                <button onClick={startGame} className="w-full bg-gradient-to-r from-pink-500 to-yellow-500 py-[3vmin] rounded-[2vmin] text-responsive-3xl font-black text-white shadow-2xl hover:scale-105 transition">게임 시작하기 🚀</button>
                             </div>
                         </div>
-                    ) : (
-                        <div className="w-full h-full flex flex-col">
-                            {/* 상단바 */}
-                            <div className="bg-white/80 backdrop-blur-md shadow-xl p-6 flex justify-between items-center z-10 px-10 h-28 border-b-4 border-white shrink-0">
-                                <div className="flex items-center gap-8">
-                                     <button onClick={finishGame} className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-2xl font-black text-3xl shadow-lg transition flex items-center gap-3 hover:scale-105 whitespace-nowrap"><Icons.Flag /> 경기 종료</button>
-                                     <button onClick={() => setIsMuted(!isMuted)} className="text-slate-400 hover:text-slate-600 transition hover:scale-110">{isMuted ? <Icons.VolumeX /> : <Icons.Volume2 />}</button>
+                    )}
+
+                    {/* Game UI */}
+                    <div className="w-full h-[15%] min-h-[60px] bg-white/80 backdrop-blur-md shadow-xl flex justify-between items-center z-10 px-[2vmin] border-b-4 border-white shrink-0">
+                        <div className="flex items-center gap-[2vmin]">
+                             <button onClick={finishGame} className="bg-red-500 hover:bg-red-600 text-white px-[2vmin] py-[1vmin] rounded-[1vmin] font-black text-responsive-lg shadow-lg transition flex items-center gap-2 hover:scale-105 whitespace-nowrap"><div className="w-[3vmin] h-[3vmin]"><Icons.Flag /></div> 경기 종료</button>
+                             <button onClick={() => setIsMuted(!isMuted)} className="text-slate-400 hover:text-slate-600 transition hover:scale-110 w-[4vmin] h-[4vmin]">{isMuted ? <Icons.VolumeX /> : <Icons.Volume2 />}</button>
+                        </div>
+                        <div className="flex gap-[2vmin] overflow-x-auto items-center py-2 px-2 no-scrollbar h-full">
+                            {teams.map((team, idx) => (
+                                <div key={idx} className={`flex items-center gap-[1.5vmin] px-[2vmin] py-[1vmin] rounded-full border-[0.3vmin] transition-all duration-300 ${idx === currentTurn ? 'bg-yellow-50 border-yellow-400 scale-110 shadow-xl z-10 ring-[0.3vmin] ring-yellow-200' : 'bg-white border-slate-200 opacity-60 grayscale-[0.5]'}`}>
+                                    <span className="text-responsive-2xl">{team.icon}</span>
+                                    <span className="font-bold text-slate-800 text-responsive-base whitespace-nowrap">{team.name}</span>
+                                    <span className="bg-slate-800 text-white px-[1vmin] rounded text-responsive-base font-mono">{team.score}</span>
                                 </div>
-                                <div className="flex gap-6 overflow-x-auto items-center py-4 px-4 no-scrollbar">
-                                    {teams.map((team, idx) => (
-                                        <div key={idx} className={`flex items-center gap-4 px-8 py-4 rounded-full border-4 transition-all duration-300 ${idx === currentTurn ? 'bg-yellow-50 border-yellow-400 scale-110 shadow-xl z-10 ring-4 ring-yellow-200 ml-2' : 'bg-white border-slate-200 opacity-60 grayscale-[0.5]'}`}>
-                                            <span className="text-5xl">{team.icon}</span>
-                                            <span className="font-bold text-slate-800 text-3xl whitespace-nowrap">{team.name}</span>
-                                            <span className="bg-slate-800 text-white px-5 py-1 rounded-xl text-3xl font-mono">{team.score}</span>
-                                        </div>
-                                    ))}
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex-1 w-full flex items-center justify-center p-[2vmin] relative">
+                        <div className="w-full h-full grid grid-cols-7 grid-rows-4 gap-[1vmin] relative">
+                            <div className="col-start-2 col-end-7 row-start-2 row-end-4 bg-white/70 backdrop-blur-sm rounded-[3vmin] flex flex-col items-center justify-center border-[0.5vmin] border-dashed border-indigo-200">
+                                <h1 className="text-responsive-4xl font-black text-indigo-900/10 tracking-tight mb-[2vmin] select-none whitespace-nowrap">💵 우당탕탕 환율 대모험 🌏</h1>
+                                <div className="text-responsive-xl font-bold text-slate-500 mb-[4vmin] bg-white/80 px-[4vmin] py-[1vmin] rounded-full border border-slate-300 shadow-sm">💡 규칙: 정답 +1점 / 오답 0점</div>
+                                <div className="bg-indigo-600 text-white px-[5vmin] py-[2vmin] rounded-full shadow-2xl transform scale-110 border-[0.4vmin] border-indigo-400">
+                                    <span className="text-responsive-2xl font-bold animate-pulse block whitespace-nowrap">📢 {history[0]}</span>
                                 </div>
                             </div>
 
-                            {/* 보드판 영역 */}
-                            <div className="flex-1 flex items-center justify-center p-8 relative">
-                                <div className="w-full h-full max-w-[1500px] grid grid-cols-7 grid-rows-4 gap-4 relative">
-                                    <div className="col-start-2 col-end-7 row-start-2 row-end-4 bg-white/70 backdrop-blur-sm rounded-[3rem] flex flex-col items-center justify-center border-8 border-dashed border-indigo-200">
-                                        <h1 className="text-8xl font-black text-indigo-900/10 tracking-tight mb-4 select-none whitespace-nowrap">💵 우당탕탕 환율 대모험 🌏</h1>
-                                        <div className="text-4xl font-bold text-slate-500 mb-8 bg-white/80 px-10 py-3 rounded-full border border-slate-300 shadow-sm">💡 규칙: 정답 +1점 / 오답 0점</div>
-                                        <div className="bg-indigo-600 text-white px-16 py-8 rounded-full shadow-2xl transform scale-110 border-4 border-indigo-400">
-                                            <span className="text-5xl font-bold animate-pulse block whitespace-nowrap">📢 {history[0]}</span>
+                            {BOARD_TILES.map((tile, idx) => (
+                                <div key={idx} style={getGridStyle(idx)} className={`relative border-[0.4vmin] rounded-[2vmin] flex flex-col items-center justify-center text-center p-[1vmin] shadow-md transition-colors ${tile.bg} ${idx === teams[currentTurn].position ? 'border-yellow-500 bg-yellow-50 ring-[0.6vmin] ring-yellow-300 z-10 scale-105 shadow-2xl' : 'border-slate-300 hover:border-indigo-300'}`}>
+                                    <div className="text-responsive-3xl mb-[1vmin] drop-shadow-md">{tile.icon}</div>
+                                    <div className="font-bold text-responsive-sm text-slate-900 leading-tight break-keep keep-word">{tile.name}</div>
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div className="grid grid-cols-2 gap-[0.5vmin] content-center justify-items-center w-full h-full p-[1vmin]">
+                                            {teams.map((team, tIdx) => team.position === idx && (
+                                                <div key={tIdx} className={`w-[4vmin] h-[4vmin] rounded-full shadow-md flex items-center justify-center text-responsive-lg border-[0.3vmin] border-white token-transition ${team.color} z-20 transform`} style={{ transform: tIdx === currentTurn ? 'scale(1.3) translateY(-1vmin)' : 'scale(1)' }}>{team.icon}</div>
+                                            ))}
                                         </div>
                                     </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
 
-                                    {BOARD_TILES.map((tile, idx) => (
-                                        <div key={idx} style={getGridStyle(idx)} className={`relative border-[6px] rounded-[2.5rem] flex flex-col items-center justify-center text-center p-4 shadow-md transition-colors ${tile.bg} ${idx === teams[currentTurn].position ? 'border-yellow-500 bg-yellow-50 ring-8 ring-yellow-300 z-10 scale-105 shadow-2xl' : 'border-slate-300 hover:border-indigo-300'}`}>
-                                            <div className="text-7xl mb-4 drop-shadow-md">{tile.icon}</div>
-                                            <div className="font-bold text-3xl text-slate-900 leading-tight break-keep keep-word">{tile.name}</div>
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <div className="grid grid-cols-2 gap-3 content-center justify-items-center w-full h-full p-4">
-                                                    {teams.map((team, tIdx) => team.position === idx && (
-                                                        <div key={tIdx} className={`w-24 h-24 rounded-full shadow-[0_10px_20px_rgba(0,0,0,0.3)] flex items-center justify-center text-6xl border-[6px] border-white token-transition ${team.color} z-20 transform hover:scale-125 transition-transform`} style={{ transform: tIdx === currentTurn ? 'scale(1.3) translateY(-15px)' : 'scale(1)' }}>{team.icon}</div>
-                                                    ))}
-                                                </div>
+                    <div className="absolute bottom-[5vmin] left-1/2 -translate-x-1/2 z-20">
+                        {gameState === 'ready' && (
+                             <button onClick={rollDice} className={`flex flex-col items-center justify-center w-[12vmin] h-[12vmin] rounded-full shadow-xl border-[0.8vmin] border-white transition-all hover:scale-110 active:scale-95 ${teams[currentTurn].color} animate-bounce cursor-pointer group`}>
+                                <span className="text-responsive-3xl mb-1 group-hover:rotate-12 transition-transform">🎲</span>
+                                <span className="text-white font-black text-responsive-base shadow-black drop-shadow-lg">GO!</span>
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="absolute bottom-[3vmin] right-[3vmin] z-50 pointer-events-auto">
+                        <button onClick={toggleFullscreen} className="bg-white/80 p-[1.5vmin] rounded-full shadow-lg border-[0.3vmin] border-slate-300 hover:bg-indigo-100 transition active:scale-95 w-[6vmin] h-[6vmin]">
+                            {isFullscreen ? <Icons.Minimize /> : <Icons.Maximize />}
+                        </button>
+                    </div>
+
+                    {/* Popups (Fully Centered, Responsive Size) */}
+                    {showIslandPopup && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-[4vmin]">
+                            <div className="bg-white rounded-[3vmin] p-[6vmin] max-w-[80vw] text-center shadow-2xl pop-in">
+                                <div className="text-responsive-4xl mb-[3vmin]">🏝️</div>
+                                <h2 className="text-responsive-3xl font-black text-slate-800 mb-[3vmin]">무인도 도착!</h2>
+                                <p className="text-responsive-xl text-slate-600 font-bold mb-[5vmin]">이번 턴은 쉬어갑니다 💤</p>
+                                <button onClick={closeIslandPopup} className="bg-indigo-600 text-white px-[6vmin] py-[2vmin] rounded-[2vmin] text-responsive-xl font-bold hover:bg-indigo-700 transition">확인</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {(gameState === 'rolling' || gameState === 'rolled') && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+                            <div className="flex flex-col items-center pop-in">
+                                <div className="text-white text-responsive-4xl font-black mb-[8vmin] drop-shadow-md">{teams[currentTurn].name} 차례!</div>
+                                <div className="transform scale-[1.5]"><Dice3D val={diceVal} isRolling={gameState === 'rolling'} /></div>
+                                {gameState === 'rolled' && <div className="mt-[10vmin] text-responsive-4xl font-black text-yellow-400 animate-bounce drop-shadow-md">{diceVal}</div>}
+                            </div>
+                        </div>
+                    )}
+
+                    {gameState === 'bonus' && bonusQuiz && (
+                        <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-[4vmin]">
+                            <div className="bg-white rounded-[3vmin] p-[5vmin] max-w-[80vw] w-full text-center shadow-2xl border-[1vmin] border-yellow-300 pop-in relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-[3vmin] bg-yellow-300"></div>
+                                <h2 className="text-responsive-3xl font-black text-indigo-900 mb-[4vmin] mt-[2vmin]">🎁 보너스 넌센스 퀴즈!</h2>
+                                <div className="bg-indigo-50 p-[4vmin] rounded-[2vmin] border-[0.5vmin] border-indigo-100 mb-[4vmin]">
+                                    <p className="text-responsive-2xl font-bold text-slate-800 leading-normal keep-word">{bonusQuiz.q}</p>
+                                </div>
+                                <div className="mb-[4vmin]">
+                                    <input type="text" value={bonusInput} onChange={(e) => setBonusInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && checkBonusAnswer()} placeholder="정답을 입력하세요" className="w-full text-responsive-2xl p-[2vmin] rounded-[1.5vmin] border-[0.5vmin] border-slate-300 text-center focus:border-indigo-500 outline-none" autoFocus />
+                                </div>
+                                <button onClick={checkBonusAnswer} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-[2vmin] rounded-[2vmin] text-responsive-2xl font-black shadow-xl hover:scale-105 transition transform">정답 확인 (+2점)</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {gameState === 'card' && currentCard && (
+                        <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-[4vmin]">
+                            <div className="bg-white rounded-[3vmin] p-[4vmin] w-[90vw] max-h-[90vh] overflow-y-auto text-center shadow-2xl border-[1vmin] border-indigo-100 pop-in flex flex-col gap-[3vmin]">
+                                <div className="flex flex-col md:flex-row justify-center items-stretch gap-[3vmin] mb-[1vmin]">
+                                    <div className="flex-1 bg-slate-50 border-[0.5vmin] border-slate-200 rounded-[2vmin] p-[3vmin] shadow-inner flex flex-col justify-center min-h-[30vh]">
+                                        <div className="text-responsive-xl text-slate-500 font-bold mb-[2vmin]">뉴스 속보 📰</div>
+                                        <div className={`text-responsive-3xl font-black mb-[1vmin] ${currentCard.color}`}>{currentCard.label}</div>
+                                        <div className={`text-responsive-2xl font-black mb-[3vmin] ${currentCard.color}`}>{currentCard.subLabel}</div>
+                                        <div className="text-responsive-xl text-slate-700 font-bold leading-snug keep-word">{currentCard.desc}</div>
+                                        <div className="text-responsive-base text-slate-500 mt-[2vmin]">{currentCard.detail}</div>
+                                    </div>
+                                    <div className="flex-1 bg-yellow-50 border-[0.5vmin] border-yellow-200 rounded-[2vmin] p-[3vmin] shadow-inner flex flex-col justify-center min-h-[30vh]">
+                                        <div className="text-responsive-xl text-yellow-700 font-bold mb-[2vmin]">현재 우리 팀은?</div>
+                                        <div className="text-responsive-4xl mb-[3vmin] animate-pulse filter drop-shadow-xl">{BOARD_TILES[teams[currentTurn].position].scene}</div>
+                                        <div className="text-responsive-2xl font-black text-slate-800 mb-[2vmin]">{BOARD_TILES[teams[currentTurn].position].name.split('\n')[0]}</div>
+                                        <div className="text-responsive-lg text-slate-600 bg-white/60 p-[2vmin] rounded-[1.5vmin] font-bold leading-relaxed whitespace-nowrap">"{BOARD_TILES[teams[currentTurn].position].desc}"</div>
+                                    </div>
+                                </div>
+                                <div className="text-responsive-2xl font-bold text-slate-900 mb-[1vmin]">이 상황이 <span className="text-indigo-600 underline decoration-4 underline-offset-4">{BOARD_TILES[teams[currentTurn].position].name.split('\n')[0]}</span>에게 유리할까요?</div>
+                                <div className="grid grid-cols-2 gap-[3vmin]">
+                                    <button onClick={() => checkAnswer('good')} className="bg-blue-100 hover:bg-blue-200 text-blue-700 py-[3vmin] rounded-[2vmin] text-responsive-2xl font-black border-b-[0.8vmin] border-blue-300 active:translate-y-1 transition-transform transform hover:scale-[1.02] flex flex-col items-center gap-1"><span>👍</span> <span>유리해요!</span></button>
+                                    <button onClick={() => checkAnswer('bad')} className="bg-red-100 hover:bg-red-200 text-red-700 py-[3vmin] rounded-[2vmin] text-responsive-2xl font-black border-b-[0.8vmin] border-red-300 active:translate-y-1 transition-transform transform hover:scale-[1.02] flex flex-col items-center gap-1"><span>👎</span> <span>불리해요!</span></button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {gameState === 'result' && feedback && (
+                        <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-[4vmin]" onClick={nextTurn}>
+                            <div className="bg-white rounded-[3vmin] p-[5vmin] max-w-[80vw] text-center shadow-2xl pop-in cursor-pointer border-[1vmin] border-white ring-[0.5vmin] ring-indigo-200 max-h-[90vh] overflow-y-auto">
+                                <div className="text-responsive-4xl mb-[3vmin] animate-bounce">{feedback.isGood ? '🎉' : '🤔'}</div>
+                                <h2 className="text-responsive-3xl font-black mb-[2vmin] text-indigo-900">{feedback.result}</h2>
+                                <p className="text-responsive-2xl font-bold text-pink-500 mb-[4vmin]">{feedback.msg}</p>
+                                <div className="bg-slate-100 p-[4vmin] rounded-[2vmin] text-left text-responsive-xl text-slate-800 font-bold leading-relaxed border-l-[1vmin] border-indigo-500 shadow-inner">💡 선생님 말씀:<br/><span className="text-responsive-base font-medium text-slate-600 mt-[1vmin] block keep-word">{feedback.desc}</span></div>
+                                <p className="mt-[4vmin] text-slate-400 text-responsive-sm animate-pulse">화면을 클릭하면 다음 차례로 넘어갑니다</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {gameState === 'gameover' && (
+                        <div className="absolute inset-0 bg-indigo-900/95 z-50 flex items-center justify-center p-[4vmin]">
+                            <div className="bg-white rounded-[3vmin] p-[4vmin] max-w-[90vw] w-full text-center shadow-2xl pop-in relative overflow-hidden h-[85vh] flex flex-col">
+                                <div className="absolute top-0 left-0 w-full h-[1vmin] bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500"></div>
+                                <h1 className="text-responsive-3xl font-black mb-[4vmin] text-indigo-900 mt-[2vmin]">🏆 경기 결과 발표 🏆</h1>
+                                <div className="flex-1 flex items-end justify-center gap-[4vmin] pb-[4vmin] overflow-x-auto">
+                                    {[...teams].sort((a,b) => b.score - a.score)[1] && (
+                                        <div className="w-1/4 flex flex-col items-center justify-end rise-up" style={{animationDelay: '0.5s'}}>
+                                            <div className="mb-[2vmin] text-center">
+                                                <div className="text-responsive-3xl mb-[1vmin]">{[...teams].sort((a,b) => b.score - a.score)[1].icon}</div>
+                                                <div className="text-responsive-base font-bold text-slate-600 mb-[0.5vmin]">{[...teams].sort((a,b) => b.score - a.score)[1].name}</div>
+                                                <div className="text-responsive-xl font-black text-indigo-600">{[...teams].sort((a,b) => b.score - a.score)[1].score}점</div>
                                             </div>
+                                            <div className="w-full h-[20vh] bg-slate-200 rounded-t-[2vmin] flex items-center justify-center border-t-[0.8vmin] border-slate-300 text-responsive-4xl font-black text-white/50 shadow-inner">2</div>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* 주사위 버튼 */}
-                            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
-                                {gameState === 'ready' && (
-                                     <button onClick={rollDice} className={`flex flex-col items-center justify-center w-56 h-56 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.4)] border-[12px] border-white transition-all hover:scale-110 active:scale-95 ${teams[currentTurn].color} animate-bounce cursor-pointer group`}>
-                                        <span className="text-8xl mb-2 group-hover:rotate-12 transition-transform">🎲</span>
-                                        <span className="text-white font-black text-5xl shadow-black drop-shadow-lg">GO!</span>
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* 전체화면 토글 버튼 (우측 하단) */}
-                            <div className="absolute bottom-8 right-8 z-50 pointer-events-auto">
-                                <button onClick={toggleFullscreen} className="bg-white/80 p-4 rounded-full shadow-lg border-2 border-slate-300 hover:bg-indigo-100 transition active:scale-95">
-                                    {isFullscreen ? <Icons.Minimize /> : <Icons.Maximize />}
-                                </button>
-                            </div>
-
-                            {/* 팝업들 */}
-                            {showIslandPopup && (
-                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-10">
-                                    <div className="bg-white rounded-[4rem] p-16 max-w-4xl w-full text-center shadow-2xl pop-in">
-                                        <div className="text-[12rem] mb-8">🏝️</div>
-                                        <h2 className="text-7xl font-black text-slate-800 mb-8">무인도 도착!</h2>
-                                        <p className="text-5xl text-slate-600 font-bold mb-16">이번 턴은 쉬어갑니다 💤</p>
-                                        <button onClick={closeIslandPopup} className="bg-indigo-600 text-white px-16 py-8 rounded-[3rem] text-5xl font-bold hover:bg-indigo-700 transition">확인</button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {(gameState === 'rolling' || gameState === 'rolled') && (
-                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
-                                    <div className="flex flex-col items-center pop-in">
-                                        <div className="text-white text-7xl font-black mb-24 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">{teams[currentTurn].name} 차례!</div>
-                                        <div className="transform scale-[3.0]"><Dice3D val={diceVal} isRolling={gameState === 'rolling'} /></div>
-                                        {gameState === 'rolled' && <div className="mt-40 text-[10rem] font-black text-yellow-400 animate-bounce drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">{diceVal}</div>}
-                                    </div>
-                                </div>
-                            )}
-
-                            {gameState === 'bonus' && bonusQuiz && (
-                                <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-10">
-                                    <div className="bg-white rounded-[4rem] p-16 max-w-5xl w-full text-center shadow-2xl border-[16px] border-yellow-300 pop-in relative overflow-hidden">
-                                        <div className="absolute top-0 left-0 w-full h-12 bg-yellow-300"></div>
-                                        <h2 className="text-7xl font-black text-indigo-900 mb-16 mt-4">🎁 보너스 넌센스 퀴즈!</h2>
-                                        <div className="bg-indigo-50 p-12 rounded-[3rem] border-8 border-indigo-100 mb-12">
-                                            <p className="text-6xl font-bold text-slate-800 leading-normal keep-word">{bonusQuiz.q}</p>
-                                        </div>
-                                        <div className="mb-12">
-                                            <input type="text" value={bonusInput} onChange={(e) => setBonusInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && checkBonusAnswer()} placeholder="정답을 입력하세요" className="w-full text-5xl p-8 rounded-[2rem] border-8 border-slate-300 text-center focus:border-indigo-500 outline-none" autoFocus />
-                                        </div>
-                                        <button onClick={checkBonusAnswer} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-10 rounded-[3rem] text-5xl font-black shadow-xl hover:scale-105 transition transform">정답 확인 (+2점)</button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {gameState === 'card' && currentCard && (
-                                <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-10">
-                                    <div className="bg-white rounded-[4rem] p-16 max-w-[1400px] w-full text-center shadow-2xl border-[16px] border-indigo-100 pop-in flex flex-col gap-10 max-h-[95vh] overflow-y-auto">
-                                        <div className="flex justify-center items-stretch gap-10 mb-4">
-                                            <div className="flex-1 bg-slate-50 border-8 border-slate-200 rounded-[3rem] p-10 shadow-inner flex flex-col justify-center min-h-[400px]">
-                                                <div className="text-4xl text-slate-500 font-bold mb-8">뉴스 속보 📰</div>
-                                                <div className={`text-8xl font-black mb-4 ${currentCard.color}`}>{currentCard.label}</div>
-                                                <div className={`text-6xl font-black mb-10 ${currentCard.color}`}>{currentCard.subLabel}</div>
-                                                <div className="text-5xl text-slate-700 font-bold leading-snug keep-word">{currentCard.desc}</div>
-                                                <div className="text-3xl text-slate-500 mt-8">{currentCard.detail}</div>
+                                    )}
+                                    {[...teams].sort((a,b) => b.score - a.score)[0] && (
+                                        <div className="w-1/3 flex flex-col items-center justify-end z-10 rise-up" style={{animationDelay: '0s'}}>
+                                            <div className="mb-[2vmin] text-center transform scale-110">
+                                                <div className="text-responsive-4xl mb-[1vmin] animate-bounce">{[...teams].sort((a,b) => b.score - a.score)[0].icon}</div>
+                                                <div className="text-responsive-lg font-bold text-slate-800 mb-[0.5vmin]">{[...teams].sort((a,b) => b.score - a.score)[0].name}</div>
+                                                <div className="text-responsive-2xl font-black text-yellow-500 drop-shadow-lg">{[...teams].sort((a,b) => b.score - a.score)[0].score}점</div>
                                             </div>
-                                            <div className="flex-1 bg-yellow-50 border-8 border-yellow-200 rounded-[3rem] p-10 shadow-inner flex flex-col justify-center min-h-[400px]">
-                                                <div className="text-4xl text-yellow-700 font-bold mb-8">현재 우리 팀은?</div>
-                                                <div className="text-[10rem] mb-10 animate-pulse filter drop-shadow-xl">{BOARD_TILES[teams[currentTurn].position].scene}</div>
-                                                <div className="text-6xl font-black text-slate-800 mb-8">{BOARD_TILES[teams[currentTurn].position].name.split('\n')[0]}</div>
-                                                <div className="text-4xl text-slate-600 bg-white/60 p-8 rounded-[2rem] font-bold leading-relaxed whitespace-nowrap">"{BOARD_TILES[teams[currentTurn].position].desc}"</div>
+                                            <div className="w-full h-[30vh] bg-yellow-400 rounded-t-[2vmin] flex items-center justify-center border-t-[0.8vmin] border-yellow-300 text-responsive-4xl font-black text-white/50 shadow-2xl relative"><div className="absolute -top-[5vmin] text-responsive-4xl">👑</div>1</div>
+                                        </div>
+                                    )}
+                                    {[...teams].sort((a,b) => b.score - a.score)[2] && (
+                                        <div className="w-1/4 flex flex-col items-center justify-end rise-up" style={{animationDelay: '1s'}}>
+                                            <div className="mb-[2vmin] text-center">
+                                                <div className="text-responsive-3xl mb-[1vmin]">{[...teams].sort((a,b) => b.score - a.score)[2].icon}</div>
+                                                <div className="text-responsive-base font-bold text-slate-600 mb-[0.5vmin]">{[...teams].sort((a,b) => b.score - a.score)[2].name}</div>
+                                                <div className="text-responsive-xl font-black text-indigo-600">{[...teams].sort((a,b) => b.score - a.score)[2].score}점</div>
                                             </div>
+                                            <div className="w-full h-[15vh] bg-amber-600 rounded-t-[2vmin] flex items-center justify-center border-t-[0.8vmin] border-amber-500 text-responsive-4xl font-black text-white/50 shadow-inner">3</div>
                                         </div>
-                                        <div className="text-6xl font-bold text-slate-900 mb-4">이 상황이 <span className="text-indigo-600 underline decoration-8 underline-offset-8">{BOARD_TILES[teams[currentTurn].position].name.split('\n')[0]}</span>에게 유리할까요?</div>
-                                        <div className="grid grid-cols-2 gap-10">
-                                            <button onClick={() => checkAnswer('good')} className="bg-blue-100 hover:bg-blue-200 text-blue-700 py-12 rounded-[3rem] text-6xl font-black border-b-[12px] border-blue-300 active:translate-y-4 transition-transform transform hover:scale-[1.02] flex flex-col items-center gap-2"><span>👍</span> <span>유리해요!</span></button>
-                                            <button onClick={() => checkAnswer('bad')} className="bg-red-100 hover:bg-red-200 text-red-700 py-12 rounded-[3rem] text-6xl font-black border-b-[12px] border-red-300 active:translate-y-4 transition-transform transform hover:scale-[1.02] flex flex-col items-center gap-2"><span>👎</span> <span>불리해요!</span></button>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
-                            )}
-
-                            {gameState === 'result' && feedback && (
-                                <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-10" onClick={nextTurn}>
-                                    <div className="bg-white rounded-[4rem] p-16 max-w-5xl w-full text-center shadow-2xl pop-in cursor-pointer border-[16px] border-white ring-8 ring-indigo-200 max-h-[90vh] overflow-y-auto">
-                                        <div className="text-[12rem] mb-10 animate-bounce">{feedback.isGood ? '🎉' : '🤔'}</div>
-                                        <h2 className="text-8xl font-black mb-8 text-indigo-900">{feedback.result}</h2>
-                                        <p className="text-7xl font-bold text-pink-500 mb-12">{feedback.msg}</p>
-                                        <div className="bg-slate-100 p-12 rounded-[3rem] text-left text-5xl text-slate-800 font-bold leading-relaxed border-l-[20px] border-indigo-500 shadow-inner">💡 선생님 말씀:<br/><span className="text-4xl font-medium text-slate-600 mt-6 block keep-word">{feedback.desc}</span></div>
-                                        <p className="mt-12 text-slate-400 text-3xl animate-pulse">화면을 클릭하면 다음 차례로 넘어갑니다</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {gameState === 'gameover' && (
-                                <div className="absolute inset-0 bg-indigo-900/95 z-50 flex items-center justify-center p-10">
-                                    <div className="bg-white rounded-[4rem] p-16 max-w-7xl w-full text-center shadow-2xl pop-in relative overflow-hidden h-[85vh] flex flex-col">
-                                        <div className="absolute top-0 left-0 w-full h-10 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500"></div>
-                                        <h1 className="text-8xl font-black mb-10 text-indigo-900 mt-6">🏆 경기 결과 발표 🏆</h1>
-                                        <div className="flex-1 flex items-end justify-center gap-10 pb-12 overflow-x-auto">
-                                            {[...teams].sort((a,b) => b.score - a.score)[1] && (
-                                                <div className="w-1/4 min-w-[200px] flex flex-col items-center justify-end rise-up" style={{animationDelay: '0.5s'}}>
-                                                    <div className="mb-6 text-center">
-                                                        <div className="text-8xl mb-4">{[...teams].sort((a,b) => b.score - a.score)[1].icon}</div>
-                                                        <div className="text-4xl font-bold text-slate-600 mb-2">{[...teams].sort((a,b) => b.score - a.score)[1].name}</div>
-                                                        <div className="text-6xl font-black text-indigo-600">{[...teams].sort((a,b) => b.score - a.score)[1].score}점</div>
-                                                    </div>
-                                                    <div className="w-full h-72 bg-slate-200 rounded-t-[3rem] flex items-center justify-center border-t-[16px] border-slate-300 text-8xl font-black text-white/50 shadow-inner">2</div>
-                                                </div>
-                                            )}
-                                            {[...teams].sort((a,b) => b.score - a.score)[0] && (
-                                                <div className="w-1/3 min-w-[250px] flex flex-col items-center justify-end z-10 rise-up" style={{animationDelay: '0s'}}>
-                                                    <div className="mb-6 text-center transform scale-110">
-                                                        <div className="text-[10rem] mb-4 animate-bounce">{[...teams].sort((a,b) => b.score - a.score)[0].icon}</div>
-                                                        <div className="text-5xl font-bold text-slate-800 mb-2">{[...teams].sort((a,b) => b.score - a.score)[0].name}</div>
-                                                        <div className="text-8xl font-black text-yellow-500 drop-shadow-lg">{[...teams].sort((a,b) => b.score - a.score)[0].score}점</div>
-                                                    </div>
-                                                    <div className="w-full h-96 bg-yellow-400 rounded-t-[3rem] flex items-center justify-center border-t-[16px] border-yellow-300 text-[10rem] font-black text-white/50 shadow-2xl relative"><div className="absolute -top-20 text-[8rem]">👑</div>1</div>
-                                                </div>
-                                            )}
-                                            {[...teams].sort((a,b) => b.score - a.score)[2] && (
-                                                <div className="w-1/4 min-w-[200px] flex flex-col items-center justify-end rise-up" style={{animationDelay: '1s'}}>
-                                                    <div className="mb-6 text-center">
-                                                        <div className="text-8xl mb-4">{[...teams].sort((a,b) => b.score - a.score)[2].icon}</div>
-                                                        <div className="text-4xl font-bold text-slate-600 mb-2">{[...teams].sort((a,b) => b.score - a.score)[2].name}</div>
-                                                        <div className="text-6xl font-black text-indigo-600">{[...teams].sort((a,b) => b.score - a.score)[2].score}점</div>
-                                                    </div>
-                                                    <div className="w-full h-48 bg-amber-600 rounded-t-[3rem] flex items-center justify-center border-t-[16px] border-amber-500 text-8xl font-black text-white/50 shadow-inner">3</div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button onClick={() => window.location.reload()} className="bg-indigo-600 text-white px-20 py-8 rounded-[3rem] text-5xl font-bold hover:bg-indigo-700 transition shadow-2xl flex items-center justify-center gap-6 mx-auto hover:scale-105"><Icons.Refresh /> 새로운 게임 시작</button>
-                                    </div>
-                                </div>
-                            )}
+                                <button onClick={() => window.location.reload()} className="bg-indigo-600 text-white px-[6vmin] py-[2vmin] rounded-[2vmin] text-responsive-xl font-bold hover:bg-indigo-700 transition shadow-2xl flex items-center justify-center gap-[2vmin] mx-auto hover:scale-105"><Icons.Refresh /> 새로운 게임 시작</button>
+                            </div>
                         </div>
                     )}
                 </div>
