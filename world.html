@@ -1,0 +1,1613 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Map as MapIcon,
+  Landmark,
+  ChevronLeft,
+  Star,
+  RotateCcw,
+  X,
+  MousePointer2,
+  Loader2,
+  Globe,
+  Search,
+  ArrowLeft,
+  Trophy,
+  Play,
+  Volume2,
+  VolumeX,
+  HelpCircle,
+  BookOpen,
+} from "lucide-react";
+
+import * as d3 from "d3-geo";
+import { feature } from "topojson-client";
+
+/**
+ * 🔊 사운드 효과 (Web Audio API)
+ */
+const soundEffect = {
+  ctx: null,
+  init: () => {
+    if (!soundEffect.ctx) {
+      soundEffect.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  },
+  play: (type) => {
+    if (!soundEffect.ctx) soundEffect.init();
+    const ctx = soundEffect.ctx;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+
+    const stop = (t) => {
+      try {
+        osc.stop(t);
+      } catch {}
+    };
+
+    if (type === "snap") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(850, now);
+      osc.frequency.exponentialRampToValueAtTime(140, now + 0.12);
+      gain.gain.setValueAtTime(0.45, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+      osc.start(now);
+      stop(now + 0.12);
+    } else if (type === "success") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.linearRampToValueAtTime(1040, now + 0.12);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+      osc.start(now);
+      stop(now + 0.5);
+    } else if (type === "error") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(210, now);
+      osc.frequency.linearRampToValueAtTime(140, now + 0.28);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.28);
+      osc.start(now);
+      stop(now + 0.28);
+    } else if (type === "win") {
+      osc.type = "square";
+      osc.frequency.setValueAtTime(420, now);
+      osc.frequency.setValueAtTime(620, now + 0.1);
+      osc.frequency.setValueAtTime(820, now + 0.2);
+      osc.frequency.setValueAtTime(1240, now + 0.42);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 1.0);
+      osc.start(now);
+      stop(now + 1.0);
+    }
+  },
+};
+
+/**
+ * 🌍 국가 ID 매핑 (world-atlas numeric id)
+ */
+const WORLD_ATLAS_ID = {
+  ru: 643,
+  // 아시아
+  kr: 410,
+  kp: 408,
+  cn: 156,
+  jp: 392,
+  in: 356,
+  vn: 704,
+  th: 764,
+  mn: 496,
+  ph: 608,
+  id: 360,
+  sa: 682,
+  ir: 364,
+  iq: 368,
+  tr: 792,
+  ae: 784,
+  sy: 760,
+  ye: 887,
+  il: 376,
+  kz: 398,
+  pk: 586,
+  // 유럽
+  gb: 826,
+  fr: 250,
+  de: 276,
+  it: 380,
+  es: 724,
+  pt: 620,
+  nl: 528,
+  be: 56,
+  ch: 756,
+  at: 40,
+  gr: 300,
+  dk: 208,
+  no: 578,
+  se: 752,
+  fi: 246,
+  pl: 616,
+  cz: 203,
+  hu: 348,
+  ro: 642,
+  ua: 804,
+  // 아프리카
+  eg: 818,
+  za: 710,
+  ke: 404,
+  ng: 566,
+  ma: 504,
+  dz: 12,
+  et: 231,
+  tz: 834,
+  cd: 180,
+  sd: 729,
+  mg: 450,
+  gh: 288,
+  ci: 384,
+  cm: 120,
+  ly: 434,
+  // 북미
+  us: 840,
+  ca: 124,
+  mx: 484,
+  cu: 192,
+  // 남미
+  br: 76,
+  ar: 32,
+  cl: 152,
+  pe: 604,
+  co: 170,
+  ve: 862,
+  bo: 68,
+  // 오세아니아
+  au: 36,
+  nz: 554,
+  pg: 598,
+};
+
+const ID_TO_NAME_KO = {
+  643: "러시아",
+  410: "대한민국",
+  408: "북한",
+  156: "중국",
+  392: "일본",
+  356: "인도",
+  704: "베트남",
+  764: "태국",
+  496: "몽골",
+  608: "필리핀",
+  360: "인도네시아",
+  682: "사우디",
+  364: "이란",
+  368: "이라크",
+  792: "튀르키예",
+  784: "UAE",
+  760: "시리아",
+  887: "예멘",
+  376: "이스라엘",
+  398: "카자흐스탄",
+  586: "파키스탄",
+  826: "영국",
+  250: "프랑스",
+  276: "독일",
+  380: "이탈리아",
+  724: "스페인",
+  620: "포르투갈",
+  528: "네덜란드",
+  56: "벨기에",
+  756: "스위스",
+  40: "오스트리아",
+  300: "그리스",
+  208: "덴마크",
+  578: "노르웨이",
+  752: "스웨덴",
+  246: "핀란드",
+  616: "폴란드",
+  203: "체코",
+  348: "헝가리",
+  642: "루마니아",
+  804: "우크라이나",
+  818: "이집트",
+  710: "남아공",
+  404: "케냐",
+  566: "나이지리아",
+  504: "모로코",
+  12: "알제리",
+  231: "에티오피아",
+  834: "탄자니아",
+  180: "콩고민주",
+  729: "수단",
+  450: "마다가스카르",
+  288: "가나",
+  384: "코트디부아르",
+  120: "카메룬",
+  434: "리비아",
+  840: "미국",
+  124: "캐나다",
+  484: "멕시코",
+  192: "쿠바",
+  76: "브라질",
+  32: "아르헨티나",
+  152: "칠레",
+  604: "페루",
+  170: "콜롬비아",
+  862: "베네수엘라",
+  68: "볼리비아",
+  36: "호주",
+  554: "뉴질랜드",
+  598: "파푸아뉴기니",
+};
+
+const CONTINENT_COUNTRY_IDS = {
+  asia: ["kr", "kp", "cn", "jp", "in", "vn", "th", "mn", "ph", "id", "sa", "ir", "iq", "tr", "ae", "kz", "pk", "ru"],
+  europe: ["gb", "fr", "de", "it", "es", "pt", "nl", "be", "ch", "at", "gr", "dk", "no", "se", "fi", "pl", "cz", "hu", "ro", "ua", "ru"],
+  africa: ["eg", "za", "ke", "ng", "ma", "dz", "et", "tz", "cd", "sd", "mg", "gh", "ci", "cm", "ly"],
+  north_america: ["us", "ca", "mx", "cu"],
+  south_america: ["br", "ar", "cl", "pe", "co", "ve", "bo"],
+  oceania: ["au", "nz", "pg"],
+};
+
+const GAME_DATA = {
+  continents: [
+    { id: "asia", name: "아시아", color: "#ffadad", next: "europe" },
+    { id: "europe", name: "유럽", color: "#a0c4ff", next: "africa" },
+    { id: "africa", name: "아프리카", color: "#ffd6a5", next: "north_america" },
+    { id: "north_america", name: "북아메리카", color: "#9bf6ff", next: "south_america" },
+    { id: "south_america", name: "남아메리카", color: "#bdb2ff", next: "oceania" },
+    { id: "oceania", name: "오세아니아", color: "#ffc6ff", next: null },
+  ],
+  countries: {
+    asia: [
+      { id: "kr", name: "대한민국", capital: "서울", landmark: "경복궁", landmarkEmoji: "🏯", desc: "아름다운 우리 땅", color: "#ff9999" },
+      { id: "kp", name: "북한", capital: "평양", landmark: "류경호텔", landmarkEmoji: "🏨", desc: "한반도 북쪽의 나라", color: "#ff8a80" },
+      { id: "cn", name: "중국", capital: "베이징", landmark: "만리장성", landmarkEmoji: "🧱", desc: "만리장성과 판다의 나라", color: "#ffe082" },
+      { id: "jp", name: "일본", capital: "도쿄", landmark: "도쿄타워", landmarkEmoji: "🗼", desc: "화산과 온천이 많은 섬나라", color: "#fff9c4" },
+      { id: "sa", name: "사우디", capital: "리야드", landmark: "킹덤 센터", landmarkEmoji: "🏙️", desc: "사막과 석유의 나라", color: "#a5d6a7" },
+      { id: "ir", name: "이란", capital: "테헤란", landmark: "아자디 타워", landmarkEmoji: "🏛️", desc: "페르시아 제국의 역사", color: "#80cbc4" },
+      { id: "tr", name: "튀르키예", capital: "앙카라", landmark: "성 소피아", landmarkEmoji: "🕌", desc: "유럽과 아시아를 잇는 나라", color: "#ffab91" },
+      { id: "in", name: "인도", capital: "뉴델리", landmark: "타지마할", landmarkEmoji: "🕌", desc: "타지마할과 다양한 문화", color: "#c8e6c9" },
+      { id: "vn", name: "베트남", capital: "하노이", landmark: "하롱베이", landmarkEmoji: "⛰️", desc: "아오자이와 쌀국수의 나라", color: "#b2ebf2" },
+      { id: "ph", name: "필리핀", capital: "마닐라", landmark: "인트라무로스", landmarkEmoji: "🏰", desc: "7천 개가 넘는 섬나라", color: "#fff59d" },
+      { id: "th", name: "태국", capital: "방콕", landmark: "왓 아룬", landmarkEmoji: "🛕", desc: "화려한 사원의 나라", color: "#bbdefb" },
+      { id: "id", name: "인도네시아", capital: "자카르타", landmark: "보로부두르", landmarkEmoji: "🗿", desc: "세계 최대의 섬나라", color: "#e1bee7" },
+      { id: "mn", name: "몽골", capital: "울란바토르", landmark: "게르", landmarkEmoji: "⛺", desc: "푸른 초원과 유목민의 나라", color: "#cfd8dc" },
+    ],
+    europe: [
+      { id: "gb", name: "영국", capital: "런던", landmark: "빅벤", landmarkEmoji: "🕰️", desc: "축구와 문화의 나라", color: "#d1c4e9" },
+      { id: "fr", name: "프랑스", capital: "파리", landmark: "에펠탑", landmarkEmoji: "🗼", desc: "예술과 패션의 나라", color: "#f8bbd0" },
+      { id: "de", name: "독일", capital: "베를린", landmark: "브란덴부르크 문", landmarkEmoji: "🏛️", desc: "과학 기술의 강국", color: "#f0f4c3" },
+      { id: "it", name: "이탈리아", capital: "로마", landmark: "콜로세움", landmarkEmoji: "🏟️", desc: "피자와 고대 유적의 나라", color: "#ffccbc" },
+      { id: "es", name: "스페인", capital: "마드리드", landmark: "사그라다 파밀리아", landmarkEmoji: "⛪", desc: "정열적인 문화", color: "#ffcc80" },
+      { id: "pt", name: "포르투갈", capital: "리스본", landmark: "벨렝탑", landmarkEmoji: "🏰", desc: "대항해시대의 시작", color: "#ffe0b2" },
+      { id: "nl", name: "네덜란드", capital: "암스테르담", landmark: "풍차", landmarkEmoji: "🌬️", desc: "풍차와 튤립", color: "#ffccbc" },
+      { id: "ch", name: "스위스", capital: "베른", landmark: "알프스", landmarkEmoji: "🏔️", desc: "산과 자연", color: "#ffcdd2" },
+      { id: "at", name: "오스트리아", capital: "빈", landmark: "쇤브룬 궁전", landmarkEmoji: "🏰", desc: "음악의 도시", color: "#ffab91" },
+      { id: "gr", name: "그리스", capital: "아테네", landmark: "파르테논", landmarkEmoji: "🏛️", desc: "신화와 고대 문명", color: "#bbdefb" },
+      { id: "no", name: "노르웨이", capital: "오슬로", landmark: "피요르드", landmarkEmoji: "🏞️", desc: "북유럽의 자연", color: "#ff8a80" },
+      { id: "se", name: "스웨덴", capital: "스톡홀름", landmark: "감라스탄", landmarkEmoji: "🏘️", desc: "디자인의 나라", color: "#fff176" },
+      { id: "ua", name: "우크라이나", capital: "키이우", landmark: "성 소피아 대성당", landmarkEmoji: "⛪", desc: "해바라기의 나라", color: "#fff9c4" },
+      { id: "pl", name: "폴란드", capital: "바르샤바", landmark: "문화 과학 궁전", landmarkEmoji: "🏢", desc: "역사가 깊은 나라", color: "#ffcdd2" },
+    ],
+    africa: [
+      { id: "eg", name: "이집트", capital: "카이로", landmark: "피라미드", landmarkEmoji: "🔺", desc: "고대 문명의 중심", color: "#ffe0b2" },
+      { id: "za", name: "남아공", capital: "프리토리아", landmark: "테이블 마운틴", landmarkEmoji: "⛰️", desc: "무지개 나라", color: "#c8e6c9" },
+      { id: "ke", name: "케냐", capital: "나이로비", landmark: "사파리", landmarkEmoji: "🦁", desc: "사파리로 유명", color: "#ffcc80" },
+      { id: "ng", name: "나이지리아", capital: "아부자", landmark: "주마 바위", landmarkEmoji: "🪨", desc: "인구가 많은 나라", color: "#a5d6a7" },
+      { id: "ma", name: "모로코", capital: "라바트", landmark: "카사블랑카", landmarkEmoji: "🏙️", desc: "사막과 바다", color: "#ef9a9a" },
+      { id: "dz", name: "알제리", capital: "알제", landmark: "사하라", landmarkEmoji: "🐪", desc: "넓은 사막", color: "#80cbc4" },
+      { id: "et", name: "에티오피아", capital: "아디스아바바", landmark: "랄리벨라", landmarkEmoji: "⛪", desc: "커피의 고향", color: "#fff59d" },
+      { id: "tz", name: "탄자니아", capital: "도도마", landmark: "킬리만자로", landmarkEmoji: "🏔️", desc: "아프리카 최고봉", color: "#81d4fa" },
+      { id: "mg", name: "마다가스카르", capital: "안타나나리보", landmark: "바오밥", landmarkEmoji: "🌳", desc: "특별한 자연", color: "#ffab91" },
+      { id: "gh", name: "가나", capital: "아크라", landmark: "해안 성채", landmarkEmoji: "🏰", desc: "카카오로 유명", color: "#d7ccc8" },
+    ],
+    north_america: [
+      { id: "us", name: "미국", capital: "워싱턴 D.C.", landmark: "자유의 여신상", landmarkEmoji: "🗽", desc: "세계 경제와 문화의 중심", color: "#90caf9" },
+      { id: "ca", name: "캐나다", capital: "오타와", landmark: "CN 타워", landmarkEmoji: "🗼", desc: "넓은 자연", color: "#ef9a9a" },
+      { id: "mx", name: "멕시코", capital: "멕시코시티", landmark: "치첸이트사", landmarkEmoji: "🏛️", desc: "고대 문명", color: "#a5d6a7" },
+      { id: "cu", name: "쿠바", capital: "아바나", landmark: "올드카", landmarkEmoji: "🚗", desc: "카리브해의 진주", color: "#9fa8da" },
+    ],
+    south_america: [
+      { id: "br", name: "브라질", capital: "브라질리아", landmark: "예수상", landmarkEmoji: "🗿", desc: "축구와 삼바", color: "#a5d6a7" },
+      { id: "ar", name: "아르헨티나", capital: "부에노스아이레스", landmark: "오벨리스크", landmarkEmoji: "🗼", desc: "탱고의 고장", color: "#81d4fa" },
+      { id: "cl", name: "칠레", capital: "산티아고", landmark: "모아이", landmarkEmoji: "🗿", desc: "길쭉한 나라", color: "#ffab91" },
+      { id: "pe", name: "페루", capital: "리마", landmark: "마추픽추", landmarkEmoji: "⛰️", desc: "잉카 문명", color: "#ef9a9a" },
+      { id: "co", name: "콜롬비아", capital: "보고타", landmark: "소금 성당", landmarkEmoji: "⛪", desc: "커피가 유명", color: "#fff59d" },
+    ],
+    oceania: [
+      { id: "au", name: "호주", capital: "캔버라", landmark: "오페라 하우스", landmarkEmoji: "🎭", desc: "캥거루의 나라", color: "#ffcc80" },
+      { id: "nz", name: "뉴질랜드", capital: "웰링턴", landmark: "호빗 마을", landmarkEmoji: "🏡", desc: "청정 자연", color: "#a5d6a7" },
+      { id: "pg", name: "파푸아뉴기니", capital: "포트모르즈비", landmark: "전통 가면", landmarkEmoji: "👺", desc: "다양한 언어와 부족", color: "#ef9a9a" },
+    ],
+  },
+};
+
+const getFlagUrl = (countryId) => `https://flagcdn.com/w160/${countryId}.png`;
+
+/**
+ * ✅ 대륙별 상식퀴즈 (각 10문제)
+ * - exp: 정답/오답 시 보여줄 설명
+ * - img: (옵션) 이미지 URL (원하면 교체/추가 가능)
+ */
+const QUIZ_BY_CONTINENT = {
+  asia: [
+    { q: "아시아에서 인구가 가장 많은 나라는?", a: ["인도", "중국", "일본", "인도네시아"], correct: 1, exp: "중국은 오랫동안 세계 최대 인구 국가로 알려져 있어요. (최근엔 인도와 1~2위를 다투지만, 수업용 상식으로는 중국을 많이 써요) 🧑‍🤝‍🧑" },
+    { q: "대한민국의 수도는?", a: ["부산", "서울", "대구", "인천"], correct: 1, exp: "수도는 나라의 중심 도시! 대한민국의 수도는 서울이에요. 🏙️" },
+    { q: "일본의 수도는?", a: ["오사카", "삿포로", "도쿄", "나고야"], correct: 2, exp: "일본의 수도는 도쿄(東京)예요. 🗼" },
+    { q: "사우디아라비아는 무엇으로 유명할까요?", a: ["석유", "빙하", "피요르드", "커피"], correct: 0, exp: "사우디아라비아는 석유 산업으로 세계적으로 유명해요. 🛢️" },
+    { q: "인도의 유명한 흰 대리석 건축물은?", a: ["만리장성", "타지마할", "앙코르와트", "피사의 사탑"], correct: 1, exp: "타지마할은 사랑을 상징하는 아름다운 건축물로 유명해요. 🕌" },
+    { q: "중국의 대표적인 방어 건축물은?", a: ["만리장성", "피라미드", "콜로세움", "마추픽추"], correct: 0, exp: "만리장성은 북방 민족의 침입을 막기 위해 쌓은 성벽이에요. 🧱" },
+    { q: "베트남의 수도는?", a: ["하노이", "호치민", "다낭", "후에"], correct: 0, exp: "베트남의 수도는 하노이예요. 🇻🇳" },
+    { q: "태국의 수도는?", a: ["방콕", "치앙마이", "푸껫", "파타야"], correct: 0, exp: "태국의 수도는 방콕! 🛕" },
+    { q: "몽골의 전통 이동식 집은?", a: ["게르", "이글루", "텐트", "하우스보트"], correct: 0, exp: "몽골의 유목 문화에서 중요한 집이 바로 게르(ger)예요. ⛺" },
+    { q: "인도네시아는 어떤 지형이 많을까요?", a: ["섬", "빙하", "사막", "초원"], correct: 0, exp: "인도네시아는 수많은 섬으로 이루어진 ‘세계 최대의 섬나라’로 알려져 있어요. 🏝️" },
+  ],
+  europe: [
+    { q: "프랑스의 수도는?", a: ["파리", "리옹", "마르세유", "니스"], correct: 0, exp: "프랑스의 수도는 파리! 에펠탑으로도 유명해요. 🗼" },
+    { q: "영국의 수도는?", a: ["맨체스터", "런던", "에든버러", "리버풀"], correct: 1, exp: "영국의 수도는 런던이에요. 🕰️" },
+    { q: "이탈리아의 수도는?", a: ["밀라노", "베네치아", "로마", "피렌체"], correct: 2, exp: "이탈리아의 수도는 로마! 고대 로마 유적이 많아요. 🏟️" },
+    { q: "독일의 수도는?", a: ["뮌헨", "베를린", "함부르크", "쾰른"], correct: 1, exp: "독일의 수도는 베를린이에요. 🇩🇪" },
+    { q: "스페인의 수도는?", a: ["바르셀로나", "세비야", "마드리드", "발렌시아"], correct: 2, exp: "스페인의 수도는 마드리드예요. 🇪🇸" },
+    { q: "그리스의 수도는?", a: ["아테네", "스파르타", "테살로니키", "크레타"], correct: 0, exp: "그리스의 수도 아테네에는 파르테논 신전이 있어요. 🏛️" },
+    { q: "네덜란드 하면 떠오르는 것은?", a: ["피요르드", "풍차", "사막", "빙하"], correct: 1, exp: "네덜란드는 풍차와 튤립이 유명해요. 🌬️🌷" },
+    { q: "스위스 하면 유명한 것은?", a: ["알프스", "사하라", "아마존", "고비"], correct: 0, exp: "스위스는 알프스 산맥과 아름다운 자연으로 유명해요. 🏔️" },
+    { q: "EU(유럽연합) 주요 기관이 있는 도시는?", a: ["브뤼셀", "파리", "베를린", "로마"], correct: 0, exp: "벨기에의 브뤼셀은 EU 주요 기관이 모여 있는 도시로 유명해요. 🇪🇺" },
+    { q: "폴란드의 수도는?", a: ["바르샤바", "크라쿠프", "그단스크", "브로츠와프"], correct: 0, exp: "폴란드의 수도는 바르샤바예요. 🇵🇱" },
+  ],
+  africa: [
+    { q: "이집트의 수도는?", a: ["카이로", "알렉산드리아", "룩소르", "기자"], correct: 0, exp: "이집트의 수도는 카이로! 피라미드 근처 지역도 유명해요. 🔺" },
+    { q: "아프리카의 세계 최대 사막은?", a: ["사하라", "고비", "아타카마", "모하비"], correct: 0, exp: "사하라 사막은 아프리카 북부에 펼쳐진 거대한 사막이에요. 🐪" },
+    { q: "케냐 하면 떠오르는 것은?", a: ["사파리", "피요르드", "빙하", "화산섬"], correct: 0, exp: "케냐는 야생동물을 볼 수 있는 사파리로 유명해요. 🦁" },
+    { q: "에티오피아는 무엇의 고향으로 알려질까요?", a: ["커피", "차", "카카오", "사탕수수"], correct: 0, exp: "에티오피아는 커피의 기원지로 자주 소개돼요. ☕" },
+    { q: "탄자니아에 있는 아프리카 최고봉은?", a: ["킬리만자로", "에베레스트", "몽블랑", "후지산"], correct: 0, exp: "킬리만자로는 아프리카에서 가장 높은 산으로 유명해요. 🏔️" },
+    { q: "나이지리아의 수도는?", a: ["라고스", "아부자", "카노", "이바단"], correct: 1, exp: "나이지리아의 수도는 아부자예요. 🇳🇬" },
+    { q: "남아프리카공화국의 행정 수도(정부 소재지)는?", a: ["케이프타운", "프리토리아", "요하네스버그", "더반"], correct: 1, exp: "남아공은 수도 기능이 도시별로 나뉘기도 하지만, 행정 수도는 프리토리아로 알려져요. ⛰️" },
+    { q: "모로코는 어떤 자연환경이 함께 나타날까요?", a: ["사막과 바다", "빙하와 툰드라", "열대우림", "대초원만"], correct: 0, exp: "모로코는 대서양/지중해와 사하라 사막의 영향을 함께 받아요. 🏙️🐪" },
+    { q: "마다가스카르의 유명한 나무는?", a: ["바오밥", "벚나무", "소나무", "단풍나무"], correct: 0, exp: "마다가스카르에는 ‘바오밥’이 유명해요. 🌳" },
+    { q: "가나는 무엇(작물)로 유명할까요?", a: ["카카오", "쌀", "밀", "옥수수"], correct: 0, exp: "가나는 카카오 생산으로 유명해서 초콜릿 이야기와 연결하기 좋아요. 🍫" },
+  ],
+  north_america: [
+    { q: "미국의 수도는?", a: ["뉴욕", "워싱턴 D.C.", "LA", "시카고"], correct: 1, exp: "미국의 수도는 워싱턴 D.C.예요. 🏛️" },
+    { q: "캐나다의 수도는?", a: ["토론토", "밴쿠버", "오타와", "몬트리올"], correct: 2, exp: "캐나다의 수도는 오타와예요. 🇨🇦" },
+    { q: "멕시코의 수도는?", a: ["칸쿤", "과달라하라", "멕시코시티", "몬테레이"], correct: 2, exp: "멕시코의 수도는 멕시코시티예요. 🇲🇽" },
+    { q: "쿠바의 수도는?", a: ["산티아고", "아바나", "트리니다드", "바라데로"], correct: 1, exp: "쿠바의 수도는 아바나예요. 🚗" },
+    { q: "북아메리카에서 가장 큰 나라는?", a: ["캐나다", "미국", "멕시코", "쿠바"], correct: 0, exp: "북아메리카에서 면적이 가장 큰 나라는 캐나다예요. 🗺️" },
+    { q: "나이아가라 폭포는 주로 어떤 나라와 가까울까요?", a: ["캐나다", "멕시코", "쿠바", "브라질"], correct: 0, exp: "나이아가라 폭포는 미국-캐나다 국경 근처로 유명해요. 🌊" },
+    { q: "자유의 여신상이 있는 나라는?", a: ["캐나다", "미국", "멕시코", "쿠바"], correct: 1, exp: "자유의 여신상은 미국 뉴욕 근처에 있어요. 🗽" },
+    { q: "멕시코의 유명한 고대 유적은?", a: ["치첸이트사", "피라미드", "콜로세움", "에펠탑"], correct: 0, exp: "치첸이트사는 마야 문명과 관련된 유적이에요. 🏛️" },
+    { q: "북아메리카는 어떤 바다/해양과 연결될까요?", a: ["대서양·태평양", "인도양만", "북극해만", "지중해만"], correct: 0, exp: "북아메리카는 대서양과 태평양 양쪽과 연결돼요. 🌊🌊" },
+    { q: "쿠바는 어떤 지역(바다)로 유명할까요?", a: ["카리브해", "지중해", "발트해", "흑해"], correct: 0, exp: "쿠바는 카리브해 지역의 섬나라예요. 🏝️" },
+  ],
+  south_america: [
+    { q: "브라질의 수도는?", a: ["리우데자네이루", "브라질리아", "상파울루", "살바도르"], correct: 1, exp: "브라질의 수도는 브라질리아예요. 🇧🇷" },
+    { q: "아르헨티나의 수도는?", a: ["부에노스아이레스", "코르도바", "멘도사", "로사리오"], correct: 0, exp: "아르헨티나의 수도는 부에노스아이레스예요. 💃" },
+    { q: "페루의 유명한 유적은?", a: ["마추픽추", "만리장성", "피라미드", "빅벤"], correct: 0, exp: "마추픽추는 잉카 문명과 관련된 산악 유적이에요. ⛰️" },
+    { q: "콜롬비아의 수도는?", a: ["메데인", "보고타", "칼리", "카르타헤나"], correct: 1, exp: "콜롬비아의 수도는 보고타예요. ☕" },
+    { q: "칠레는 어떤 모양의 나라로 자주 표현될까요?", a: ["길쭉한 나라", "원형 나라", "삼각형 나라", "섬나라"], correct: 0, exp: "칠레는 남북으로 길게 뻗어 있는 나라로 유명해요. 🗺️" },
+    { q: "남아메리카의 큰 열대우림은?", a: ["아마존", "사하라", "고비", "타이가"], correct: 0, exp: "아마존 열대우림은 ‘지구의 허파’로 불리기도 해요. 🌳" },
+    { q: "브라질 하면 떠오르는 대표 문화는?", a: ["삼바", "플라멩코", "탱고", "발레"], correct: 0, exp: "브라질은 삼바와 축구로 유명해요. ⚽🥁" },
+    { q: "아르헨티나 하면 유명한 춤은?", a: ["탱고", "삼바", "힙합", "발레"], correct: 0, exp: "아르헨티나는 탱고의 고장으로 알려져요. 💃" },
+    { q: "페루의 수도는?", a: ["리마", "라파스", "키토", "보고타"], correct: 0, exp: "페루의 수도는 리마예요. 🇵🇪" },
+    { q: "남아메리카에서 가장 큰 나라(면적)는?", a: ["브라질", "아르헨티나", "칠레", "페루"], correct: 0, exp: "남아메리카에서 면적이 가장 큰 나라는 브라질이에요. 🗺️" },
+  ],
+  oceania: [
+    { q: "호주의 수도는?", a: ["시드니", "멜버른", "캔버라", "브리즈번"], correct: 2, exp: "호주의 수도는 캔버라예요. (시드니가 아님!) 🇦🇺" },
+    { q: "뉴질랜드의 수도는?", a: ["오클랜드", "웰링턴", "크라이스트처치", "더니든"], correct: 1, exp: "뉴질랜드의 수도는 웰링턴이에요. 🇳🇿" },
+    { q: "오페라하우스는 어느 나라의 랜드마크?", a: ["뉴질랜드", "호주", "피지", "파푸아뉴기니"], correct: 1, exp: "시드니 오페라하우스는 호주의 대표 랜드마크예요. 🎭" },
+    { q: "뉴질랜드 ‘호빗 마을’은 어떤 영화와 연결될까요?", a: ["해리포터", "반지의 제왕", "스타워즈", "어벤져스"], correct: 1, exp: "뉴질랜드는 반지의 제왕 촬영지로 유명해요. 🧙‍♂️" },
+    { q: "오세아니아는 어떤 특징이 많을까요?", a: ["섬이 많다", "사막만 있다", "빙하만 있다", "평원이 없다"], correct: 0, exp: "오세아니아는 섬과 해양 지역이 큰 비중을 차지해요. 🏝️" },
+    { q: "파푸아뉴기니의 수도는?", a: ["포트모르즈비", "수바", "웰링턴", "캔버라"], correct: 0, exp: "파푸아뉴기니의 수도는 포트모르즈비예요. 👺" },
+    { q: "호주에서 유명한 동물은?", a: ["낙타", "코알라", "펭귄", "북극곰"], correct: 1, exp: "호주는 코알라와 캥거루로 유명해요. 🐨🦘" },
+    { q: "뉴질랜드는 무엇으로도 유명할까요?", a: ["청정 자연", "사하라", "만리장성", "피라미드"], correct: 0, exp: "뉴질랜드는 아름다운 자연 풍경으로 유명해요. 🌿" },
+    { q: "오세아니아에 속하는 대륙은?", a: ["호주", "유럽", "아프리카", "아시아"], correct: 0, exp: "오세아니아는 호주와 주변 섬나라들을 포함해요. 🌏" },
+    { q: "오스트레일리아(호주) 대륙의 기후 특징은?", a: ["지역별 다양", "항상 한겨울", "항상 빙하", "항상 장마"], correct: 0, exp: "호주는 지역에 따라 사막부터 온대까지 다양해요. 🌦️" },
+  ],
+};
+
+function safeMean(points) {
+  if (!points || points.length === 0) return { x: 0, y: 0 };
+  const sx = points.reduce((a, p) => a + (p.x || 0), 0);
+  const sy = points.reduce((a, p) => a + (p.y || 0), 0);
+  return { x: sx / points.length, y: sy / points.length };
+}
+
+/**
+ * ✅ 지도 데이터 로드 + 대륙별 SVG path 생성
+ * - 퍼즐 화면 지도 크게: 대륙맵 width/height 키움
+ * - 월드맵도 살짝 크게
+ */
+async function loadRealMapShapes() {
+  try {
+    const url = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("지도 데이터 로딩 실패");
+    const topo = await response.json();
+
+    const countries = feature(topo, topo.objects.countries).features;
+    const byNumericId = new Map(countries.map((f) => [Number(f.id), f]));
+
+    const makeContinentShapes = (continentId, width = 1100, height = 760) => {
+      const ids = CONTINENT_COUNTRY_IDS[continentId] || [];
+      const feats = ids.map((code) => byNumericId.get(WORLD_ATLAS_ID[code])).filter(Boolean);
+      if (feats.length === 0) return { shapes: {}, centroids: {}, width, height, continentCentroid: { x: width / 2, y: height / 2 } };
+
+      const projection = d3.geoMercator();
+      const featureCollection = { type: "FeatureCollection", features: feats };
+      projection.fitSize([width, height], featureCollection);
+      const pathGen = d3.geoPath(projection);
+
+      const shapes = {};
+      const centroids = {};
+      feats.forEach((f) => {
+        shapes[f.id] = pathGen(f);
+        const [cx, cy] = pathGen.centroid(f);
+        centroids[f.id] = { cx, cy };
+      });
+
+      // 대륙 라벨 위치(평균)
+      const pts = feats
+        .map((f) => {
+          const [cx, cy] = pathGen.centroid(f);
+          return { x: cx, y: cy };
+        })
+        .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+      const mean = safeMean(pts);
+
+      return { shapes, centroids, width, height, continentCentroid: mean };
+    };
+
+    const makeWorldMap = (width = 1300, height = 700) => {
+      const projection = d3.geoEquirectangular().translate([width / 2, height / 2]).scale(210);
+      const pathGen = d3.geoPath(projection);
+
+      const shapes = {};
+      const centroids = {};
+
+      // 대륙별 centroid 계산용 포인트 누적
+      const contPts = {
+        asia: [],
+        europe: [],
+        africa: [],
+        north_america: [],
+        south_america: [],
+        oceania: [],
+      };
+
+      Object.keys(CONTINENT_COUNTRY_IDS).forEach((contKey) => {
+        CONTINENT_COUNTRY_IDS[contKey].forEach((code) => {
+          const numId = WORLD_ATLAS_ID[code];
+          const f = byNumericId.get(numId);
+          if (!f) return;
+          shapes[numId] = pathGen(f);
+          const [cx, cy] = pathGen.centroid(f);
+          centroids[numId] = { cx, cy };
+          if (Number.isFinite(cx) && Number.isFinite(cy)) contPts[contKey].push({ x: cx, y: cy });
+        });
+      });
+
+      const allShapes = countries.map((f) => ({ id: Number(f.id), d: pathGen(f) }));
+      const continentLabels = Object.fromEntries(Object.keys(contPts).map((k) => [k, safeMean(contPts[k])]));
+
+      return { shapes, centroids, allShapes, continentLabels, width, height };
+    };
+
+    return {
+      asia: makeContinentShapes("asia"),
+      europe: makeContinentShapes("europe"),
+      africa: makeContinentShapes("africa"),
+      north_america: makeContinentShapes("north_america"),
+      south_america: makeContinentShapes("south_america"),
+      oceania: makeContinentShapes("oceania"),
+      world: makeWorldMap(),
+    };
+  } catch (error) {
+    console.error("Map Load Error:", error);
+    return null;
+  }
+}
+
+export default function App() {
+  const [view, setView] = useState("MAIN");
+  const [activeContinent, setActiveContinent] = useState(null);
+
+  const [unlockedContinents, setUnlockedContinents] = useState(["asia"]);
+  const [badges, setBadges] = useState([]);
+
+  const [mapShapes, setMapShapes] = useState(null);
+  const [mapLoading, setMapLoading] = useState(true);
+
+  const [isMuted, setIsMuted] = useState(false);
+
+  useEffect(() => {
+    const link = document.createElement("link");
+    link.href = "https://fonts.googleapis.com/css2?family=Jua&display=swap";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+
+    (async () => {
+      try {
+        setMapLoading(true);
+        const shapes = await loadRealMapShapes();
+        setMapShapes(shapes);
+      } finally {
+        setMapLoading(false);
+      }
+    })();
+  }, []);
+
+  const playSfx = (type) => {
+    if (!isMuted) soundEffect.play(type);
+  };
+
+  const handlePuzzleComplete = (continentId) => {
+    if (!badges.includes(continentId)) setBadges((prev) => [...prev, continentId]);
+    const current = GAME_DATA.continents.find((c) => c.id === continentId);
+    if (current && current.next && !unlockedContinents.includes(current.next)) {
+      setUnlockedContinents((prev) => [...prev, current.next]);
+    }
+  };
+
+  const renderView = () => {
+    switch (view) {
+      case "MAIN":
+        return <MainMenu setView={setView} badges={badges} />;
+      case "PUZZLE_SELECT":
+        return (
+          <WorldMapSelect
+            setView={setView}
+            setActiveContinent={setActiveContinent}
+            unlocked={unlockedContinents}
+            badges={badges}
+            mapShapes={mapShapes}
+            mapLoading={mapLoading}
+            playSfx={playSfx}
+          />
+        );
+      case "PUZZLE_PLAY":
+        return (
+          <PuzzleGame
+            continent={GAME_DATA.continents.find((c) => c.id === activeContinent)}
+            countries={GAME_DATA.countries[activeContinent]}
+            mapShapes={mapShapes?.[activeContinent] || null}
+            mapLoading={mapLoading}
+            onComplete={() => handlePuzzleComplete(activeContinent)}
+            onBack={() => setView("PUZZLE_SELECT")}
+            playSfx={playSfx}
+          />
+        );
+      case "MEMORY_CAPITAL":
+        return (
+          <CapitalMemoryGame
+            onBack={() => setView("MAIN")}
+            allCountries={Object.values(GAME_DATA.countries).flat()}
+            playSfx={playSfx}
+          />
+        );
+      case "QUIZ_SELECT":
+        return <QuizSelect onBack={() => setView("MAIN")} onPick={(cid) => { setActiveContinent(cid); setView("QUIZ_GAME"); }} />;
+      case "QUIZ_GAME":
+        return <QuizGameByContinent onBack={() => setView("MAIN")} continentId={activeContinent || "asia"} playSfx={playSfx} />;
+      default:
+        return <MainMenu setView={setView} badges={badges} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-sky-50 font-['Jua'] text-gray-800 select-none overflow-hidden touch-none">
+      <div className="max-w-7xl mx-auto h-screen flex flex-col relative shadow-2xl bg-white overflow-hidden">
+        {/* 사운드 토글 */}
+        <div className="absolute top-4 right-4 z-50">
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className="p-2 bg-white/70 backdrop-blur rounded-full shadow hover:bg-white transition-colors"
+          >
+            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+          </button>
+        </div>
+
+        {renderView()}
+      </div>
+
+      <style>{`
+        .font-jua { font-family: 'Jua', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        @keyframes pop {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); }
+        }
+        .animate-pop { animation: pop 0.4s ease-in-out; }
+        .word-keep-all { word-break: keep-all; }
+      `}</style>
+    </div>
+  );
+}
+
+/**
+ * ✅ 시작 화면 (요청 #6)
+ */
+function MainMenu({ setView, badges }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-blue-100 to-sky-50 w-full h-full relative">
+      <div className="text-center mb-8 z-10">
+        <div className="inline-block p-4 bg-white rounded-full shadow-lg mb-4 animate-bounce">
+          <Globe size={56} className="text-blue-500" />
+        </div>
+        <h1 className="text-5xl font-bold text-blue-900 mb-2 drop-shadow-sm">
+          🌍✨ 도전! 세계지리 마스터
+        </h1>
+        <p className="text-xl text-blue-600">지도를 보며 대륙을 탐험해요!</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl z-10 px-8 mb-10">
+        <MenuButton
+          icon={<MapIcon size={48} />}
+          title="세계 여행"
+          desc="대륙 선택 → 퍼즐 맞추기"
+          color="bg-rose-100 hover:bg-rose-200"
+          textColor="text-rose-600"
+          onClick={() => setView("PUZZLE_SELECT")}
+        />
+        <MenuButton
+          icon={<Landmark size={48} />}
+          title="수도 메모리게임"
+          desc="나라-수도/랜드마크 짝꿍 찾기"
+          color="bg-yellow-100 hover:bg-yellow-200"
+          textColor="text-yellow-700"
+          onClick={() => setView("MEMORY_CAPITAL")}
+        />
+        <MenuButton
+          icon={<HelpCircle size={48} />}
+          title="상식 퀴즈"
+          desc="대륙별 10문제 도전!"
+          color="bg-green-100 hover:bg-green-200"
+          textColor="text-green-600"
+          onClick={() => setView("QUIZ_SELECT")}
+        />
+      </div>
+
+      {/* 배지 */}
+      <div className="mt-2 bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-white/50 flex gap-4">
+        {GAME_DATA.continents.map((c) => (
+          <div
+            key={c.id}
+            className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+              badges.includes(c.id)
+                ? "bg-yellow-400 border-yellow-500 text-white shadow-md transform scale-110"
+                : "bg-gray-100 border-gray-200 text-gray-300"
+            }`}
+          >
+            <Star size={20} fill={badges.includes(c.id) ? "currentColor" : "none"} />
+          </div>
+        ))}
+      </div>
+
+      {/* 출처 */}
+      <div className="absolute bottom-4 text-center">
+        <span className="text-gray-500 text-sm font-bold bg-white/50 px-4 py-1 rounded-full shadow-sm">
+          보라쌤과 사회를 보라
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function MenuButton({ icon, title, desc, color, textColor, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`${color} ${textColor} p-8 rounded-3xl shadow-lg transform transition-all hover:scale-105 active:scale-95 flex flex-col items-center text-center group border-4 border-white`}
+    >
+      <div className="mb-4 p-4 bg-white rounded-2xl shadow-sm group-hover:rotate-6 transition-transform">{icon}</div>
+      <h2 className="text-2xl font-bold mb-2">{title}</h2>
+      <p className="text-base opacity-90 font-medium">{desc}</p>
+    </button>
+  );
+}
+
+/**
+ * ✅ 세계지도에서 대륙 선택 (요청 #5: 한글 대륙명 + 알록달록 파스텔)
+ */
+function WorldMapSelect({ setView, setActiveContinent, unlocked, badges, mapShapes, mapLoading, playSfx }) {
+  const [hoverContinent, setHoverContinent] = useState(null);
+
+  const contMap = useMemo(() => {
+    const m = {};
+    GAME_DATA.continents.forEach((c) => (m[c.id] = c));
+    return m;
+  }, []);
+
+  return (
+    <div className="flex-1 flex flex-col bg-slate-50 relative">
+      <div className="absolute top-4 left-4 z-20">
+        <button
+          onClick={() => setView("MAIN")}
+          className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-100 border border-gray-200"
+        >
+          <ChevronLeft size={28} />
+        </button>
+      </div>
+
+      <div className="absolute top-8 w-full text-center z-10 pointer-events-none">
+        <div className="inline-block bg-white/90 backdrop-blur px-6 py-2 rounded-full shadow-md border border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-800">
+            {hoverContinent
+              ? contMap[hoverContinent]?.name + (unlocked.includes(hoverContinent) ? " 탐험하기!" : " (아직 갈 수 없어요)")
+              : "탐험할 대륙을 지도에서 선택하세요!"}
+          </h2>
+        </div>
+      </div>
+
+      <div className="flex-1 w-full h-full bg-blue-50 relative overflow-hidden flex items-center justify-center">
+        {mapLoading || !mapShapes?.world ? (
+          <div className="flex flex-col items-center text-blue-500">
+            <Loader2 className="animate-spin mb-2" size={48} />
+            <span className="font-bold">세계 지도 펼치는 중...</span>
+          </div>
+        ) : (
+          <svg
+            viewBox={`0 0 ${mapShapes.world.width} ${mapShapes.world.height}`}
+            className="w-full h-full max-h-[92vh] drop-shadow-2xl"
+            style={{ background: "#e0f7fa" }}
+          >
+            {/* 바탕 전체 국가 */}
+            <g>
+              {mapShapes.world.allShapes.map((shape, i) => (
+                <path key={`bg-${i}`} d={shape.d} fill="#f3f5f7" stroke="#d6dde3" strokeWidth="0.5" />
+              ))}
+            </g>
+
+            {/* 대륙별 색칠 */}
+            {Object.keys(CONTINENT_COUNTRY_IDS).map((contKey) => {
+              const continent = contMap[contKey];
+              const isUnlocked = unlocked.includes(contKey);
+              const isCompleted = badges.includes(contKey);
+              const isHovered = hoverContinent === contKey;
+
+              const baseColor = continent?.color || "#b0bec5";
+              const fill = isUnlocked
+                ? isCompleted
+                  ? baseColor
+                  : isHovered
+                  ? baseColor
+                  : baseColor
+                : baseColor;
+
+              const opacity = isUnlocked ? (isHovered ? 1 : 0.78) : 0.25;
+
+              return CONTINENT_COUNTRY_IDS[contKey].map((code) => {
+                const numId = WORLD_ATLAS_ID[code];
+                const pathData = mapShapes.world.shapes[numId];
+                if (!pathData) return null;
+                return (
+                  <path
+                    key={`${contKey}-${code}`}
+                    d={pathData}
+                    fill={fill}
+                    fillOpacity={opacity}
+                    stroke="white"
+                    strokeWidth={isHovered ? 1.5 : 0.6}
+                    className="transition-all duration-300 cursor-pointer"
+                    onMouseEnter={() => setHoverContinent(contKey)}
+                    onMouseLeave={() => setHoverContinent(null)}
+                    onClick={() => {
+                      if (isUnlocked) {
+                        setActiveContinent(contKey);
+                        setView("PUZZLE_PLAY");
+                      } else {
+                        playSfx("error");
+                      }
+                    }}
+                  />
+                );
+              });
+            })}
+
+            {/* ✅ 대륙명 한글 라벨 */}
+            <g className="pointer-events-none">
+              {GAME_DATA.continents.map((c) => {
+                const pos = mapShapes.world.continentLabels?.[c.id];
+                if (!pos) return null;
+                const locked = !unlocked.includes(c.id);
+                return (
+                  <g key={`label-${c.id}`}>
+                    <text
+                      x={pos.x}
+                      y={pos.y}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      style={{ fontSize: 28 }}
+                      className={`font-bold ${locked ? "fill-gray-400" : "fill-gray-800"}`}
+                    >
+                      {c.name}
+                    </text>
+                    <text
+                      x={pos.x}
+                      y={pos.y + 28}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      style={{ fontSize: 14 }}
+                      className={`${locked ? "fill-gray-400" : "fill-gray-700"} font-bold`}
+                    >
+                      {locked ? "잠금" : badges.includes(c.id) ? "정복 완료!" : "도전!"}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          </svg>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ✅ 퍼즐 게임 (요청 #4: 지도 가운데 크게)
+ * - 지도 영역을 더 크게, 조각 패널은 하단 드로어 형태(모바일/태블릿 친화)
+ */
+function PuzzleGame({ continent, countries, mapShapes, mapLoading, onComplete, onBack, playSfx }) {
+  const [pieces, setPieces] = useState([]);
+  const [placed, setPlaced] = useState([]);
+  const [selectedPiece, setSelectedPiece] = useState(null);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [message, setMessage] = useState(null);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [isReviewMode, setIsReviewMode] = useState(false);
+
+  const svgRef = useRef(null);
+
+  useEffect(() => {
+    const shuffled = [...countries].sort(() => Math.random() - 0.5);
+    setPieces(shuffled);
+    setPlaced([]);
+    setIsCompleted(false);
+    setIsReviewMode(false);
+    setSelectedPiece(null);
+    setMessage(null);
+  }, [continent?.id]);
+
+  useEffect(() => {
+    if (placed.length === countries.length && countries.length > 0) {
+      setIsCompleted(true);
+      playSfx("win");
+      setTimeout(() => onComplete(), 900);
+    }
+  }, [placed, countries]);
+
+  const handleMouseMove = (e) => {
+    if (!selectedPiece) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    setDragPos({ x: clientX, y: clientY });
+  };
+
+  const handlePieceStart = (e, piece) => {
+    if (isReviewMode) return;
+    e.stopPropagation();
+    setSelectedPiece(piece);
+    setIsDragging(true);
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    setDragPos({ x: clientX, y: clientY });
+  };
+
+  const handleMapRelease = (e) => {
+    if (!selectedPiece || !mapShapes || isReviewMode) return;
+
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+    const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+    const vbW = mapShapes.width;
+    const vbH = mapShapes.height;
+
+    const x = ((clientX - rect.left) / rect.width) * vbW;
+    const y = ((clientY - rect.top) / rect.height) * vbH;
+
+    const numId = WORLD_ATLAS_ID[selectedPiece.id];
+    const target = mapShapes.centroids?.[numId];
+    if (!target) return;
+
+    const dist = Math.hypot(x - target.cx, y - target.cy);
+
+    // 작은 나라 대비 판정 넉넉
+    const threshold = 130;
+
+    if (dist < threshold) {
+      setPlaced((prev) => [...prev, selectedPiece]);
+      setPieces((prev) => prev.filter((p) => p.id !== selectedPiece.id));
+      playSfx("snap");
+      setMessage({ type: "info", data: selectedPiece });
+    } else {
+      playSfx("error");
+    }
+
+    setSelectedPiece(null);
+    setIsDragging(false);
+  };
+
+  const handleCountryClick = (country) => {
+    if (!isReviewMode) return;
+    setMessage({ type: "info", data: country });
+  };
+
+  if (!continent) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-gray-500 font-bold">대륙 정보를 불러오는 중...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden"
+      onMouseMove={handleMouseMove}
+      onTouchMove={handleMouseMove}
+      onMouseUp={handleMapRelease}
+      onTouchEnd={handleMapRelease}
+    >
+      {/* 상단바 */}
+      <div className={`p-2 ${continent.color} border-b-2 border-white/50 flex items-center justify-between shadow-sm z-20`}>
+        <button onClick={onBack} className="bg-white p-2 rounded-full shadow-sm hover:bg-gray-50 text-gray-700 flex items-center gap-2">
+          <ArrowLeft size={20} />
+          <span className="text-sm font-bold hidden sm:inline">뒤로</span>
+        </button>
+
+        <div className="flex flex-col items-center">
+          <h2 className="text-xl font-bold text-gray-800">{continent.name} {isReviewMode ? "탐험" : "퍼즐"}</h2>
+          {!isReviewMode && (
+            <span className="text-xs text-gray-600 font-bold bg-white/50 px-2 py-0.5 rounded-full">
+              {placed.length} / {countries.length}
+            </span>
+          )}
+        </div>
+
+        {isReviewMode ? (
+          <div className="flex items-center gap-2 bg-white/60 px-3 py-1 rounded-full text-xs font-bold text-blue-900">
+            <Search size={16} />
+            <span className="hidden sm:inline">나라를 클릭해보세요!</span>
+          </div>
+        ) : (
+          <div className="w-10" />
+        )}
+      </div>
+
+      {/* 지도 크게 중앙 */}
+      <div className="flex-1 relative bg-blue-50 overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(#90caf9 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+
+        <div className="relative w-full h-full flex items-center justify-center p-2 sm:p-4">
+          {mapLoading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm z-30">
+              <Loader2 className="animate-spin text-blue-500 mb-2" size={48} />
+              <span className="text-blue-600 font-bold text-lg">지도를 펼치는 중...</span>
+            </div>
+          )}
+
+          {!mapLoading && mapShapes && (
+            <div className="w-full max-w-6xl aspect-[11/7] bg-white/40 rounded-3xl shadow-inner border border-white/50 overflow-hidden flex items-center justify-center">
+              <svg
+                ref={svgRef}
+                viewBox={`0 0 ${mapShapes.width} ${mapShapes.height}`}
+                className="w-full h-full drop-shadow-xl cursor-default"
+                preserveAspectRatio="xMidYMid meet"
+              >
+                {/* 윤곽/배경 */}
+                <g>
+                  {mapShapes.shapes &&
+                    Object.keys(mapShapes.shapes).map((key) => {
+                      const numId = Number(key);
+                      const pathData = mapShapes.shapes[numId];
+                      const centroid = mapShapes.centroids[numId];
+
+                      const puzzleCountry = countries.find((c) => WORLD_ATLAS_ID[c.id] === numId);
+                      const isPlaced = placed.find((p) => WORLD_ATLAS_ID[p.id] === numId);
+
+                      // 러시아(배경용)
+                      if (numId === 643) {
+                        return (
+                          <g key={`bg-ru-${numId}`} className="opacity-50">
+                            <path d={pathData} fill="#e6eaee" stroke="#90a4ae" strokeWidth="0.6" />
+                            {centroid && (
+                              <text x={centroid.cx} y={centroid.cy} textAnchor="middle" className="fill-gray-500 font-bold" style={{ fontSize: 10 }}>
+                                러시아
+                              </text>
+                            )}
+                          </g>
+                        );
+                      }
+
+                      if (!puzzleCountry) {
+                        return (
+                          <g key={`bg-country-${numId}`} className="opacity-70">
+                            <path d={pathData} fill="#f0f2f4" stroke="#9fb0bb" strokeWidth="0.7" />
+                            {centroid && (
+                              <text
+                                x={centroid.cx}
+                                y={centroid.cy}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                className="fill-gray-500 font-bold pointer-events-none select-none"
+                                style={{ fontSize: 8 }}
+                              >
+                                {ID_TO_NAME_KO[numId] || ""}
+                              </text>
+                            )}
+                          </g>
+                        );
+                      }
+
+                      // 퍼즐 자리(점선)
+                      if (!isPlaced) {
+                        return (
+                          <g key={`outline-${numId}`}>
+                            <path d={pathData} fill="#e3f2fd" stroke="#546e7a" strokeWidth="2" strokeDasharray="4,4" className="opacity-90" />
+                          </g>
+                        );
+                      }
+                      return null;
+                    })}
+                </g>
+
+                {/* 배치된 조각 */}
+                <g>
+                  {placed.map((country) => {
+                    const numId = WORLD_ATLAS_ID[country.id];
+                    const pathData = mapShapes.shapes?.[numId];
+                    const centroid = mapShapes.centroids?.[numId];
+                    if (!pathData || !centroid) return null;
+
+                    return (
+                      <g
+                        key={`placed-${country.id}`}
+                        className={`transition-all duration-300 ${isReviewMode ? "cursor-pointer hover:opacity-95" : "animate-pop"}`}
+                        onClick={() => handleCountryClick(country)}
+                      >
+                        <path d={pathData} fill={country.color || "#a7f3d0"} stroke="white" strokeWidth="1.5" className="drop-shadow-sm" />
+                        <foreignObject x={centroid.cx - 26} y={centroid.cy - 14} width="52" height="28" className="overflow-visible pointer-events-none">
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className={`text-[10px] sm:text-xs font-bold text-gray-800 bg-white/70 px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap border border-white/50 ${isReviewMode ? "bg-white/85 scale-110" : ""}`}>
+                              {country.name}
+                            </span>
+                          </div>
+                        </foreignObject>
+                      </g>
+                    );
+                  })}
+                </g>
+
+                {/* 드래그 하이라이트 */}
+                {selectedPiece && (() => {
+                  const numId = WORLD_ATLAS_ID[selectedPiece.id];
+                  const pathData = mapShapes.shapes?.[numId];
+                  if (!pathData) return null;
+                  return <path d={pathData} fill="none" stroke="#ffd54f" strokeWidth="4" className="animate-pulse opacity-80" />;
+                })()}
+              </svg>
+            </div>
+          )}
+
+          {!selectedPiece && pieces.length > 0 && !mapLoading && !isReviewMode && (
+            <div className="absolute bottom-24 sm:bottom-28 bg-white/90 backdrop-blur px-6 py-3 rounded-full text-blue-800 font-bold shadow-lg animate-bounce flex items-center gap-2 pointer-events-none">
+              <MousePointer2 size={24} />
+              <span className="text-lg">조각을 끌어서 지도에 놓으세요!</span>
+            </div>
+          )}
+        </div>
+
+        {/* 하단 조각 트레이 */}
+        {!isReviewMode && (
+          <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t-4 border-blue-50 shadow-2xl">
+            <div className="p-3 flex items-center justify-between">
+              <div className="font-bold text-gray-700">남은 조각 ({pieces.length})</div>
+              <button
+                onClick={() => {
+                  // 리셋
+                  const shuffled = [...countries].sort(() => Math.random() - 0.5);
+                  setPieces(shuffled);
+                  setPlaced([]);
+                  setIsCompleted(false);
+                  setSelectedPiece(null);
+                  setMessage(null);
+                  playSfx("error");
+                }}
+                className="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold flex items-center gap-2"
+              >
+                <RotateCcw size={18} /> 다시
+              </button>
+            </div>
+
+            <div className="px-3 pb-4 overflow-x-auto hide-scrollbar">
+              <div className="flex gap-3 items-center">
+                {pieces.length === 0 && !isCompleted ? (
+                  <div className="w-full py-8 text-center text-gray-400 font-bold">✨ 완성! ✨</div>
+                ) : (
+                  pieces.map((piece) => (
+                    <button
+                      key={piece.id}
+                      onMouseDown={(e) => handlePieceStart(e, piece)}
+                      onTouchStart={(e) => handlePieceStart(e, piece)}
+                      className={`flex-shrink-0 w-28 h-32 bg-white border-2 border-gray-100 rounded-2xl shadow-sm hover:shadow-lg hover:border-blue-300 hover:scale-105 transition-all flex flex-col items-center justify-center gap-2 relative group overflow-hidden ${
+                        selectedPiece?.id === piece.id ? "opacity-0" : "opacity-100"
+                      }`}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-white to-gray-50" />
+                      <div className="relative z-10 w-20 h-20 flex items-center justify-center">
+                        <img src={getFlagUrl(piece.id)} alt={piece.name} className="w-16 h-auto shadow-md rounded-sm object-cover" draggable={false} />
+                      </div>
+                      <span className="relative z-10 text-sm font-bold text-gray-700 bg-white/80 px-2 rounded-full">{piece.name}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 드래그 프리뷰 */}
+      {isDragging && selectedPiece && (
+        <div className="fixed pointer-events-none z-[100] transform -translate-x-1/2 -translate-y-1/2" style={{ left: dragPos.x, top: dragPos.y }}>
+          <div className="relative animate-pulse flex flex-col items-center">
+            <img src={getFlagUrl(selectedPiece.id)} alt={selectedPiece.name} className="w-32 h-auto shadow-2xl rounded-lg border-4 border-white rotate-3" />
+            <div className="bg-white/95 backdrop-blur text-blue-900 font-bold text-lg px-4 py-1.5 rounded-full shadow-lg mt-3 whitespace-nowrap border-2 border-blue-100">
+              {selectedPiece.name}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 나라 정보 팝업 */}
+      {message && message.type === "info" && (
+        <InfoModal
+          data={message.data}
+          onClose={() => setMessage(null)}
+        />
+      )}
+
+      {/* 완료 오버레이 */}
+      {isCompleted && !isReviewMode && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-50 flex items-center justify-center">
+          <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-8 border-yellow-300 animate-pop max-w-md mx-4">
+            <div className="text-9xl mb-6">🎉</div>
+            <h2 className="text-4xl font-bold text-gray-800 mb-2">{continent.name} 정복!</h2>
+            <p className="text-gray-500 mb-8 text-lg">모든 나라의 위치를 찾았어요!</p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => setIsReviewMode(true)}
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-bold text-2xl py-4 rounded-2xl shadow-lg hover:scale-105 transition-transform flex items-center justify-center gap-2"
+              >
+                <Search size={28} /> 지도 탐색하기
+              </button>
+              <button
+                onClick={onBack}
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xl py-4 rounded-2xl shadow-sm hover:scale-105 transition-transform"
+              >
+                나가기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfoModal({ data, onClose }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center z-50 p-4">
+      <div className="bg-white/95 backdrop-blur rounded-[2rem] p-6 max-w-sm w-full shadow-2xl animate-pop border-4 border-blue-100 relative text-center">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+          <X size={24} />
+        </button>
+        <div className="flex justify-center mb-4">
+          <img src={getFlagUrl(data.id)} alt="flag" className="w-32 shadow-lg rounded-lg animate-bounce" />
+        </div>
+        <h3 className="text-3xl font-bold text-gray-800 mb-1">{data.name}</h3>
+
+        <div className="flex flex-col gap-2 mb-6">
+          <div className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
+            수도: {data.capital}
+          </div>
+          {data.landmark && (
+            <div className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-bold">
+              랜드마크: {data.landmarkEmoji} {data.landmark}
+            </div>
+          )}
+        </div>
+
+        <p className="text-gray-600 bg-gray-50 p-4 rounded-xl text-lg leading-snug mb-6 break-keep font-medium">
+          {data.desc}
+        </p>
+        <button
+          onClick={onClose}
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md transition-colors text-xl"
+        >
+          확인!
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ✅ (요청 #1, #2) 수도 메모리게임
+ * - 빈화면 원인(ReferenceError type) 제거
+ * - 카드 타입: 'name' / 'pair'
+ * - pair는 "수도" 또는 "랜드마크" 텍스트를 보여주고, 아래에 수도 라벨
+ */
+function CapitalMemoryGame({ onBack, allCountries, playSfx }) {
+  const [level, setLevel] = useState(1);
+  const [cards, setCards] = useState([]);
+  const [flipped, setFlipped] = useState([]);
+  const [matched, setMatched] = useState([]);
+  const [disabled, setDisabled] = useState(false);
+  const [moves, setMoves] = useState(0);
+  const [score, setScore] = useState(0);
+  const [gameWon, setGameWon] = useState(false);
+
+  const LEVEL_CONFIG = {
+    1: { pairs: 4, cols: 4, name: "초급" },
+    2: { pairs: 6, cols: 4, name: "중급" },
+    3: { pairs: 8, cols: 4, name: "고급" },
+  };
+
+  useEffect(() => {
+    startNewGame(level);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level]);
+
+  const startNewGame = (currentLevel) => {
+    const config = LEVEL_CONFIG[currentLevel];
+    const selection = [...allCountries].sort(() => Math.random() - 0.5).slice(0, config.pairs);
+
+    const cardPairs = selection
+      .map((country) => {
+        const id = country.id;
+
+        // 카드 A: 나라 이름
+        const cardA = {
+          id: `${id}-name`,
+          countryId: id,
+          content: country.name,
+          kind: "name",
+          country,
+        };
+
+        // 카드 B: 랜드마크(있으면) / 없으면 수도
+        const main = country.landmark ? `${country.landmarkEmoji} ${country.landmark}` : `🏙️ ${country.capital}`;
+        const cardB = {
+          id: `${id}-pair`,
+          countryId: id,
+          content: main,
+          kind: "pair",
+          country,
+          label: `수도: ${country.capital}`,
+        };
+
+        return [cardA, cardB];
+      })
+      .flat();
+
+    setCards(cardPairs.sort(() => Math.random() - 0.5));
+    setFlipped([]);
+    setMatched([]);
+    setMoves(0);
+    setGameWon(false);
+    setDisabled(false);
+  };
+
+  const handleCardClick = (id) => {
+    if (disabled || flipped.includes(id) || matched.includes(id)) return;
+
+    const newFlipped = [...flipped, id];
+    setFlipped(newFlipped);
+
+    if (newFlipped.length === 2) {
+      setDisabled(true);
+      setMoves((prev) => prev + 1);
+
+      const [firstId, secondId] = newFlipped;
+      const firstCard = cards.find((c) => c.id === firstId);
+      const secondCard = cards.find((c) => c.id === secondId);
+
+      if (firstCard && secondCard && firstCard.countryId === secondCard.countryId) {
+        setMatched((prev) => [...prev, firstId, secondId]);
+        setScore((prev) => prev + 10 * level);
+        setFlipped([]);
+        setDisabled(false);
+        playSfx("success");
+      } else {
+        setTimeout(() => {
+          setFlipped([]);
+          setDisabled(false);
+        }, 900);
+        playSfx("error");
+      }
+    } else {
+      playSfx("snap");
+    }
+  };
+
+  useEffect(() => {
+    if (cards.length > 0 && matched.length === cards.length) {
+      setGameWon(true);
+      playSfx("win");
+    }
+  }, [matched, cards]);
+
+  const handleNextLevel = () => {
+    if (level < 3) setLevel((l) => l + 1);
+    else onBack();
+  };
+
+  const cols = LEVEL_CONFIG[level]?.cols || 4;
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-yellow-50">
+      <div className="p-4 bg-white shadow-sm flex items-center justify-between z-10">
+        <button onClick={onBack} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200">
+          <ChevronLeft size={24} />
+        </button>
+
+        <div className="flex flex-col items-center">
+          <h2 className="text-xl font-bold text-gray-800">
+            수도 메모리게임 <span className="text-yellow-600">Lv.{level}</span>
+          </h2>
+          <div className="flex gap-4 text-xs text-gray-500 font-bold">
+            <span>시도: {moves}</span>
+            <span className="text-blue-600">점수: {score}</span>
+          </div>
+        </div>
+
+        <button onClick={() => startNewGame(level)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200">
+          <RotateCcw size={24} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 flex items-center justify-center">
+        <div className={`grid gap-2 w-full max-w-3xl`} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+          {cards.map((card) => {
+            const isOpen = flipped.includes(card.id) || matched.includes(card.id);
+            const isMatched = matched.includes(card.id);
+
+            const textLen = (card.content || "").length;
+            const fontSizeClass = textLen > 10 ? "text-xs" : textLen > 6 ? "text-sm" : "text-lg";
+
+            return (
+              <button
+                key={card.id}
+                onClick={() => handleCardClick(card.id)}
+                className={`aspect-[3/4] rounded-2xl shadow-md border-4 transition-all duration-300 overflow-hidden relative ${
+                  isMatched ? "opacity-60 scale-95 border-green-300" : "hover:scale-[1.03] border-white"
+                }`}
+              >
+                {/* 앞면(뒷면처럼 보이게) */}
+                {!isOpen ? (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-400 to-purple-500">
+                    <span className="text-4xl text-white/70 font-bold">?</span>
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-white border-yellow-300">
+                    {card.kind === "pair" ? (
+                      <>
+                        <div className="text-2xl mb-1">{card.content?.split(" ")[0] || "🏙️"}</div>
+                        <div className="text-sm font-bold text-gray-800 break-keep text-center">{card.content?.split(" ").slice(1).join(" ")}</div>
+                        <div className="mt-2 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{card.label}</div>
+                      </>
+                    ) : (
+                      <div className={`font-bold text-gray-800 break-keep text-center ${fontSizeClass}`}>{card.content}</div>
+                    )}
+
+                    {isMatched && <div className="mt-2 text-xs font-bold text-green-600">정답!</div>}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {gameWon && (
+        <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 text-center animate-pop max-w-sm w-full border-4 border-yellow-400">
+            <div className="text-6xl mb-4">🏆</div>
+            <h2 className="text-2xl font-bold mb-2">
+              {LEVEL_CONFIG[level].name} 클리어!
+            </h2>
+            <p className="text-gray-600 mb-6">총 점수: {score}점</p>
+            {level < 3 ? (
+              <button onClick={handleNextLevel} className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 px-8 rounded-full shadow-lg flex items-center justify-center gap-2 w-full">
+                다음 단계 도전 <Play size={20} fill="white" />
+              </button>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div className="text-lg font-bold text-yellow-600 mb-2">🎉 메모리게임 마스터! 🎉</div>
+                <button onClick={onBack} className="bg-gray-100 text-gray-700 font-bold py-3 px-8 rounded-full shadow-lg">
+                  메인으로
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * ✅ (요청 #3) 상식퀴즈: 대륙 선택 화면
+ */
+function QuizSelect({ onBack, onPick }) {
+  return (
+    <div className="flex-1 flex flex-col bg-emerald-50">
+      <div className="p-4 bg-white shadow-sm flex items-center justify-between z-10">
+        <button onClick={onBack} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200">
+          <ChevronLeft size={24} />
+        </button>
+        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <BookOpen size={22} /> 상식 퀴즈 (대륙별 10문제)
+        </h2>
+        <div className="w-10" />
+      </div>
+
+      <div className="flex-1 p-6 flex items-center justify-center">
+        <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {GAME_DATA.continents.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onPick(c.id)}
+              className="p-6 rounded-3xl shadow-lg border-4 border-white hover:scale-[1.02] transition-transform text-left"
+              style={{ background: c.color }}
+            >
+              <div className="text-2xl font-bold text-gray-900 mb-1">{c.name}</div>
+              <div className="text-sm font-bold text-gray-700">10문제 도전하기</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ✅ (요청 #3) 대륙별 10문제 + 정답/오답 설명 + (옵션 이미지)
+ */
+function QuizGameByContinent({ onBack, continentId, playSfx }) {
+  const quizList = QUIZ_BY_CONTINENT[continentId] || QUIZ_BY_CONTINENT.asia;
+  const continentName = GAME_DATA.continents.find((c) => c.id === continentId)?.name || "대륙";
+
+  const [idx, setIdx] = useState(0);
+  const [score, setScore] = useState(0);
+
+  const [selected, setSelected] = useState(null);
+  const [showExplain, setShowExplain] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(null);
+
+  const [finished, setFinished] = useState(false);
+
+  const q = quizList[idx];
+
+  const answer = (pick) => {
+    if (selected !== null) return;
+    setSelected(pick);
+
+    const ok = pick === q.correct;
+    setIsCorrect(ok);
+    setShowExplain(true);
+
+    if (ok) {
+      setScore((s) => s + 10);
+      playSfx("success");
+    } else {
+      playSfx("error");
+    }
+  };
+
+  const next = () => {
+    if (idx < quizList.length - 1) {
+      setIdx((p) => p + 1);
+      setSelected(null);
+      setShowExplain(false);
+      setIsCorrect(null);
+    } else {
+      setFinished(true);
+      playSfx("win");
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-green-50">
+      <div className="p-4 bg-white shadow-sm flex items-center justify-between z-10">
+        <button onClick={onBack} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200">
+          <ChevronLeft size={24} />
+        </button>
+        <div className="flex flex-col items-center">
+          <h2 className="text-xl font-bold text-gray-800">
+            {continentName} 상식 퀴즈
+          </h2>
+          <div className="text-xs font-bold text-gray-500">
+            문제 {Math.min(idx + 1, quizList.length)} / {quizList.length}
+          </div>
+        </div>
+        <div className="font-bold text-blue-600">{score}점</div>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center p-6">
+        {!finished ? (
+          <div className="w-full max-w-xl">
+            <div className="bg-white rounded-3xl p-8 shadow-lg border-b-8 border-green-200 mb-4 text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 bg-green-500 text-white px-4 py-1 rounded-br-2xl font-bold text-sm">
+                {continentName} · {idx + 1}번
+              </div>
+
+              {/* (옵션) 이미지 */}
+              {q?.img && (
+                <div className="mb-4">
+                  <img src={q.img} alt="quiz" className="w-full max-h-56 object-cover rounded-2xl shadow" />
+                </div>
+              )}
+
+              <h3 className="text-2xl font-bold text-gray-800 mt-6 leading-relaxed word-keep-all">{q.q}</h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {q.a.map((ans, aIdx) => {
+                let btnClass = "bg-white hover:bg-gray-50 border-2 border-gray-200 text-gray-700";
+                if (selected !== null) {
+                  if (aIdx === q.correct) btnClass = "bg-green-100 border-green-500 text-green-700 font-bold";
+                  else if (selected === aIdx) btnClass = "bg-red-100 border-red-500 text-red-700";
+                }
+                return (
+                  <button
+                    key={aIdx}
+                    onClick={() => answer(aIdx)}
+                    className={`w-full p-4 rounded-xl text-lg transition-all duration-200 shadow-sm ${btnClass}`}
+                  >
+                    {ans}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ✅ 맞/틀 + 설명 */}
+            {showExplain && (
+              <div className="mt-4 bg-white rounded-2xl p-5 shadow border-2 border-gray-100">
+                <div className={`text-2xl font-bold mb-2 ${isCorrect ? "text-green-600" : "text-red-600"}`}>
+                  {isCorrect ? "⭕ 정답!" : "❌ 아쉬워요!"}
+                </div>
+                <div className="text-gray-700 font-medium break-keep leading-relaxed">{q.exp}</div>
+
+                <button
+                  onClick={next}
+                  className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg transition-transform hover:scale-[1.01]"
+                >
+                  {idx < quizList.length - 1 ? "다음 문제" : "결과 보기"}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white rounded-[2rem] p-10 text-center shadow-2xl max-w-md w-full animate-pop">
+            <Trophy size={80} className="text-yellow-400 mx-auto mb-4" />
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">퀴즈 완료!</h2>
+            <p className="text-xl text-gray-600 mb-8">
+              {continentName} 점수는 <span className="text-blue-600 font-bold">{score}점</span> 입니다.
+            </p>
+            <button onClick={onBack} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg transition-transform hover:scale-105">
+              메인으로 돌아가기
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
