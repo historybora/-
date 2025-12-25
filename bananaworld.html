@@ -1,1328 +1,1140 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  Loader2,
-  Volume2,
-  VolumeX,
-  Trophy,
-  Globe,
-  Star,
-  ArrowRight,
-  Sparkles,
-  Search,
-  CheckCircle2,
-  Unlock,
-  Clock,
-  BookOpen,
-  RotateCcw
-} from "lucide-react";
-import * as d3 from "d3-geo";
-import { feature } from "topojson-client";
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>도전! 바나나 월드</title>
 
-// =============================================================================
-// 1) 데이터 및 설정
-// =============================================================================
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-const CONTINENT_ORDER = ["asia", "europe", "africa", "north_america", "south_america", "oceania"];
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 
-const CONTINENT_META = {
-  asia: { name: "아시아", color: "#FF8A80", bg: "bg-rose-50", text: "text-rose-600", quizCount: 5 },
-  europe: { name: "유럽", color: "#81D4FA", bg: "bg-sky-50", text: "text-sky-600", quizCount: 5 },
-  africa: { name: "아프리카", color: "#FFD54F", bg: "bg-amber-50", text: "text-amber-600", quizCount: 5 },
-  north_america: { name: "북아메리카", color: "#A5D6A7", bg: "bg-green-50", text: "text-green-600", quizCount: 3 },
-  south_america: { name: "남아메리카", color: "#CE93D8", bg: "bg-purple-50", text: "text-purple-600", quizCount: 5 },
-  oceania: { name: "오세아니아", color: "#80CBC4", bg: "bg-teal-50", text: "text-teal-600", quizCount: 2 }
-};
+  <!-- React + ReactDOM (UMD) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-const COUNTRY_COLORS = {
-  410: "#ff8a80",
-  156: "#ffe082",
-  392: "#fff59d",
-  356: "#a5d6a7",
-  704: "#80cbc4",
-  764: "#81d4fa",
-  360: "#90caf9",
-  608: "#ce93d8",
-  496: "#f48fb1",
-  398: "#ef9a9a",
-  682: "#b39ddb",
-  792: "#9fa8da",
-  364: "#80deea",
-  104: "#e6ee9c",
-  418: "#ffab91",
-  250: "#aed581",
-  276: "#ffcc80",
-  380: "#ffab91",
-  826: "#bcaaa4",
-  724: "#eeeeee",
-  528: "#ffccbc",
-  756: "#dcedc8",
-  620: "#b2dfdb",
-  56: "#b3e5fc",
-  752: "#e1bee7",
-  578: "#d1c4e9",
-  246: "#fff9c4",
-  616: "#c5e1a5",
-  804: "#ffe0b2",
-  300: "#c8e6c9",
-  818: "#ffcc80",
-  710: "#a5d6a7",
-  404: "#ef9a9a",
-  566: "#80cbc4",
-  231: "#90caf9",
-  504: "#ef9a9a",
-  12: "#a5d6a7",
-  288: "#fff59d",
-  450: "#a5d6a7",
-  834: "#81d4fa",
-  384: "#ffab91",
-  120: "#e6ee9c",
-  729: "#ffcc80",
-  686: "#dce775",
-  24: "#ba68c8",
-  894: "#4dd0e1",
-  840: "#fff59d",
-  124: "#ffcc80",
-  484: "#a5d6a7",
-  192: "#ce93d8",
-  320: "#81d4fa",
-  76: "#a5d6a7",
-  32: "#81d4fa",
-  152: "#ffab91",
-  604: "#e6ee9c",
-  170: "#fff59d",
-  862: "#ff8a80",
-  36: "#ffcc80",
-  554: "#a5d6a7",
-  242: "#80deea"
-};
+  <!-- Babel (to run JSX directly in a single HTML file) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-const COUNTRY_INFO = {
-  410: { name: "대한민국", capital: "서울", desc: "동아시아의 호랑이", continent: "asia" },
-  156: { name: "중국", capital: "베이징", desc: "만리장성과 판다", continent: "asia" },
-  392: { name: "일본", capital: "도쿄", desc: "벚꽃과 온천", continent: "asia" },
-  356: { name: "인도", capital: "뉴델리", desc: "타지마할의 고향", continent: "asia" },
-  704: { name: "베트남", capital: "하노이", desc: "쌀국수와 아오자이", continent: "asia" },
-  764: { name: "태국", capital: "방콕", desc: "미소의 나라", continent: "asia" },
-  360: { name: "인도네시아", capital: "자카르타", desc: "수만 개의 섬나라", continent: "asia" },
-  608: { name: "필리핀", capital: "마닐라", desc: "7천 개의 섬", continent: "asia" },
-  496: { name: "몽골", capital: "울란바토르", desc: "푸른 초원과 게르", continent: "asia" },
-  398: { name: "카자흐스탄", capital: "아스타나", desc: "중앙아시아의 거인", continent: "asia" },
-  682: { name: "사우디", capital: "리야드", desc: "사막과 석유", continent: "asia" },
-  792: { name: "튀르키예", capital: "앙카라", desc: "형제의 나라", continent: "asia" },
-  364: { name: "이란", capital: "테헤란", desc: "페르시아의 역사", continent: "asia" },
+  <!-- d3-geo + topojson-client -->
+  <script src="https://unpkg.com/d3-geo@3/dist/d3-geo.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js"></script>
 
-  250: { name: "프랑스", capital: "파리", desc: "에펠탑과 예술", continent: "europe" },
-  276: { name: "독일", capital: "베를린", desc: "맥주와 자동차", continent: "europe" },
-  380: { name: "이탈리아", capital: "로마", desc: "콜로세움과 피자", continent: "europe" },
-  826: { name: "영국", capital: "런던", desc: "빅벤과 2층 버스", continent: "europe" },
-  724: { name: "스페인", capital: "마드리드", desc: "정열의 투우", continent: "europe" },
-  528: { name: "네덜란드", capital: "암스테르담", desc: "풍차와 튤립", continent: "europe" },
-  756: { name: "스위스", capital: "베른", desc: "알프스 소녀 하이디", continent: "europe" },
-  620: { name: "포르투갈", capital: "리스본", desc: "대항해시대의 시작", continent: "europe" },
-  56: { name: "벨기에", capital: "브뤼셀", desc: "와플과 초콜릿", continent: "europe" },
-  752: { name: "스웨덴", capital: "스톡홀름", desc: "북유럽 디자인", continent: "europe" },
-  578: { name: "노르웨이", capital: "오슬로", desc: "피요르드 해안", continent: "europe" },
-  246: { name: "핀란드", capital: "헬싱키", desc: "산타클로스 마을", continent: "europe" },
-  616: { name: "폴란드", capital: "바르샤바", desc: "쇼팽의 고향", continent: "europe" },
-  804: { name: "우크라이나", capital: "키이우", desc: "해바라기의 나라", continent: "europe" },
-  300: { name: "그리스", capital: "아테네", desc: "신화의 나라", continent: "europe" },
+  <!-- lucide-react는 CDN으로 직접 쓰기 어려워서, 아이콘은 inline SVG로 대체/간소화 -->
+  <!-- (기능엔 영향 없음: 버튼/레이아웃만 유지) -->
 
-  818: { name: "이집트", capital: "카이로", desc: "피라미드와 스핑크스", continent: "africa" },
-  710: { name: "남아공", capital: "프리토리아", desc: "아프리카 최남단", continent: "africa" },
-  404: { name: "케냐", capital: "나이로비", desc: "동물의 왕국 사파리", continent: "africa" },
-  566: { name: "나이지리아", capital: "아부자", desc: "아프리카 인구 1위", continent: "africa" },
-  231: { name: "에티오피아", capital: "아디스아바바", desc: "커피의 고향", continent: "africa" },
-  504: { name: "모로코", capital: "라바트", desc: "사하라 사막 입구", continent: "africa" },
-  12: { name: "알제리", capital: "알제", desc: "아프리카 영토 1위", continent: "africa" },
-  288: { name: "가나", capital: "아크라", desc: "초콜릿 카카오", continent: "africa" },
-  450: { name: "마다가스카르", capital: "안타나나리보", desc: "바오밥 나무", continent: "africa" },
-  834: { name: "탄자니아", capital: "도도마", desc: "킬리만자로 산", continent: "africa" },
-  384: { name: "코트디부아르", capital: "야무수크로", desc: "상아 해안", continent: "africa" },
-  120: { name: "카메룬", capital: "야운데", desc: "아프리카의 축소판", continent: "africa" },
-  686: { name: "세네갈", capital: "다카르", desc: "서아프리카의 관문", continent: "africa" },
-  24: { name: "앙골라", capital: "루안다", desc: "풍부한 자원의 나라", continent: "africa" },
-  894: { name: "잠비아", capital: "루사카", desc: "빅토리아 폭포", continent: "africa" },
+  <style>
+    html, body { height: 100%; margin: 0; font-family: 'Noto Sans KR', sans-serif; }
+    #root { height: 100%; }
+    .animate-spin-slow { animation: spin 30s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-  840: { name: "미국", capital: "워싱턴 D.C.", desc: "자유의 여신상", continent: "north_america" },
-  124: { name: "캐나다", capital: "오타와", desc: "단풍잎 국기", continent: "north_america" },
-  484: { name: "멕시코", capital: "멕시코시티", desc: "타코와 마야 문명", continent: "north_america" },
-  192: { name: "쿠바", capital: "아바나", desc: "카리브해의 진주", continent: "north_america" },
-  320: { name: "과테말라", capital: "과테말라시티", desc: "마야의 심장", continent: "north_america" },
+    .animate-bounce-in { animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .animate-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    @keyframes bounceIn { 0% { transform: scale(0) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+    @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+    .animate-twinkle { animation: twinkle 3s infinite ease-in-out; }
+    .text-outline-black { text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; }
+  </style>
+</head>
 
-  76: { name: "브라질", capital: "브라질리아", desc: "삼바와 축구", continent: "south_america" },
-  32: { name: "아르헨티나", capital: "부에노스아이레스", desc: "탱고의 본고장", continent: "south_america" },
-  152: { name: "칠레", capital: "산티아고", desc: "세상에서 가장 긴 나라", continent: "south_america" },
-  604: { name: "페루", capital: "리마", desc: "마추픽추 유적", continent: "south_america" },
-  170: { name: "콜롬비아", capital: "보고타", desc: "커피와 에메랄드", continent: "south_america" },
-  862: { name: "베네수엘라", capital: "카라카스", desc: "미녀들의 나라", continent: "south_america" },
+<body class="bg-slate-900">
+  <div id="root"></div>
 
-  36: { name: "호주", capital: "캔버라", desc: "캥거루와 코알라", continent: "oceania" },
-  554: { name: "뉴질랜드", capital: "웰링턴", desc: "반지의 제왕 촬영지", continent: "oceania" },
-  242: { name: "피지", capital: "수바", desc: "남태평양의 휴양지", continent: "oceania" }
-};
+  <script type="text/babel">
+    const { useEffect, useMemo, useRef, useState } = React;
+    const d3 = window.d3Geo;
+    const topojson = window.topojson;
 
-const PUZZLE_IDS = Object.keys(COUNTRY_INFO).filter((id) => COUNTRY_INFO[id].desc).map(Number);
+    // =============================================================================
+    // 1) 데이터 및 설정
+    // =============================================================================
+    const CONTINENT_ORDER = ['asia', 'europe', 'africa', 'north_america', 'south_america', 'oceania'];
 
-const ID_TO_ISO2 = {
-  410: "kr", 156: "cn", 392: "jp", 356: "in", 704: "vn", 764: "th", 360: "id", 608: "ph", 496: "mn",
-  398: "kz", 682: "sa", 792: "tr", 364: "ir",
-  250: "fr", 276: "de", 380: "it", 826: "gb", 724: "es", 643: "ru", 528: "nl", 756: "ch", 620: "pt",
-  56: "be", 752: "se", 578: "no", 246: "fi", 616: "pl", 804: "ua", 300: "gr",
-  818: "eg", 710: "za", 404: "ke", 566: "ng", 231: "et", 504: "ma", 12: "dz", 288: "gh", 450: "mg",
-  834: "tz", 384: "ci", 120: "cm", 686: "sn", 24: "ao", 894: "zm",
-  840: "us", 124: "ca", 484: "mx", 192: "cu", 320: "gt",
-  76: "br", 32: "ar", 152: "cl", 604: "pe", 170: "co", 862: "ve",
-  36: "au", 554: "nz", 242: "fj"
-};
-const getFlagUrl = (id) => `https://flagcdn.com/w80/${ID_TO_ISO2[id] || "xx"}.png`;
-
-const EXPLORER_TITLES = [
-  "초보 탐험가 🌱",
-  "중급 탐험가 🌿",
-  "숙련 탐험가 🌳",
-  "엘리트 탐험가 🗺️",
-  "마스터 탐험가 👑",
-  "전설의 탐험가 🚀",
-  "우주 정복자 🪐"
-];
-
-let audioCtx = null;
-const initAudio = () => {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === "suspended") audioCtx.resume();
-};
-
-const playSound = (type) => {
-  initAudio();
-  if (!audioCtx) return;
-  const now = audioCtx.currentTime;
-
-  if (type === "snap") {
-    [523.25, 659.25, 783.99].forEach((f, i) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(f, now + i * 0.05);
-      gain.gain.setValueAtTime(0.1, now + i * 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.4);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now + i * 0.05);
-      osc.stop(now + i * 0.05 + 0.4);
-    });
-  } else if (type === "error") {
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.type = "sawtooth";
-    o.frequency.setValueAtTime(150, now);
-    g.gain.setValueAtTime(0.1, now);
-    g.gain.linearRampToValueAtTime(0, now + 0.2);
-    o.connect(g);
-    g.connect(audioCtx.destination);
-    o.start(now);
-    o.stop(now + 0.2);
-  } else if (type === "fanfare") {
-    const notes = [523.25, 523.25, 523.25, 659.25, 783.99, 1046.5];
-    const times = [0, 0.15, 0.3, 0.45, 0.6, 0.9];
-    notes.forEach((f, i) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "square";
-      osc.frequency.setValueAtTime(f, now + times[i]);
-      gain.gain.setValueAtTime(0.1, now + times[i]);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + times[i] + 0.3);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now + times[i]);
-      osc.stop(now + times[i] + 0.4);
-    });
-  }
-};
-
-// =============================================================================
-// 2) 부품 컴포넌트
-// =============================================================================
-
-const StarField = () => {
-  const stars = useMemo(
-    () =>
-      Array.from({ length: 100 }).map((_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        size: Math.random() * 2 + 1,
-        delay: Math.random() * 5
-      })),
-    []
-  );
-  return (
-    <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-      {stars.map((s) => (
-        <div
-          key={s.id}
-          className="absolute rounded-full bg-white animate-twinkle"
-          style={{
-            left: `${s.x}%`,
-            top: `${s.y}%`,
-            width: `${s.size}px`,
-            height: `${s.size}px`,
-            animationDelay: `${s.delay}s`,
-            opacity: Math.random() * 0.7 + 0.3
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
-const BananaAvatar = ({ level, mood }) => (
-  <div className="w-full h-full relative filter drop-shadow-xl">
-    <svg viewBox="0 0 100 100" className="w-full h-full">
-      <path
-        d="M30,85 Q5,50 30,15 Q60,5 85,25 Q95,60 75,90 Q55,100 30,85"
-        fill="#FFEB3B"
-        stroke="#FBC02D"
-        strokeWidth="3"
-      />
-      {level >= 1 && (
-        <>
-          <path
-            d="M25,25 Q55,0 85,30 L90,25 L20,20 Z"
-            fill="#8D6E63"
-            stroke="#5D4037"
-            strokeWidth="2"
-          />
-          <ellipse cx="55" cy="20" rx="25" ry="12" fill="#D7CCC8" stroke="#8D6E63" strokeWidth="2" />
-        </>
-      )}
-      {level >= 5 && <path d="M20,60 Q10,70 15,90 L25,85" fill="red" opacity="0.8" />}
-      <circle cx="35" cy="55" r="4" fill="#FF8A80" opacity="0.6" />
-      <circle cx="75" cy="55" r="4" fill="#FF8A80" opacity="0.6" />
-
-      {mood === "happy" ? (
-        <>
-          <circle cx="45" cy="45" r="3.5" fill="#3E2723" />
-          <circle cx="65" cy="45" r="3.5" fill="#3E2723" />
-          <path d="M45,60 Q55,70 65,60" fill="none" stroke="#3E2723" strokeWidth="3" strokeLinecap="round" />
-        </>
-      ) : mood === "sad" ? (
-        <>
-          <path d="M40,45 L50,50 L40,55" fill="none" stroke="#3E2723" strokeWidth="2" />
-          <path d="M70,45 L60,50 L70,55" fill="none" stroke="#3E2723" strokeWidth="2" />
-          <path d="M45,65 Q55,55 65,65" fill="none" stroke="#3E2723" strokeWidth="3" strokeLinecap="round" />
-        </>
-      ) : (
-        <>
-          <path d="M40,40 L50,35" fill="none" stroke="#3E2723" strokeWidth="2" />
-          <path d="M60,35 L70,40" fill="none" stroke="#3E2723" strokeWidth="2" />
-          <circle cx="45" cy="45" r="3.5" fill="#3E2723" />
-          <circle cx="65" cy="45" r="3.5" fill="#3E2723" />
-          <path d="M45,60 Q55,80 65,60" fill="#3E2723" />
-        </>
-      )}
-
-      {level >= 2 && (
-        <g>
-          <rect x="38" y="40" width="14" height="10" rx="3" fill="#333" />
-          <rect x="58" y="40" width="14" height="10" rx="3" fill="#333" />
-          <line x1="52" y1="45" x2="58" y2="45" stroke="#333" strokeWidth="2" />
-        </g>
-      )}
-      {level >= 3 && <path d="M45,65 Q55,55 65,65" fill="none" stroke="#3E2723" strokeWidth="4" />}
-      {level >= 6 && <path d="M45,10 L50,20 L55,10 L60,20 L65,10 L60,25 L50,25 Z" fill="gold" stroke="orange" strokeWidth="1" />}
-    </svg>
-  </div>
-);
-
-const DraggableBanana = ({ mood = "happy", message, onClick, level = 0 }) => {
-  const getInitialPos = () => {
-    const w = typeof window !== "undefined" ? window.innerWidth : 1280;
-    const h = typeof window !== "undefined" ? window.innerHeight : 720;
-    return { x: w - 120, y: h - 140 };
-  };
-
-  const [pos, setPos] = useState(getInitialPos);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-  const hasMoved = useRef(false);
-
-  // 화면 회전/리사이즈 시 바나나가 화면 밖으로 나가는 것 방지
-  useEffect(() => {
-    const onResize = () => {
-      setPos((p) => {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        const nx = Math.max(8, Math.min(p.x, w - 120));
-        const ny = Math.max(8, Math.min(p.y, h - 140));
-        return { x: nx, y: ny };
-      });
+    const CONTINENT_META = {
+      asia: { name: "아시아", color: "#FF8A80", bg: "bg-rose-50", text: "text-rose-600", quizCount: 5 },
+      europe: { name: "유럽", color: "#81D4FA", bg: "bg-sky-50", text: "text-sky-600", quizCount: 5 },
+      africa: { name: "아프리카", color: "#FFD54F", bg: "bg-amber-50", text: "text-amber-600", quizCount: 5 },
+      north_america: { name: "북아메리카", color: "#A5D6A7", bg: "bg-green-50", text: "text-green-600", quizCount: 3 },
+      south_america: { name: "남아메리카", color: "#CE93D8", bg: "bg-purple-50", text: "text-purple-600", quizCount: 5 },
+      oceania: { name: "오세아니아", color: "#80CBC4", bg: "bg-teal-50", text: "text-teal-600", quizCount: 2 },
     };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
 
-  const handleStart = (cx, cy) => {
-    setIsDragging(true);
-    hasMoved.current = false;
-    dragStart.current = { x: cx - pos.x, y: cy - pos.y };
-  };
-
-  const handleMove = (cx, cy) => {
-    if (!isDragging) return;
-    if (Math.abs(cx - dragStart.current.x - pos.x) > 5 || Math.abs(cy - dragStart.current.y - pos.y) > 5) {
-      hasMoved.current = true;
-    }
-    setPos({ x: cx - dragStart.current.x, y: cy - dragStart.current.y });
-  };
-
-  const handleEnd = () => {
-    setIsDragging(false);
-    if (!hasMoved.current && onClick) onClick();
-  };
-
-  useEffect(() => {
-    const mm = (e) => handleMove(e.clientX, e.clientY);
-    const mu = () => handleEnd();
-    const tm = (e) => handleMove(e.touches[0].clientX, e.touches[0].clientY);
-    const tu = () => handleEnd();
-
-    if (isDragging) {
-      window.addEventListener("mousemove", mm);
-      window.addEventListener("mouseup", mu);
-      window.addEventListener("touchmove", tm, { passive: false });
-      window.addEventListener("touchend", tu);
-    }
-    return () => {
-      window.removeEventListener("mousemove", mm);
-      window.removeEventListener("mouseup", mu);
-      window.removeEventListener("touchmove", tm);
-      window.removeEventListener("touchend", tu);
+    const COUNTRY_COLORS = {
+      410: '#ff8a80', 156: '#ffe082', 392: '#fff59d', 356: '#a5d6a7', 704: '#80cbc4',
+      764: '#81d4fa', 360: '#90caf9', 608: '#ce93d8', 496: '#f48fb1', 398: '#ef9a9a',
+      682: '#b39ddb', 792: '#9fa8da', 364: '#80deea', 104: '#e6ee9c', 418: '#ffab91',
+      250: '#aed581', 276: '#ffcc80', 380: '#ffab91', 826: '#bcaaa4', 724: '#eeeeee',
+      528: '#ffccbc', 756: '#dcedc8', 620: '#b2dfdb', 56: '#b3e5fc',
+      752: '#e1bee7', 578: '#d1c4e9', 246: '#fff9c4', 616: '#c5e1a5', 804: '#ffe0b2', 300: '#c8e6c9',
+      818: '#ffcc80', 710: '#a5d6a7', 404: '#ef9a9a', 566: '#80cbc4', 231: '#90caf9',
+      504: '#ef9a9a', 12: '#a5d6a7', 288: '#fff59d', 450: '#a5d6a7', 834: '#81d4fa',
+      384: '#ffab91', 120: '#e6ee9c', 729: '#ffcc80', 686: '#dce775', 24: '#ba68c8', 894: '#4dd0e1',
+      840: '#fff59d', 124: '#ffcc80', 484: '#a5d6a7', 192: '#ce93d8', 320: '#81d4fa',
+      76: '#a5d6a7', 32: '#81d4fa', 152: '#ffab91', 604: '#e6ee9c', 170: '#fff59d', 862: '#ff8a80',
+      36: '#ffcc80', 554: '#a5d6a7', 242: '#80deea'
     };
-  }, [isDragging, pos.x, pos.y]);
 
-  return (
-    <div
-      className="fixed z-[9999] flex flex-col items-center cursor-grab active:cursor-grabbing"
-      style={{ left: pos.x, top: pos.y, touchAction: "none" }}
-      onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
-      onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
-    >
-      {message && (
-        <div className="absolute bottom-full mb-2 bg-white/95 backdrop-blur px-4 py-3 rounded-2xl rounded-br-none shadow-xl border-4 border-yellow-300 w-[240px] animate-pop origin-bottom-right pointer-events-none">
-          <p className="text-base font-bold text-slate-800 leading-snug whitespace-pre-line break-keep font-['Jua']">{message}</p>
+    const COUNTRY_INFO = {
+      410: { name: '대한민국', capital: '서울', desc: '동아시아의 호랑이', continent: 'asia' },
+      156: { name: '중국', capital: '베이징', desc: '만리장성과 판다', continent: 'asia' },
+      392: { name: '일본', capital: '도쿄', desc: '벚꽃과 온천', continent: 'asia' },
+      356: { name: '인도', capital: '뉴델리', desc: '타지마할의 고향', continent: 'asia' },
+      704: { name: '베트남', capital: '하노이', desc: '쌀국수와 아오자이', continent: 'asia' },
+      764: { name: '태국', capital: '방콕', desc: '미소의 나라', continent: 'asia' },
+      360: { name: '인도네시아', capital: '자카르타', desc: '수만 개의 섬나라', continent: 'asia' },
+      608: { name: '필리핀', capital: '마닐라', desc: '7천 개의 섬', continent: 'asia' },
+      496: { name: '몽골', capital: '울란바토르', desc: '푸른 초원과 게르', continent: 'asia' },
+      398: { name: '카자흐스탄', capital: '아스타나', desc: '중앙아시아의 거인', continent: 'asia' },
+      682: { name: '사우디', capital: '리야드', desc: '사막과 석유', continent: 'asia' },
+      792: { name: '튀르키예', capital: '앙카라', desc: '형제의 나라', continent: 'asia' },
+      364: { name: '이란', capital: '테헤란', desc: '페르시아의 역사', continent: 'asia' },
+
+      250: { name: '프랑스', capital: '파리', desc: '에펠탑과 예술', continent: 'europe' },
+      276: { name: '독일', capital: '베를린', desc: '맥주와 자동차', continent: 'europe' },
+      380: { name: '이탈리아', capital: '로마', desc: '콜로세움과 피자', continent: 'europe' },
+      826: { name: '영국', capital: '런던', desc: '빅벤과 2층 버스', continent: 'europe' },
+      724: { name: '스페인', capital: '마드리드', desc: '정열의 투우', continent: 'europe' },
+      528: { name: '네덜란드', capital: '암스테르담', desc: '풍차와 튤립', continent: 'europe' },
+      756: { name: '스위스', capital: '베른', desc: '알프스 소녀 하이디', continent: 'europe' },
+      620: { name: '포르투갈', capital: '리스본', desc: '대항해시대의 시작', continent: 'europe' },
+      56: { name: '벨기에', capital: '브뤼셀', desc: '와플과 초콜릿', continent: 'europe' },
+      752: { name: '스웨덴', capital: '스톡홀름', desc: '북유럽 디자인', continent: 'europe' },
+      578: { name: '노르웨이', capital: '오슬로', desc: '피요르드 해안', continent: 'europe' },
+      246: { name: '핀란드', capital: '헬싱키', desc: '산타클로스 마을', continent: 'europe' },
+      616: { name: '폴란드', capital: '바르샤바', desc: '쇼팽의 고향', continent: 'europe' },
+      804: { name: '우크라이나', capital: '키이우', desc: '해바라기의 나라', continent: 'europe' },
+      300: { name: '그리스', capital: '아테네', desc: '신화의 나라', continent: 'europe' },
+
+      818: { name: '이집트', capital: '카이로', desc: '피라미드와 스핑크스', continent: 'africa' },
+      710: { name: '남아공', capital: '프리토리아', desc: '아프리카 최남단', continent: 'africa' },
+      404: { name: '케냐', capital: '나이로비', desc: '동물의 왕국 사파리', continent: 'africa' },
+      566: { name: '나이지리아', capital: '아부자', desc: '아프리카 인구 1위', continent: 'africa' },
+      231: { name: '에티오피아', capital: '아디스아바바', desc: '커피의 고향', continent: 'africa' },
+      504: { name: '모로코', capital: '라바트', desc: '사하라 사막 입구', continent: 'africa' },
+      12: { name: '알제리', capital: '알제', desc: '아프리카 영토 1위', continent: 'africa' },
+      288: { name: '가나', capital: '아크라', desc: '초콜릿 카카오', continent: 'africa' },
+      450: { name: '마다가스카르', capital: '안타나나리보', desc: '바오밥 나무', continent: 'africa' },
+      834: { name: '탄자니아', capital: '도도마', desc: '킬리만자로 산', continent: 'africa' },
+      384: { name: '코트디부아르', capital: '야무수크로', desc: '상아 해안', continent: 'africa' },
+      120: { name: '카메룬', capital: '야운데', desc: '아프리카의 축소판', continent: 'africa' },
+      686: { name: '세네갈', capital: '다카르', desc: '서아프리카의 관문', continent: 'africa' },
+      24: { name: '앙골라', capital: '루안다', desc: '풍부한 자원의 나라', continent: 'africa' },
+      894: { name: '잠비아', capital: '루사카', desc: '빅토리아 폭포', continent: 'africa' },
+
+      840: { name: '미국', capital: '워싱턴 D.C.', desc: '자유의 여신상', continent: 'north_america' },
+      124: { name: '캐나다', capital: '오타와', desc: '단풍잎 국기', continent: 'north_america' },
+      484: { name: '멕시코', capital: '멕시코시티', desc: '타코와 마야 문명', continent: 'north_america' },
+      192: { name: '쿠바', capital: '아바나', desc: '카리브해의 진주', continent: 'north_america' },
+      320: { name: '과테말라', capital: '과테말라시티', desc: '마야의 심장', continent: 'north_america' },
+
+      76: { name: '브라질', capital: '브라질리아', desc: '삼바와 축구', continent: 'south_america' },
+      32: { name: '아르헨티나', capital: '부에노스아이레스', desc: '탱고의 본고장', continent: 'south_america' },
+      152: { name: '칠레', capital: '산티아고', desc: '세상에서 가장 긴 나라', continent: 'south_america' },
+      604: { name: '페루', capital: '리마', desc: '마추픽추 유적', continent: 'south_america' },
+      170: { name: '콜롬비아', capital: '보고타', desc: '커피와 에메랄드', continent: 'south_america' },
+      862: { name: '베네수엘라', capital: '카라카스', desc: '미녀들의 나라', continent: 'south_america' },
+
+      36: { name: '호주', capital: '캔버라', desc: '캥거루와 코알라', continent: 'oceania' },
+      554: { name: '뉴질랜드', capital: '웰링턴', desc: '반지의 제왕 촬영지', continent: 'oceania' },
+      242: { name: '피지', capital: '수바', desc: '남태평양의 휴양지', continent: 'oceania' },
+    };
+
+    const PUZZLE_IDS = Object.keys(COUNTRY_INFO).filter(id => COUNTRY_INFO[id].desc).map(Number);
+
+    const ID_TO_ISO2 = {
+      410:'kr', 156:'cn', 392:'jp', 356:'in', 704:'vn', 764:'th', 360:'id', 608:'ph', 496:'mn', 398:'kz', 682:'sa', 792:'tr', 364:'ir',
+      250:'fr', 276:'de', 380:'it', 826:'gb', 724:'es', 643:'ru', 528:'nl', 756:'ch', 620:'pt', 56:'be', 752:'se', 578:'no', 246:'fi', 616:'pl', 804:'ua', 300:'gr',
+      818:'eg', 710:'za', 404:'ke', 566:'ng', 231:'et', 504:'ma', 12:'dz', 288:'gh', 450:'mg', 834:'tz', 384:'ci', 120:'cm', 686:'sn', 24:'ao', 894:'zm',
+      840:'us', 124:'ca', 484:'mx', 192:'cu', 320:'gt',
+      76:'br', 32:'ar', 152:'cl', 604:'pe', 170:'co', 862:'ve',
+      36:'au', 554:'nz', 242:'fj'
+    };
+    const getFlagUrl = (id) => `https://flagcdn.com/w80/${ID_TO_ISO2[id] || 'xx'}.png`;
+
+    const EXPLORER_TITLES = [
+      "초보 탐험가 🌱", "중급 탐험가 🌿", "숙련 탐험가 🌳",
+      "엘리트 탐험가 🗺️", "마스터 탐험가 👑", "전설의 탐험가 🚀", "우주 정복자 🪐"
+    ];
+
+    // =============================================================================
+    // Sound
+    // =============================================================================
+    let audioCtx = null;
+    const initAudio = () => {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    };
+
+    const playSound = (type) => {
+      initAudio();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      if (type === 'snap') {
+        [523.25, 659.25, 783.99].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now + i * 0.05);
+          gain.gain.setValueAtTime(0.1, now + i * 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.4);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.05); osc.stop(now + i * 0.05 + 0.4);
+        });
+      } else if (type === 'error') {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(150, now);
+        g.gain.setValueAtTime(0.1, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.2);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.2);
+      } else if (type === 'fanfare') {
+        const notes = [523.25, 523.25, 523.25, 659.25, 783.99, 1046.50];
+        const times = [0, 0.15, 0.3, 0.45, 0.6, 0.9];
+        notes.forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(f, now + times[i]);
+          gain.gain.setValueAtTime(0.1, now + times[i]);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + times[i] + 0.3);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now + times[i]); osc.stop(now + times[i] + 0.4);
+        });
+      }
+    };
+
+    // =============================================================================
+    // Components
+    // =============================================================================
+    const StarField = () => {
+      const stars = useMemo(
+        () => Array.from({ length: 100 }).map((_, i) => ({
+          id: i,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          size: Math.random() * 2 + 1,
+          delay: Math.random() * 5,
+          op: Math.random() * 0.7 + 0.3
+        })),
+        []
+      );
+      return (
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+          {stars.map(s => (
+            <div
+              key={s.id}
+              className="absolute rounded-full bg-white animate-twinkle"
+              style={{
+                left: `${s.x}%`,
+                top: `${s.y}%`,
+                width: `${s.size}px`,
+                height: `${s.size}px`,
+                animationDelay: `${s.delay}s`,
+                opacity: s.op
+              }}
+            />
+          ))}
         </div>
-      )}
-      <div className="w-24 h-24 hover:scale-105 transition-transform">
-        <BananaAvatar level={level} mood={mood} />
-      </div>
-    </div>
-  );
-};
+      );
+    };
 
-// 메인 화면
-function MainScreen({ onStart, onTeacherMode }) {
-  const [name, setName] = useState("");
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (name.trim()) onStart(name);
-  };
-  return (
-    <div className="h-full w-full flex flex-col items-center justify-start pt-10 p-6 text-white relative overflow-y-auto">
-      <div className="text-center space-y-2 animate-pop max-w-3xl w-full mt-4">
-        <div className="relative inline-block">
-          <Globe
-            size={100}
-            className="text-blue-400 opacity-80 animate-spin drop-shadow-[0_0_30px_rgba(59,130,246,0.5)]"
-            style={{ animationDuration: "30s" }}
-          />
-          <div className="absolute inset-0 flex items-center justify-center text-6xl drop-shadow-2xl filter brightness-125 contrast-125">🍌</div>
-        </div>
-        <h2 className="text-5xl md:text-7xl font-['Jua'] drop-shadow-2xl text-transparent bg-clip-text bg-gradient-to-br from-yellow-200 via-white to-yellow-100 leading-tight py-2 whitespace-nowrap">
-          도전! 바나나 월드
-        </h2>
-      </div>
-
-      <div className="mt-8 w-full max-w-md animate-pop" style={{ animationDelay: "0.1s" }}>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 bg-white/10 backdrop-blur-lg p-8 rounded-3xl border border-white/20 shadow-2xl">
-          <label className="text-lg font-bold text-blue-100 font-['Jua'] text-center">탐험가님의 이름은 무엇인가요?</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="이름 입력"
-            className="w-full bg-white/20 border-2 border-white/30 rounded-2xl py-4 px-4 text-xl text-white placeholder-white/50 focus:outline-none focus:border-yellow-400 transition-all font-bold text-center"
-            autoFocus
-          />
-          <button
-            type="submit"
-            disabled={!name.trim()}
-            className={`mt-4 group relative bg-gradient-to-r from-yellow-400 to-orange-500 text-slate-900 text-2xl font-['Jua'] py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 ${
-              !name.trim() ? "opacity-50 cursor-not-allowed" : "hover:scale-105 active:scale-95 hover:shadow-orange-500/50"
-            }`}
-          >
-            출발하기 <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-          </button>
-        </form>
-      </div>
-
-      <div className="mt-auto w-full flex justify-between items-end pt-4 pb-2 text-white/40">
-        <div className="flex flex-col">
-          <span className="text-xs font-bold">Design & Development by</span>
-          <span className="font-['Jua'] text-white/60 text-sm">보라쌤과 사회를 보라</span>
-        </div>
-        <button
-          onClick={onTeacherMode}
-          className="flex items-center gap-1 text-xs font-bold hover:text-yellow-300 transition-colors bg-white/10 px-3 py-1 rounded-full"
-        >
-          <Unlock size={12} /> 선생님은 여기로!
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// 지구본 선택
-function GlobeSelection({
-  mapData,
-  unlocked,
-  onSelect,
-  onBack,
-  isMuted,
-  showToast,
-  explorerName,
-  isTeacherMode,
-  onPreviewEnding
-}) {
-  const [rotation, setRotation] = useState([0, 0]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [hovered, setHovered] = useState(null);
-  const requestRef = useRef(null);
-  const lastPosRef = useRef({ x: 0, y: 0 });
-
-  const { pathGen, projection } = useMemo(() => {
-    const proj = d3.geoOrthographic().scale(260).center([0, 0]).translate([400, 300]);
-    const path = d3.geoPath(proj);
-    return { pathGen: path, projection: proj };
-  }, []);
-
-  const animate = () => {
-    if (!isDragging) setRotation((prev) => [(prev[0] + 0.2) % 360, prev[1]]);
-    requestRef.current = requestAnimationFrame(animate);
-  };
-
-  useEffect(() => {
-    requestRef.current = requestAnimationFrame(animate);
-    return () => requestRef.current && cancelAnimationFrame(requestRef.current);
-  }, [isDragging]);
-
-  useEffect(() => {
-    projection.rotate(rotation);
-  }, [rotation, projection]);
-
-  const handleStart = (cx, cy) => {
-    setIsDragging(true);
-    lastPosRef.current = { x: cx, y: cy };
-  };
-
-  const handleMove = (cx, cy) => {
-    if (!isDragging) return;
-    const sensitivity = 0.5;
-    const dx = cx - lastPosRef.current.x;
-    const dy = cy - lastPosRef.current.y;
-    setRotation((prev) => [prev[0] + dx * sensitivity, prev[1] - dy * sensitivity]);
-    lastPosRef.current = { x: cx, y: cy };
-  };
-
-  const handleClick = (contId) => {
-    if (!contId) return;
-    if (unlocked.includes(contId)) {
-      if (!isMuted) playSound("snap");
-      onSelect(contId);
-    } else {
-      if (!isMuted) playSound("error");
-      showToast("sad", `[${CONTINENT_META[contId].name}]는 잠겨있어!\n${explorerName}, 이전 대륙을 먼저 깨줘.`);
-    }
-  };
-
-  const OCEAN_CENTROIDS = { 태평양: [-170, 0], 대서양: [-30, 0], 인도양: [80, -20], 북극해: [0, 85] };
-  const CONTINENT_CENTROIDS = {
-    asia: [90, 40],
-    europe: [20, 50],
-    africa: [20, 0],
-    north_america: [-100, 40],
-    south_america: [-60, -20],
-    oceania: [140, -25]
-  };
-
-  return (
-    <div
-      className="h-full flex flex-col items-center justify-center relative overflow-hidden"
-      onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
-      onMouseUp={() => setIsDragging(false)}
-      onMouseLeave={() => setIsDragging(false)}
-      onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
-      onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
-      onTouchEnd={() => setIsDragging(false)}
-      onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
-    >
-      <div className="absolute top-4 left-4 z-20">
-        <button onClick={onBack} className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors border border-white/20">
-          <ArrowLeft />
-        </button>
-      </div>
-
-      {isTeacherMode && (
-        <button
-          onClick={onPreviewEnding}
-          className="absolute bottom-6 right-6 z-40 p-3 bg-indigo-600/80 backdrop-blur text-white font-bold rounded-full shadow-lg hover:bg-indigo-500 transition-all flex items-center gap-2 pointer-events-auto border-2 border-white/30 text-xs"
-        >
-          <Trophy size={16} /> 리포트 미리보기
-        </button>
-      )}
-
-      <div className="cursor-grab active:cursor-grabbing relative flex-1 flex items-center justify-center w-full">
-        <svg viewBox="0 0 800 600" className="w-full h-full max-w-5xl drop-shadow-2xl">
-          <defs>
-            <radialGradient id="ocean" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#2563eb" />
-              <stop offset="100%" stopColor="#1e3a8a" />
-            </radialGradient>
-          </defs>
-
-          <circle cx="400" cy="300" r="260" fill="url(#ocean)" />
-          <path d={pathGen(d3.geoGraticule()())} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
-
-          {Object.entries(OCEAN_CENTROIDS).map(([name, coords]) => {
-            const projected = projection(coords);
-            const isVisible = pathGen({ type: "Point", coordinates: coords });
-            if (!isVisible || !projected) return null;
-            const [x, y] = projected;
-            return (
-              <text key={name} x={x} y={y} textAnchor="middle" className="font-['Jua'] fill-white/60 pointer-events-none text-lg select-none">
-                {name}
-              </text>
-            );
-          })}
-
-          <g>
-            {mapData.map((f, i) => {
-              const contId = f.properties.continent;
-              const meta = contId ? CONTINENT_META[contId] : null;
-              const isUnlocked = contId ? unlocked.includes(contId) : false;
-              const isHover = hovered === contId;
-
-              let fill = "#475569";
-              if (meta) fill = isUnlocked ? meta.color : "#64748b";
-              if (isHover && isUnlocked) fill = "#ffffff";
-
-              // Antarctica white
-              if (Number(f.id) === 10) fill = "#ffffff";
-
-              return (
-                <path
-                  key={i}
-                  d={pathGen(f)}
-                  fill={fill}
-                  stroke="rgba(255,255,255,0.4)"
-                  strokeWidth="0.5"
-                  className="transition-colors duration-150 cursor-pointer"
-                  onMouseEnter={() => contId && setHovered(contId)}
-                  onMouseLeave={() => setHovered(null)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleClick(contId);
-                  }}
-                  onTouchEnd={() => {
-                    if (!isDragging) handleClick(contId);
-                  }}
-                />
-              );
-            })}
-          </g>
-
-          {Object.entries(CONTINENT_CENTROIDS).map(([id, coords]) => {
-            const projected = projection(coords);
-            const isVisible = pathGen({ type: "Point", coordinates: coords });
-            if (!isVisible || !projected) return null;
-            const [x, y] = projected;
-            const meta = CONTINENT_META[id];
-            return (
-              <text
-                key={id}
-                x={x}
-                y={y}
-                textAnchor="middle"
-                className="font-['Jua'] font-bold fill-black drop-shadow-md pointer-events-none"
-                style={{ fontSize: "16px", stroke: "white", strokeWidth: "3px", paintOrder: "stroke" }}
-              >
-                {meta.name}
-              </text>
-            );
-          })}
+    const BananaAvatar = ({ level, mood }) => (
+      <div className="w-full h-full relative filter drop-shadow-xl">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <path d="M30,85 Q5,50 30,15 Q60,5 85,25 Q95,60 75,90 Q55,100 30,85" fill="#FFEB3B" stroke="#FBC02D" strokeWidth="3" />
+          {level >= 1 && (
+            <>
+              <path d="M25,25 Q55,0 85,30 L90,25 L20,20 Z" fill="#8D6E63" stroke="#5D4037" strokeWidth="2" />
+              <ellipse cx="55" cy="20" rx="25" ry="12" fill="#D7CCC8" stroke="#8D6E63" strokeWidth="2" />
+            </>
+          )}
+          {level >= 5 && <path d="M20,60 Q10,70 15,90 L25,85" fill="red" opacity="0.8" />}
+          <circle cx="35" cy="55" r="4" fill="#FF8A80" opacity="0.6" />
+          <circle cx="75" cy="55" r="4" fill="#FF8A80" opacity="0.6" />
+          {mood === 'happy' ? (
+            <>
+              <circle cx="45" cy="45" r="3.5" fill="#3E2723" />
+              <circle cx="65" cy="45" r="3.5" fill="#3E2723" />
+              <path d="M45,60 Q55,70 65,60" fill="none" stroke="#3E2723" strokeWidth="3" strokeLinecap="round" />
+            </>
+          ) : mood === 'sad' ? (
+            <>
+              <path d="M40,45 L50,50 L40,55" fill="none" stroke="#3E2723" strokeWidth="2" />
+              <path d="M70,45 L60,50 L70,55" fill="none" stroke="#3E2723" strokeWidth="2" />
+              <path d="M45,65 Q55,55 65,65" fill="none" stroke="#3E2723" strokeWidth="3" strokeLinecap="round" />
+            </>
+          ) : (
+            <>
+              <path d="M40,40 L50,35" fill="none" stroke="#3E2723" strokeWidth="2" />
+              <path d="M60,35 L70,40" fill="none" stroke="#3E2723" strokeWidth="2" />
+              <circle cx="45" cy="45" r="3.5" fill="#3E2723" />
+              <circle cx="65" cy="45" r="3.5" fill="#3E2723" />
+              <path d="M45,60 Q55,80 65,60" fill="#3E2723" />
+            </>
+          )}
+          {level >= 2 && (
+            <g>
+              <rect x="38" y="40" width="14" height="10" rx="3" fill="#333" />
+              <rect x="58" y="40" width="14" height="10" rx="3" fill="#333" />
+              <line x1="52" y1="45" x2="58" y2="45" stroke="#333" strokeWidth="2" />
+            </g>
+          )}
+          {level >= 3 && <path d="M45,65 Q55,55 65,65" fill="none" stroke="#3E2723" strokeWidth="4" />}
+          {level >= 6 && <path d="M45,10 L50,20 L55,10 L60,20 L65,10 L60,25 L50,25 Z" fill="gold" stroke="orange" strokeWidth="1" />}
         </svg>
       </div>
-    </div>
-  );
-}
-
-// 퍼즐 & 퀴즈
-function PuzzleGame({ continentId, mapData, onComplete, onBack, isMuted, showToast, explorerName }) {
-  const meta = CONTINENT_META[continentId];
-  const svgRef = useRef(null);
-
-  const [pieces, setPieces] = useState([]);
-  const [placed, setPlaced] = useState([]);
-  const [selectedPiece, setSelectedPiece] = useState(null);
-  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-
-  const [mode, setMode] = useState("PUZZLE");
-  const [quizCandidates, setQuizCandidates] = useState([]);
-  const [quizTarget, setQuizTarget] = useState(null);
-  const [quizCount, setQuizCount] = useState(0);
-  const [showWin, setShowWin] = useState(false);
-  const [startTime, setStartTime] = useState(Date.now());
-  const [wrongAnswers, setWrongAnswers] = useState([]);
-
-  const { pathGen, allFeaturesInView } = useMemo(() => {
-    const all = mapData || [];
-
-    let featuresForView = all.filter((f) => f.properties.continent === continentId);
-    let renderFeatures = all;
-
-    if (continentId === "europe") {
-      featuresForView = featuresForView.filter((f) => Number(f.id) !== 643);
-      renderFeatures = all.filter((f) => !["north_america", "south_america", "africa", "oceania"].includes(f.properties.continent));
-    }
-    if (continentId === "oceania") {
-      featuresForView = featuresForView.filter((f) => [36, 554].includes(Number(f.id)));
-    }
-
-    const padding = continentId === "oceania" ? 100 : 20;
-    const proj = d3.geoMercator().fitExtent(
-      [
-        [padding, padding],
-        [800 - padding, 600 - padding]
-      ],
-      { type: "FeatureCollection", features: featuresForView }
     );
-    const path = d3.geoPath(proj);
 
-    return { pathGen: path, allFeaturesInView: renderFeatures };
-  }, [continentId, mapData]);
+    const DraggableBanana = ({ mood='happy', message, onClick, level=0 }) => {
+      const [pos, setPos] = useState({ x: window.innerWidth - 120, y: window.innerHeight - 140 });
+      const [isDragging, setIsDragging] = useState(false);
+      const dragStart = useRef({ x: 0, y: 0 });
+      const hasMoved = useRef(false);
 
-  // 퍼즐 초기화 (의존성/가드 보강)
-  useEffect(() => {
-    if (!mapData || !continentId) return;
-
-    const targets = mapData
-      .filter((f) => PUZZLE_IDS.includes(Number(f.id)) && f.properties.continent === continentId && Number(f.id) !== 643)
-      .map((f) => ({
-        id: Number(f.id),
-        name: f.properties.name,
-        feature: f,
-        pathD: pathGen(f),
-        centroid: pathGen.centroid(f),
-        flag: getFlagUrl(Number(f.id))
-      }))
-      .sort(() => Math.random() - 0.5);
-
-    setPieces(targets);
-    setPlaced([]);
-    setMode("PUZZLE");
-    setQuizCount(0);
-    setWrongAnswers([]);
-    setShowWin(false);
-    setStartTime(Date.now());
-
-    showToast("happy", `${explorerName}!\n[${meta.name}] 대륙을 정복해볼까?`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [continentId, mapData, pathGen, explorerName]);
-
-  const generateQuiz = () => {
-    const continentTargets = (mapData || []).filter(
-      (f) => PUZZLE_IDS.includes(Number(f.id)) && f.properties.continent === continentId && Number(f.id) !== 643
-    );
-    if (continentTargets.length === 0) return;
-
-    const target = continentTargets[Math.floor(Math.random() * continentTargets.length)];
-    const others = continentTargets.filter((f) => Number(f.id) !== Number(target.id));
-    const distractors = others.sort(() => Math.random() - 0.5).slice(0, 2);
-    const candidates = [target, ...distractors].sort(() => Math.random() - 0.5);
-
-    setQuizTarget(target);
-    setQuizCandidates(candidates);
-    setMode("QUIZ");
-    showToast("excited", "퀴즈 타임! 지도를 잘 봐!");
-  };
-
-  const handleQuizClick = (f) => {
-    if (mode !== "QUIZ" || !quizTarget) return;
-    if (!quizCandidates.find((c) => Number(c.id) === Number(f.id))) return;
-
-    if (Number(f.id) === Number(quizTarget.id)) {
-      if (!isMuted) playSound("snap");
-      const targetCount = CONTINENT_META[continentId].quizCount;
-
-      if (quizCount < targetCount - 1) {
-        setQuizCount((prev) => prev + 1);
-        showToast("happy", `정답이야!\n다음 문제로 가볼까?`);
-        setTimeout(generateQuiz, 1000);
-      } else {
-        if (!isMuted) playSound("fanfare");
-        setShowWin(true);
-        onComplete(continentId, (Date.now() - startTime) / 1000, wrongAnswers);
-      }
-    } else {
-      if (!isMuted) playSound("error");
-      if (!wrongAnswers.includes(quizTarget.properties.name)) setWrongAnswers((prev) => [...prev, quizTarget.properties.name]);
-      showToast("sad", `틀렸어..\n[${quizTarget.properties.name}]를 찾아줘!`);
-    }
-  };
-
-  const handleDown = (e, piece) => {
-    if (mode === "QUIZ") return;
-    e.stopPropagation();
-    e.preventDefault();
-    setSelectedPiece(piece);
-    setIsDragging(true);
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    setDragPos({ x: cx, y: cy });
-    if (!isMuted) playSound("snap");
-  };
-
-  useEffect(() => {
-    const handleMove = (e) => {
-      if (!isDragging) return;
-      const cx = e.touches ? e.touches[0].clientX : e.clientX;
-      const cy = e.touches ? e.touches[0].clientY : e.clientY;
-      setDragPos({ x: cx, y: cy });
-    };
-
-    const handleUp = (e) => {
-      if (!isDragging || !selectedPiece) return;
-
-      const svg = svgRef.current;
-      if (svg) {
-        const pt = svg.createSVGPoint();
-        const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
-        const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-        pt.x = cx;
-        pt.y = cy;
-
-        const ctm = svg.getScreenCTM();
-        if (ctm) {
-          const svgP = pt.matrixTransform(ctm.inverse());
-          const [tx, ty] = selectedPiece.centroid;
-          const dist = Math.hypot(svgP.x - tx, svgP.y - ty);
-
-          if (dist < 80) {
-            setPlaced((prev) => [...prev, selectedPiece]);
-            setPieces((prev) => prev.filter((p) => p.id !== selectedPiece.id));
-            if (!isMuted) playSound("snap");
-
-            const info = COUNTRY_INFO[selectedPiece.id];
-            const prefix = Math.random() > 0.7 ? `${explorerName}, ` : "";
-            if (info) showToast("happy", `${prefix}딩동댕! [${info.name}]\n수도: ${info.capital}\n✨ ${info.desc}`);
-            else showToast("happy", `정답이야! ${selectedPiece.name}`);
-
-            // 마지막 조각 놓으면 퀴즈로
-            if (pieces.length === 1) setTimeout(() => generateQuiz(), 1500);
-          } else {
-            if (!isMuted) playSound("error");
-            showToast("sad", "으앙, 거기가 아닌 것 같아!\n모양을 잘 봐봐.");
-          }
+      const handleStart = (cx, cy) => {
+        setIsDragging(true);
+        hasMoved.current = false;
+        dragStart.current = { x: cx - pos.x, y: cy - pos.y };
+      };
+      const handleMove = (cx, cy) => {
+        if (!isDragging) return;
+        if (Math.abs(cx - dragStart.current.x - pos.x) > 5 || Math.abs(cy - dragStart.current.y - pos.y) > 5) {
+          hasMoved.current = true;
         }
-      }
+        setPos({ x: cx - dragStart.current.x, y: cy - dragStart.current.y });
+      };
+      const handleEnd = () => {
+        setIsDragging(false);
+        if (!hasMoved.current && onClick) onClick();
+      };
 
-      setIsDragging(false);
-      setSelectedPiece(null);
-    };
+      useEffect(() => {
+        const mm = (e) => handleMove(e.clientX, e.clientY);
+        const mu = () => handleEnd();
+        const tm = (e) => handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        const tu = () => handleEnd();
+        if (isDragging) {
+          window.addEventListener('mousemove', mm);
+          window.addEventListener('mouseup', mu);
+          window.addEventListener('touchmove', tm, { passive: false });
+          window.addEventListener('touchend', tu);
+        }
+        return () => {
+          window.removeEventListener('mousemove', mm);
+          window.removeEventListener('mouseup', mu);
+          window.removeEventListener('touchmove', tm);
+          window.removeEventListener('touchend', tu);
+        };
+      }, [isDragging, pos.x, pos.y]);
 
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("touchmove", handleMove, { passive: false });
-    window.addEventListener("mouseup", handleUp);
-    window.addEventListener("touchend", handleUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("touchmove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-      window.removeEventListener("touchend", handleUp);
-    };
-  }, [isDragging, selectedPiece, pieces.length, explorerName, isMuted, mode, wrongAnswers, quizTarget, quizCandidates, quizCount, continentId, startTime]);
-
-  return (
-    <div className="flex-1 flex flex-col lg:flex-row h-full bg-white relative overflow-hidden">
-      <div className={`flex-1 relative ${meta.bg} flex items-center justify-center p-4 shadow-inner`}>
-        <div className="absolute top-4 left-4 z-10 flex gap-3">
-          <button onClick={onBack} className="bg-white p-2 rounded-full shadow-md text-slate-500 hover:text-indigo-600 transition-colors">
-            <ArrowLeft size={24} />
-          </button>
-          <div className="bg-white/90 backdrop-blur px-5 py-2 rounded-full shadow-md flex items-center gap-2 border border-white/50">
-            <span className={`font-['Jua'] text-xl ${meta.text}`}>{meta.name}</span>
-            {mode === "PUZZLE" ? (
-              <span className="bg-slate-100 text-sm px-2 py-0.5 rounded-full font-bold text-slate-500">
-                {placed.length} / {placed.length + pieces.length}
-              </span>
-            ) : (
-              <span className="bg-yellow-100 text-yellow-700 text-sm px-2 py-0.5 rounded-full font-bold animate-pulse">
-                퀴즈 {quizCount + 1} / {CONTINENT_META[continentId].quizCount}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <svg ref={svgRef} viewBox="0 0 800 600" className="w-full h-full max-h-[85vh] drop-shadow-xl select-none" preserveAspectRatio="xMidYMid slice">
-          <g>
-            {allFeaturesInView.map((f, i) => {
-              const id = Number(f.id);
-              const isTarget = PUZZLE_IDS.includes(id) && f.properties.continent === continentId && id !== 643;
-              const isPlaced = placed.find((p) => p.id === id);
-              const isDraggingTarget = selectedPiece && selectedPiece.id === id;
-              const isQuizCandidate = mode === "QUIZ" && quizCandidates.find((c) => Number(c.id) === id);
-
-              let fill = "rgba(0,0,0,0.05)";
-              let stroke = "#cbd5e1";
-              let strokeWidth = 0.5;
-              let cursor = "default";
-
-              if (mode === "PUZZLE") {
-                if (isTarget) {
-                  if (isPlaced) {
-                    fill = COUNTRY_COLORS[id] || meta.color;
-                    stroke = "white";
-                    strokeWidth = 1.5;
-                  } else {
-                    fill = "rgba(255,255,255,0.8)";
-                    stroke = "#94a3b8";
-                    strokeWidth = 1;
-                    if (isDraggingTarget) {
-                      stroke = "#FFD700";
-                      strokeWidth = 3;
-                      fill = "rgba(255, 215, 0, 0.2)";
-                    }
-                  }
-                } else {
-                  fill = "rgba(0,0,0,0.08)";
-                  stroke = "#e2e8f0";
-                }
-              } else {
-                if (isQuizCandidate) {
-                  fill = COUNTRY_COLORS[id] || meta.color;
-                  stroke = "white";
-                  strokeWidth = 2;
-                  cursor = "pointer";
-                } else {
-                  fill = "rgba(0,0,0,0.05)";
-                  stroke = "#e2e8f0";
-                }
-              }
-
-              return (
-                <g key={i} onClick={() => handleQuizClick(f)} style={{ cursor }}>
-                  <path d={pathGen(f)} fill={fill} stroke={stroke} strokeWidth={strokeWidth} className="transition-all duration-300" />
-                  {mode === "PUZZLE" &&
-                    ((isPlaced) || (!isTarget && f.properties.name && pathGen.area(f) > 50)) && (
-                      <text
-                        x={pathGen.centroid(f)[0]}
-                        y={pathGen.centroid(f)[1]}
-                        textAnchor="middle"
-                        fontSize={isPlaced ? Math.min(14, Math.sqrt(pathGen.area(f)) / 2) : 8}
-                        fontWeight={isPlaced ? "bold" : "normal"}
-                        fill={isPlaced ? "#374151" : "#9ca3af"}
-                        className="pointer-events-none drop-shadow-sm"
-                        style={{ opacity: isPlaced ? 1 : 0.6 }}
-                      >
-                        {f.properties.name}
-                      </text>
-                    )}
-                </g>
-              );
-            })}
-          </g>
-        </svg>
-      </div>
-
-      {/* 오른쪽(아래) 패널 */}
-      <div
-        className={`h-48 lg:h-full lg:w-80 bg-white border-t lg:border-l border-slate-200 shadow-xl z-20 flex flex-col transition-all duration-500 ${
-          mode === "QUIZ" ? "translate-y-full lg:translate-y-0 lg:translate-x-full w-0 p-0" : ""
-        }`}
-      >
-        {mode === "PUZZLE" ? (
-          <>
-            <div className="p-3 bg-indigo-50 border-b border-indigo-100 text-center font-bold text-indigo-800 text-sm">
-              남은 나라 ({pieces.length})
-            </div>
-            <div className="flex-1 p-3 overflow-y-auto flex flex-wrap content-start justify-center gap-3 bg-slate-50">
-              {pieces.map((piece) => (
-                <div
-                  key={piece.id}
-                  onMouseDown={(e) => handleDown(e, piece)}
-                  onTouchStart={(e) => handleDown(e, piece)}
-                  className={`flex-shrink-0 w-24 h-24 bg-white rounded-xl border-2 border-slate-200 shadow-sm p-2 cursor-grab active:cursor-grabbing hover:border-indigo-400 hover:shadow-md transition-all flex flex-col items-center justify-center gap-1 ${
-                    selectedPiece?.id === piece.id ? "opacity-20" : "opacity-100"
-                  }`}
-                  style={{ backgroundColor: COUNTRY_COLORS[piece.id] ? `${COUNTRY_COLORS[piece.id]}20` : "#fff" }}
-                >
-                  {piece.flag && <img src={piece.flag} className="h-10 shadow-sm rounded-sm pointer-events-none" alt="" />}
-                  <div className="text-center text-xs font-bold text-slate-700 break-keep">{piece.name}</div>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 bg-yellow-50 text-center">
-            <Search size={48} className="text-yellow-500 mb-4 animate-bounce" />
-            <h3 className="text-xl font-bold text-indigo-900 mb-2 font-['Jua']">위치 찾기 퀴즈!</h3>
-            {quizTarget && (
-              <div className="bg-white px-6 py-4 rounded-2xl shadow-md border-2 border-yellow-300 mb-4">
-                <span className="text-2xl font-black text-indigo-600">{quizTarget.properties.name}</span>
-                <span className="text-gray-600 font-bold block mt-1">은(는) 어디 있을까?</span>
-              </div>
-            )}
-            <p className="text-sm text-gray-500 font-bold">지도에서 색칠된 나라 중 하나를 골라봐!</p>
-          </div>
-        )}
-      </div>
-
-      {/* 드래그 중 고스트 */}
-      {isDragging && selectedPiece && (
+      return (
         <div
-          className="fixed z-[9999] pointer-events-none transform -translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white px-3 py-2 rounded-xl shadow-2xl border-2 border-white flex flex-col items-center gap-1"
-          style={{ left: dragPos.x, top: dragPos.y }}
+          className="fixed z-[9999] flex flex-col items-center cursor-grab active:cursor-grabbing"
+          style={{ left: pos.x, top: pos.y, touchAction: 'none' }}
+          onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
+          onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
         >
-          {selectedPiece.flag && <img src={selectedPiece.flag} className="h-8 rounded shadow-sm border border-white/50" alt="" />}
-          <span className="font-['Jua'] text-sm whitespace-nowrap">{selectedPiece.name}</span>
+          {message && (
+            <div className="absolute bottom-full mb-2 bg-white/95 backdrop-blur px-4 py-3 rounded-2xl rounded-br-none shadow-xl border-4 border-yellow-300 w-[240px] animate-pop origin-bottom-right pointer-events-none">
+              <p className="text-base font-bold text-slate-800 leading-snug whitespace-pre-line break-keep" style={{ fontFamily: 'Jua, sans-serif' }}>
+                {message}
+              </p>
+            </div>
+          )}
+          <div className="w-24 h-24 hover:scale-105 transition-transform">
+            <BananaAvatar level={level} mood={mood} />
+          </div>
         </div>
-      )}
+      );
+    };
 
-      {/* 승리 모달 */}
-      {showWin && (
-        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl border-4 border-white animate-in zoom-in relative overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <Sparkles className="text-yellow-400 w-full h-full opacity-20 animate-spin-slow" />
+    function MainScreen({ onStart, onTeacherMode }) {
+      const [name, setName] = useState("");
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (name.trim()) onStart(name);
+      };
+      return (
+        <div className="h-full w-full flex flex-col items-center justify-start pt-10 p-6 text-white relative overflow-y-auto">
+          <div className="text-center space-y-2 animate-pop max-w-3xl w-full mt-4">
+            <div className="relative inline-block">
+              <div className="w-[100px] h-[100px] rounded-full bg-blue-500/20 flex items-center justify-center animate-spin-slow shadow-[0_0_30px_rgba(59,130,246,0.5)]">
+                <span className="text-6xl">🌏</span>
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center text-6xl drop-shadow-2xl filter brightness-125 contrast-125">
+                🍌
+              </div>
             </div>
-            <Trophy size={64} className="mx-auto text-yellow-400 mb-4 drop-shadow-md animate-bounce" />
-            <h2 className="text-3xl font-['Jua'] text-slate-800 mb-2">{meta.name} 정복 완료!</h2>
-            <div className="flex justify-center gap-1 mb-6">
-              {[1, 2, 3].map((i) => (
-                <Star key={i} className="fill-yellow-400 text-yellow-400" />
-              ))}
+            <h2 className="text-5xl md:text-7xl drop-shadow-2xl text-transparent bg-clip-text bg-gradient-to-br from-yellow-200 via-white to-yellow-100 leading-tight py-2 whitespace-nowrap"
+                style={{ fontFamily: 'Jua, sans-serif' }}>
+              도전! 바나나 월드
+            </h2>
+          </div>
+
+          <div className="mt-8 w-full max-w-md animate-pop" style={{ animationDelay: '0.1s' }}>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 bg-white/10 backdrop-blur-lg p-8 rounded-3xl border border-white/20 shadow-2xl">
+              <label className="text-lg font-bold text-blue-100 text-center" style={{ fontFamily: 'Jua, sans-serif' }}>
+                탐험가님의 이름은 무엇인가요?
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="이름 입력"
+                className="w-full bg-white/20 border-2 border-white/30 rounded-2xl py-4 px-4 text-xl text-white placeholder-white/50 focus:outline-none focus:border-yellow-400 transition-all font-bold text-center"
+                autoFocus
+              />
+              <button
+                type="submit"
+                disabled={!name.trim()}
+                className={`mt-4 group relative bg-gradient-to-r from-yellow-400 to-orange-500 text-slate-900 text-2xl py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 ${!name.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95 hover:shadow-orange-500/50'}`}
+                style={{ fontFamily: 'Jua, sans-serif' }}
+              >
+                출발하기 <span className="group-hover:translate-x-1 transition-transform">➡️</span>
+              </button>
+            </form>
+          </div>
+
+          <div className="mt-auto w-full flex justify-between items-end pt-4 pb-2 text-white/40">
+            <div className="flex flex-col">
+              <span className="text-xs font-bold">Design & Development by</span>
+              <span className="text-white/60 text-sm" style={{ fontFamily: 'Jua, sans-serif' }}>보라쌤과 사회를 보라</span>
             </div>
-            <p className="text-slate-500 mb-6 font-bold">
-              모든 미션(퍼즐+퀴즈)을 완료했습니다.
-              <br />
-              참 잘했어요!
-            </p>
-            <button onClick={onBack} className="w-full py-3 bg-indigo-500 text-white font-bold rounded-xl hover:bg-indigo-600 shadow-lg">
-              다음 대륙 탐험하기
+            <button onClick={onTeacherMode} className="flex items-center gap-1 text-xs font-bold hover:text-yellow-300 transition-colors bg-white/10 px-3 py-1 rounded-full">
+              🔓 선생님은 여기로!
             </button>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-// 최종 리포트
-function FinalReport({ explorerName, records, onRestart }) {
-  const totalTime = Object.values(records).reduce((acc, r) => acc + r.time, 0);
-  const allWrongs = Object.values(records).flatMap((r) => r.wrong);
-  const uniqueWrongs = [...new Set(allWrongs)];
-
-  return (
-    <div className="h-full w-full bg-slate-50 flex flex-col items-center justify-center p-6 overflow-y-auto">
-      <div className="bg-white max-w-2xl w-full rounded-[3rem] shadow-2xl p-8 border-8 border-yellow-300 animate-bounce-in relative">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-yellow-400 text-white p-4 rounded-full shadow-lg">
-          <Trophy size={48} />
-        </div>
-
-        <h2 className="text-4xl font-['Jua'] text-center text-slate-800 mt-8 mb-2">탐험 완료 보고서</h2>
-        <p className="text-center text-slate-500 font-bold mb-8">{explorerName} 대장님의 위대한 여정</p>
-
-        <div className="flex justify-center mb-8">
-          <div className="w-32 h-32 relative">
-            <BananaAvatar level={6} mood="happy" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-indigo-50 p-6 rounded-2xl text-center">
-            <Clock className="mx-auto text-indigo-500 mb-2" />
-            <p className="text-sm text-indigo-800 font-bold">총 소요 시간</p>
-            <p className="text-2xl font-black text-indigo-600">
-              {Math.floor(totalTime / 60)}분 {Math.floor(totalTime % 60)}초
-            </p>
-          </div>
-          <div className="bg-green-50 p-6 rounded-2xl text-center">
-            <CheckCircle2 className="mx-auto text-green-500 mb-2" />
-            <p className="text-sm text-green-800 font-bold">정복한 대륙</p>
-            <p className="text-2xl font-black text-green-600">6 / 6</p>
-          </div>
-        </div>
-
-        {uniqueWrongs.length > 0 ? (
-          <div className="bg-rose-50 p-6 rounded-2xl mb-8 border border-rose-100">
-            <div className="flex items-center gap-2 mb-3 text-rose-700 font-bold">
-              <BookOpen size={20} />
-              <span>다시 살펴볼 나라 (오답 노트)</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {uniqueWrongs.map((name, i) => (
-                <span key={i} className="bg-white text-rose-500 px-3 py-1 rounded-full text-sm font-bold shadow-sm border border-rose-200">
-                  {name}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="bg-blue-50 p-6 rounded-2xl mb-8 border border-blue-100 text-center">
-            <p className="text-blue-600 font-bold text-lg">
-              틀린 문제가 하나도 없어요!
-              <br />
-              완벽한 탐험이었습니다 👍
-            </p>
-          </div>
-        )}
-
-        <button
-          onClick={onRestart}
-          className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xl rounded-2xl shadow-lg transition-transform hover:scale-105 flex items-center justify-center gap-2"
-        >
-          <RotateCcw /> 처음부터 다시하기
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// 3) 메인 앱
-// =============================================================================
-
-export default function ChallengeBananaWorldFinalRefined() {
-  const [view, setView] = useState("MAIN");
-  const [activeContinent, setActiveContinent] = useState(null);
-  const [mapData, setMapData] = useState(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const [unlocked, setUnlocked] = useState(["asia"]);
-  const [completed, setCompleted] = useState([]);
-  const [explorerName, setExplorerName] = useState("");
-  const [feedback, setFeedback] = useState({ mood: "happy", msg: "안녕! 나는 탐험가 바나나야.\n이름이 뭐야? 🍌" });
-  const [isTeacherMode, setIsTeacherMode] = useState(false);
-  const [records, setRecords] = useState({});
-
-  const toastTimer = useRef(null);
-
-  const currentLevel = completed.length;
-  const currentTitle = EXPLORER_TITLES[Math.min(currentLevel, EXPLORER_TITLES.length - 1)];
-
-  useEffect(() => {
-    // 폰트 1번만 추가
-    const exists = document.querySelector('link[data-banana-font="1"]');
-    if (!exists) {
-      const link = document.createElement("link");
-      link.href = "https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap";
-      link.rel = "stylesheet";
-      link.dataset.bananaFont = "1";
-      document.head.appendChild(link);
+      );
     }
 
-    fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
-      .then((res) => res.json())
-      .then((topo) => {
-        const features = feature(topo, topo.objects.countries).features;
-        const processed = features.map((f) => {
-          const info = COUNTRY_INFO[Number(f.id)];
-          return {
-            ...f,
-            properties: {
-              ...f.properties,
-              continent: info ? info.continent : null,
-              name: info ? info.name : null
-            }
-          };
-        });
-        setMapData(processed);
-      })
-      .catch(() => {
-        setMapData([]); // 로딩 실패해도 앱이 죽지 않게
-      });
-  }, []);
+    function GlobeSelection({ mapData, unlocked, completed, onSelect, onBack, isMuted, showToast, explorerName, isTeacherMode, onPreviewEnding }) {
+      const [rotation, setRotation] = useState([0, 0]);
+      const [isDragging, setIsDragging] = useState(false);
+      const [hovered, setHovered] = useState(null);
+      const requestRef = useRef();
+      const lastPosRef = useRef({ x: 0, y: 0 });
 
-  const showToast = (mood, msg) => {
-    setFeedback({ mood, msg });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => {
-      setFeedback({ mood: "happy", msg: null });
-    }, 4000);
-  };
+      const { pathGen, projection } = useMemo(() => {
+        const proj = d3.geoOrthographic().scale(260).center([0, 0]).translate([400, 300]);
+        const path = d3.geoPath(proj);
+        return { pathGen: path, projection: proj };
+      }, []);
 
-  const handleBananaClick = () => {
-    if (view === "SELECT") {
-      const messages = [
-        { mood: "happy", msg: "지도를 알면\n세상이 보여! 🌏" },
-        { mood: "excited", msg: "위치를 아는 건\n그 나라를 이해하는 시작이야!" },
-        { mood: "happy", msg: "난 네가 참 좋아! ❤️" },
-        { mood: "excited", msg: "탐험에 성공할수록\n난 진화해! ✨" },
-        { mood: "happy", msg: "바뀐 내 모습 어때?\n멋지지? 😎" }
-      ];
-      const random = messages[Math.floor(Math.random() * messages.length)];
-      showToast(random.mood, random.msg);
-      if (!isMuted) playSound("snap");
-    }
-  };
+      const animate = () => {
+        if (!isDragging) setRotation(prev => [(prev[0] + 0.2) % 360, prev[1]]);
+        requestRef.current = requestAnimationFrame(animate);
+      };
+      useEffect(() => {
+        requestRef.current = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(requestRef.current);
+      }, [isDragging]);
 
-  const handleStartGame = (name) => {
-    initAudio();
-    setExplorerName(name);
-    setIsTeacherMode(false);
-    setFeedback({ mood: "excited", msg: `반가워, ${name}!\n나를 드래그해서 옮겨봐!` });
-    setView("SELECT");
-  };
+      useEffect(() => { projection.rotate(rotation); }, [rotation, projection]);
 
-  const unlockAll = () => {
-    initAudio();
-    setUnlocked(CONTINENT_ORDER);
-    setIsTeacherMode(true);
-    showToast("excited", "선생님 모드 활성화!\n모든 대륙이 열렸습니다 🏫");
-    playSound("fanfare");
-    setView("SELECT");
-  };
+      const handleStart = (cx, cy) => { setIsDragging(true); lastPosRef.current = { x: cx, y: cy }; };
+      const handleMove = (cx, cy) => {
+        if (!isDragging) return;
+        const sensitivity = 0.5;
+        const dx = cx - lastPosRef.current.x;
+        const dy = cy - lastPosRef.current.y;
+        setRotation(prev => [prev[0] + dx * sensitivity, prev[1] - dy * sensitivity]);
+        lastPosRef.current = { x: cx, y: cy };
+      };
 
-  const previewEnding = () => {
-    initAudio();
-    setCompleted(CONTINENT_ORDER);
-    setRecords({
-      asia: { time: 45, wrong: ["일본"] },
-      europe: { time: 60, wrong: [] },
-      africa: { time: 55, wrong: [] },
-      north_america: { time: 30, wrong: [] },
-      south_america: { time: 40, wrong: [] },
-      oceania: { time: 25, wrong: [] }
-    });
-    setView("REPORT");
-    playSound("fanfare");
-  };
-
-  const handleComplete = (contId, time, wrongList) => {
-    if (!completed.includes(contId)) {
-      setCompleted((prev) => [...prev, contId]);
-      setRecords((prev) => ({ ...prev, [contId]: { time, wrong: wrongList } }));
-
-      const currentIndex = CONTINENT_ORDER.indexOf(contId);
-      if (currentIndex < CONTINENT_ORDER.length - 1) {
-        const nextCont = CONTINENT_ORDER[currentIndex + 1];
-        if (!unlocked.includes(nextCont)) {
-          setTimeout(() => {
-            setUnlocked((prev) => [...prev, nextCont]);
-            playSound("fanfare");
-            showToast("excited", `축하해!\n[${CONTINENT_META[nextCont].name}] 대륙이 열렸어! 🎉`);
-          }, 1500);
+      const handleClick = (contId) => {
+        if (!contId) return;
+        if (unlocked.includes(contId)) {
+          if (!isMuted) playSound('snap');
+          onSelect(contId);
+        } else {
+          if (!isMuted) playSound('error');
+          showToast('sad', `[${CONTINENT_META[contId].name}]는 잠겨있어!\n${explorerName}, 이전 대륙을 먼저 깨줘.`);
         }
-      } else {
-        setTimeout(() => {
-          playSound("fanfare");
-          setView("REPORT");
-        }, 2000);
-      }
-    } else {
-      setView("SELECT");
-    }
-  };
+      };
 
-  return (
-    <div className="w-full h-screen bg-slate-900 font-sans select-none overflow-hidden flex flex-col relative text-slate-800">
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950 via-slate-900 to-black pointer-events-none">
-        <StarField />
-      </div>
+      const OCEAN_CENTROIDS = { '태평양': [-170, 0], '대서양': [-30, 0], '인도양': [80, -20], '북극해': [0, 85] };
+      const CONTINENT_CENTROIDS = { asia: [90, 40], europe: [20, 50], africa: [20, 0], north_america: [-100, 40], south_america: [-60, -20], oceania: [140, -25] };
 
-      <header className="px-6 py-4 flex justify-between items-center z-50 pointer-events-none">
+      return (
         <div
-          className="flex items-center gap-3 pointer-events-auto bg-white/10 backdrop-blur-md rounded-full px-4 py-2 shadow-lg border border-white/20 cursor-pointer hover:bg-white/20 transition-all"
-          onClick={() => setView("MAIN")}
+          className="h-full flex flex-col items-center justify-center relative overflow-hidden"
+          onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
+          onMouseUp={() => setIsDragging(false)}
+          onMouseLeave={() => setIsDragging(false)}
+          onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
+          onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
+          onTouchEnd={() => setIsDragging(false)}
+          onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
         >
-          <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-2 rounded-full text-white shadow-md">
-            <Globe size={20} />
+          <div className="absolute top-4 left-4 z-20">
+            <button onClick={onBack} className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors border border-white/20">⬅️</button>
           </div>
-          <div>
-            <h1 className="text-lg font-['Jua'] text-white leading-none drop-shadow-sm whitespace-nowrap">도전! 바나나 월드</h1>
-            <p className="text-xs font-bold text-yellow-300">{explorerName ? `${currentTitle}` : "탐험 준비 중"}</p>
+
+          {isTeacherMode && (
+            <button
+              onClick={onPreviewEnding}
+              className="absolute bottom-6 right-6 z-40 p-3 bg-indigo-600/80 backdrop-blur text-white font-bold rounded-full shadow-lg hover:bg-indigo-500 transition-all flex items-center gap-2 pointer-events-auto border-2 border-white/30 text-xs"
+            >
+              🏆 리포트 미리보기
+            </button>
+          )}
+
+          <div className="cursor-grab active:cursor-grabbing relative flex-1 flex items-center justify-center w-full">
+            <svg viewBox="0 0 800 600" className="w-full h-full max-w-5xl drop-shadow-2xl">
+              <defs>
+                <radialGradient id="ocean" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#2563eb" />
+                  <stop offset="100%" stopColor="#1e3a8a" />
+                </radialGradient>
+              </defs>
+              <circle cx="400" cy="300" r="260" fill="url(#ocean)" />
+              <path d={pathGen(d3.geoGraticule()())} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+
+              {Object.entries(OCEAN_CENTROIDS).map(([name, coords]) => {
+                const projected = projection(coords);
+                const isVisible = pathGen({type: "Point", coordinates: coords});
+                if (!isVisible) return null;
+                const [x, y] = projected;
+                return (
+                  <text key={name} x={x} y={y} textAnchor="middle"
+                        className="fill-white/60 pointer-events-none text-lg select-none"
+                        style={{ fontFamily: 'Jua, sans-serif' }}>
+                    {name}
+                  </text>
+                );
+              })}
+
+              <g>
+                {mapData.map((f, i) => {
+                  const contId = f.properties.continent;
+                  const meta = contId ? CONTINENT_META[contId] : null;
+                  const isUnlocked = contId && unlocked.includes(contId);
+                  const isHover = hovered === contId;
+
+                  let fill = "#475569";
+                  if (meta) fill = isUnlocked ? meta.color : "#64748b";
+                  if (isHover && isUnlocked) fill = "#ffffff";
+
+                  return (
+                    <path
+                      key={i}
+                      d={pathGen(f)}
+                      fill={fill}
+                      stroke="rgba(255,255,255,0.4)"
+                      strokeWidth="0.5"
+                      className="transition-colors duration-150 cursor-pointer"
+                      onMouseEnter={() => contId && setHovered(contId)}
+                      onMouseLeave={() => setHovered(null)}
+                      onClick={(e) => { e.stopPropagation(); handleClick(contId); }}
+                      onTouchEnd={(e) => { if(!isDragging) handleClick(contId); }}
+                    />
+                  );
+                })}
+              </g>
+
+              {Object.entries(CONTINENT_CENTROIDS).map(([id, coords]) => {
+                const projected = projection(coords);
+                const isVisible = pathGen({type: "Point", coordinates: coords});
+                if (!isVisible) return null;
+                const [x, y] = projected;
+                const meta = CONTINENT_META[id];
+                return (
+                  <text
+                    key={id}
+                    x={x}
+                    y={y}
+                    textAnchor="middle"
+                    className="font-bold fill-black pointer-events-none text-outline-black"
+                    style={{ fontFamily: 'Jua, sans-serif', fontSize: '16px', stroke: 'white', strokeWidth: '3px', paintOrder: 'stroke' }}
+                  >
+                    {meta.name}
+                  </text>
+                );
+              })}
+            </svg>
           </div>
         </div>
-        <button
-          onClick={() => setIsMuted(!isMuted)}
-          className="pointer-events-auto p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors border border-white/20"
-        >
-          {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-        </button>
-      </header>
+      );
+    }
 
-      <div className="flex-1 relative z-10 flex flex-col overflow-hidden">
-        {!mapData ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-white">
-            <Loader2 className="animate-spin w-12 h-12 text-yellow-400" />
-            <span className="font-['Jua'] text-xl">지구본을 닦고 있어요...</span>
+    function PuzzleGame({ continentId, mapData, onComplete, onBack, isMuted, showToast, explorerName }) {
+      const meta = CONTINENT_META[continentId];
+      const svgRef = useRef(null);
+
+      const [pieces, setPieces] = useState([]);
+      const [placed, setPlaced] = useState([]);
+      const [selectedPiece, setSelectedPiece] = useState(null);
+      const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+      const [isDragging, setIsDragging] = useState(false);
+
+      const [mode, setMode] = useState('PUZZLE');
+      const [quizCandidates, setQuizCandidates] = useState([]);
+      const [quizTarget, setQuizTarget] = useState(null);
+      const [quizCount, setQuizCount] = useState(0);
+      const [showWin, setShowWin] = useState(false);
+      const [startTime, setStartTime] = useState(Date.now());
+      const [wrongAnswers, setWrongAnswers] = useState([]);
+
+      const { pathGen, allFeaturesInView } = useMemo(() => {
+        let featuresForView = mapData.filter(f => f.properties.continent === continentId);
+        let renderFeatures = mapData;
+
+        // 유럽은 러시아 제외
+        if (continentId === 'europe') {
+          featuresForView = featuresForView.filter(f => Number(f.id) !== 643);
+          renderFeatures = mapData.filter(f => !['north_america', 'south_america', 'africa', 'oceania'].includes(f.properties.continent));
+        }
+        // 오세아니아는 호주/뉴질랜드 위주
+        if (continentId === 'oceania') {
+          featuresForView = featuresForView.filter(f => [36, 554].includes(Number(f.id)));
+        }
+
+        const padding = continentId === 'oceania' ? 100 : 20;
+        const proj = d3.geoMercator().fitExtent(
+          [[padding, padding], [800 - padding, 600 - padding]],
+          { type: "FeatureCollection", features: featuresForView }
+        );
+        const path = d3.geoPath(proj);
+
+        return { pathGen: path, allFeaturesInView: renderFeatures };
+      }, [continentId, mapData]);
+
+      useEffect(() => {
+        const targets = mapData
+          .filter(f => PUZZLE_IDS.includes(Number(f.id)) && f.properties.continent === continentId && Number(f.id) !== 643);
+
+        const shuffled = targets.map(f => ({
+          id: Number(f.id),
+          name: f.properties.name,
+          feature: f,
+          pathD: pathGen(f),
+          centroid: pathGen.centroid(f),
+          flag: getFlagUrl(Number(f.id))
+        })).sort(() => Math.random() - 0.5);
+
+        setPieces(shuffled);
+        setPlaced([]);
+        setMode('PUZZLE');
+        setQuizCount(0);
+        setWrongAnswers([]);
+        setShowWin(false);
+        setStartTime(Date.now());
+
+        showToast('happy', `${explorerName}!\n[${meta.name}] 대륙을 정복해볼까?`);
+      }, [continentId, mapData]);
+
+      const generateQuiz = () => {
+        const continentTargets = mapData.filter(f => PUZZLE_IDS.includes(Number(f.id)) && f.properties.continent === continentId && Number(f.id) !== 643);
+        if (continentTargets.length === 0) return;
+
+        const target = continentTargets[Math.floor(Math.random() * continentTargets.length)];
+        const others = continentTargets.filter(f => Number(f.id) !== Number(target.id));
+        const distractors = others.sort(() => Math.random() - 0.5).slice(0, 2);
+        const candidates = [target, ...distractors].sort(() => Math.random() - 0.5);
+
+        setQuizTarget(target);
+        setQuizCandidates(candidates);
+        setMode('QUIZ');
+        showToast('excited', '퀴즈 타임! 지도를 잘 봐!');
+      };
+
+      const handleQuizClick = (f) => {
+        if (mode !== 'QUIZ' || !quizTarget) return;
+        if (!quizCandidates.find(c => Number(c.id) === Number(f.id))) return;
+
+        if (Number(f.id) === Number(quizTarget.id)) {
+          if (!isMuted) playSound('snap');
+          const targetCount = CONTINENT_META[continentId].quizCount;
+
+          if (quizCount < targetCount - 1) {
+            setQuizCount(prev => prev + 1);
+            showToast('happy', `정답이야!\n다음 문제로 가볼까?`);
+            setTimeout(generateQuiz, 1000);
+          } else {
+            if (!isMuted) playSound('fanfare');
+            setShowWin(true);
+            onComplete(continentId, (Date.now() - startTime) / 1000, wrongAnswers);
+          }
+        } else {
+          if (!isMuted) playSound('error');
+          if (!wrongAnswers.includes(quizTarget.properties.name)) setWrongAnswers(prev => [...prev, quizTarget.properties.name]);
+          showToast('sad', `틀렸어..\n[${quizTarget.properties.name}]를 찾아줘!`);
+        }
+      };
+
+      const handleDown = (e, piece) => {
+        if (mode === 'QUIZ') return;
+        e.stopPropagation(); e.preventDefault();
+
+        setSelectedPiece(piece);
+        setIsDragging(true);
+
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        setDragPos({ x: cx, y: cy });
+
+        if (!isMuted) playSound('snap');
+      };
+
+      useEffect(() => {
+        const handleMove = (e) => {
+          if (!isDragging) return;
+          const cx = e.touches ? e.touches[0].clientX : e.clientX;
+          const cy = e.touches ? e.touches[0].clientY : e.clientY;
+          setDragPos({ x: cx, y: cy });
+        };
+
+        const handleUp = (e) => {
+          if (!isDragging || !selectedPiece) return;
+          const svg = svgRef.current;
+          if (svg) {
+            const pt = svg.createSVGPoint();
+            const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+            pt.x = cx; pt.y = cy;
+
+            const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+            const [tx, ty] = selectedPiece.centroid;
+            const dist = Math.hypot(svgP.x - tx, svgP.y - ty);
+
+            if (dist < 80) {
+              setPlaced(prev => [...prev, selectedPiece]);
+              setPieces(prev => prev.filter(p => p.id !== selectedPiece.id));
+              if (!isMuted) playSound('snap');
+
+              const info = COUNTRY_INFO[selectedPiece.id];
+              const prefix = Math.random() > 0.7 ? `${explorerName}, ` : '';
+              if (info) showToast('happy', `${prefix}딩동댕! [${info.name}]\n수도: ${info.capital}\n✨ ${info.desc}`);
+              else showToast('happy', `정답이야! ${selectedPiece.name}`);
+
+              // 마지막 조각 맞추면 퀴즈 시작
+              if (pieces.length === 1) setTimeout(() => generateQuiz(), 1500);
+            } else {
+              if (!isMuted) playSound('error');
+              showToast('sad', '으앙, 거기가 아닌 것 같아!\n모양을 잘 봐봐.');
+            }
+          }
+
+          setIsDragging(false);
+          setSelectedPiece(null);
+        };
+
+        window.addEventListener("mousemove", handleMove);
+        window.addEventListener("touchmove", handleMove, { passive: false });
+        window.addEventListener("mouseup", handleUp);
+        window.addEventListener("touchend", handleUp);
+
+        return () => {
+          window.removeEventListener("mousemove", handleMove);
+          window.removeEventListener("touchmove", handleMove);
+          window.removeEventListener("mouseup", handleUp);
+          window.removeEventListener("touchend", handleUp);
+        };
+      }, [isDragging, selectedPiece, pieces, mode, quizTarget, quizCandidates, quizCount, wrongAnswers]);
+
+      return (
+        <div className="flex-1 flex flex-col lg:flex-row h-full bg-white relative overflow-hidden">
+          <div className={`flex-1 relative ${meta.bg} flex items-center justify-center p-4 shadow-inner`}>
+            <div className="absolute top-4 left-4 z-10 flex gap-3">
+              <button onClick={onBack} className="bg-white p-2 rounded-full shadow-md text-slate-500 hover:text-indigo-600 transition-colors">⬅️</button>
+              <div className="bg-white/90 backdrop-blur px-5 py-2 rounded-full shadow-md flex items-center gap-2 border border-white/50">
+                <span className={`text-xl ${meta.text}`} style={{ fontFamily: 'Jua, sans-serif' }}>{meta.name}</span>
+                {mode === 'PUZZLE' ? (
+                  <span className="bg-slate-100 text-sm px-2 py-0.5 rounded-full font-bold text-slate-500">
+                    {placed.length} / {placed.length + pieces.length}
+                  </span>
+                ) : (
+                  <span className="bg-yellow-100 text-yellow-700 text-sm px-2 py-0.5 rounded-full font-bold animate-pulse">
+                    퀴즈 {quizCount + 1} / {CONTINENT_META[continentId].quizCount}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <svg ref={svgRef} viewBox="0 0 800 600" className="w-full h-full max-h-[85vh] drop-shadow-xl select-none" preserveAspectRatio="xMidYMid slice">
+              <g>
+                {allFeaturesInView.map((f, i) => {
+                  const id = Number(f.id);
+                  const isTarget = PUZZLE_IDS.includes(id) && f.properties.continent === continentId && id !== 643;
+                  const isPlaced = placed.find(p => p.id === id);
+                  const isDraggingTarget = selectedPiece && selectedPiece.id === id;
+                  const isQuizCandidate = mode === 'QUIZ' && quizCandidates.find(c => Number(c.id) === id);
+
+                  let fill = "rgba(0,0,0,0.05)";
+                  let stroke = "#cbd5e1";
+                  let strokeWidth = 0.5;
+                  let cursor = "default";
+
+                  if (mode === 'PUZZLE') {
+                    if (isTarget) {
+                      if (isPlaced) { fill = COUNTRY_COLORS[id] || meta.color; stroke = "white"; strokeWidth = 1.5; }
+                      else {
+                        fill = "rgba(255,255,255,0.8)";
+                        stroke = "#94a3b8";
+                        strokeWidth = 1;
+                        cursor = "default";
+                        if (isDraggingTarget) { stroke = "#FFD700"; strokeWidth = 3; fill = "rgba(255, 215, 0, 0.2)"; }
+                      }
+                    } else {
+                      fill = "rgba(0,0,0,0.08)";
+                      stroke = "#e2e8f0";
+                    }
+                  } else {
+                    if (isQuizCandidate) { fill = COUNTRY_COLORS[id] || meta.color; stroke = "white"; strokeWidth = 2; cursor = "pointer"; }
+                    else { fill = "rgba(0,0,0,0.05)"; stroke = "#e2e8f0"; }
+                  }
+
+                  const area = pathGen.area(f);
+
+                  return (
+                    <g key={i} onClick={() => handleQuizClick(f)} style={{ cursor }}>
+                      <path d={pathGen(f)} fill={fill} stroke={stroke} strokeWidth={strokeWidth} className="transition-all duration-300" />
+                      {mode === 'PUZZLE' && (
+                        (isPlaced || (!isTarget && f.properties.name && area > 50))
+                      ) && (
+                        <text
+                          x={pathGen.centroid(f)[0]}
+                          y={pathGen.centroid(f)[1]}
+                          textAnchor="middle"
+                          fontSize={isPlaced ? Math.min(14, Math.sqrt(area)/2) : 8}
+                          fontWeight={isPlaced ? "bold" : "normal"}
+                          fill={isPlaced ? "#374151" : "#9ca3af"}
+                          className="pointer-events-none drop-shadow-sm"
+                          style={{ opacity: isPlaced ? 1 : 0.6 }}
+                        >
+                          {f.properties.name}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+              </g>
+            </svg>
           </div>
-        ) : (
-          <>
-            {view === "MAIN" && <MainScreen onStart={handleStartGame} onTeacherMode={unlockAll} />}
 
-            {view === "SELECT" && (
-              <GlobeSelection
-                mapData={mapData}
-                unlocked={unlocked}
-                onSelect={(c) => {
-                  setActiveContinent(c);
-                  setView("PLAY");
-                }}
-                onBack={() => setView("MAIN")}
-                isMuted={isMuted}
-                showToast={showToast}
-                explorerName={explorerName}
-                isTeacherMode={isTeacherMode}
-                onPreviewEnding={previewEnding}
-              />
+          {/* Side panel */}
+          <div className={`h-48 lg:h-full lg:w-80 bg-white border-t lg:border-l border-slate-200 shadow-xl z-20 flex flex-col transition-all duration-500 ${mode === 'QUIZ' ? 'translate-y-full lg:translate-y-0 lg:translate-x-full w-0 p-0' : ''}`}>
+            {mode === 'PUZZLE' ? (
+              <>
+                <div className="p-3 bg-indigo-50 border-b border-indigo-100 text-center font-bold text-indigo-800 text-sm">남은 나라 ({pieces.length})</div>
+                <div className="flex-1 p-3 overflow-y-auto flex flex-wrap content-start justify-center gap-3 bg-slate-50">
+                  {pieces.map(piece => (
+                    <div
+                      key={piece.id}
+                      onMouseDown={(e) => handleDown(e, piece)}
+                      onTouchStart={(e) => handleDown(e, piece)}
+                      className={`flex-shrink-0 w-24 h-24 bg-white rounded-xl border-2 border-slate-200 shadow-sm p-2 cursor-grab active:cursor-grabbing hover:border-indigo-400 hover:shadow-md transition-all flex flex-col items-center justify-center gap-1 ${selectedPiece?.id === piece.id ? "opacity-20" : "opacity-100"}`}
+                      style={{ backgroundColor: COUNTRY_COLORS[piece.id] ? `${COUNTRY_COLORS[piece.id]}20` : '#fff' }}
+                    >
+                      {piece.flag && <img src={piece.flag} className="h-10 shadow-sm rounded-sm pointer-events-none" alt="" />}
+                      <div className="text-center text-xs font-bold text-slate-700 break-keep">{piece.name}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 bg-yellow-50 text-center">
+                <div className="text-5xl mb-3 animate-bounce">🔎</div>
+                <h3 className="text-xl font-bold text-indigo-900 mb-2" style={{ fontFamily: 'Jua, sans-serif' }}>위치 찾기 퀴즈!</h3>
+                {quizTarget && (
+                  <div className="bg-white px-6 py-4 rounded-2xl shadow-md border-2 border-yellow-300 mb-4">
+                    <span className="text-2xl font-black text-indigo-600">{quizTarget.properties.name}</span>
+                    <span className="text-gray-600 font-bold block mt-1">은(는) 어디 있을까?</span>
+                  </div>
+                )}
+                <p className="text-sm text-gray-500 font-bold">지도에서 색칠된 나라 중 하나를 골라봐!</p>
+              </div>
+            )}
+          </div>
+
+          {isDragging && selectedPiece && (
+            <div
+              className="fixed z-[9999] pointer-events-none transform -translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white px-3 py-2 rounded-xl shadow-2xl border-2 border-white flex flex-col items-center gap-1"
+              style={{ left: dragPos.x, top: dragPos.y }}
+            >
+              {selectedPiece.flag && <img src={selectedPiece.flag} className="h-8 rounded shadow-sm border border-white/50" alt="" />}
+              <span style={{ fontFamily: 'Jua, sans-serif' }} className="text-sm whitespace-nowrap">{selectedPiece.name}</span>
+            </div>
+          )}
+
+          {showWin && (
+            <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+              <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl border-4 border-white animate-in zoom-in relative overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-20 animate-spin-slow text-8xl">✨</div>
+                <div className="text-6xl mx-auto mb-3 animate-bounce">🏆</div>
+                <h2 className="text-3xl text-slate-800 mb-2" style={{ fontFamily: 'Jua, sans-serif' }}>{meta.name} 정복 완료!</h2>
+                <div className="flex justify-center gap-1 mb-6">⭐️⭐️⭐️</div>
+                <p className="text-slate-500 mb-6 font-bold">모든 미션(퍼즐+퀴즈)을 완료했습니다.<br/>참 잘했어요!</p>
+                <button onClick={onBack} className="w-full py-3 bg-indigo-500 text-white font-bold rounded-xl hover:bg-indigo-600 shadow-lg">다음 대륙 탐험하기</button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function FinalReport({ explorerName, records, onRestart }) {
+      const totalTime = Object.values(records).reduce((acc, r) => acc + r.time, 0);
+      const allWrongs = Object.values(records).flatMap(r => r.wrong);
+      const uniqueWrongs = [...new Set(allWrongs)];
+
+      return (
+        <div className="h-full w-full bg-slate-50 flex flex-col items-center justify-center p-6 overflow-y-auto">
+          <div className="bg-white max-w-2xl w-full rounded-[3rem] shadow-2xl p-8 border-8 border-yellow-300 animate-bounce-in relative">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-yellow-400 text-white p-4 rounded-full shadow-lg text-3xl">🏆</div>
+            <h2 className="text-4xl text-center text-slate-800 mt-8 mb-2" style={{ fontFamily: 'Jua, sans-serif' }}>탐험 완료 보고서</h2>
+            <p className="text-center text-slate-500 font-bold mb-8">{explorerName} 대장님의 위대한 여정</p>
+
+            <div className="flex justify-center mb-8">
+              <div className="w-32 h-32 relative"><BananaAvatar level={6} mood="happy" /></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="bg-indigo-50 p-6 rounded-2xl text-center">
+                <div className="text-3xl mb-2">⏱️</div>
+                <p className="text-sm text-indigo-800 font-bold">총 소요 시간</p>
+                <p className="text-2xl font-black text-indigo-600">{Math.floor(totalTime / 60)}분 {Math.floor(totalTime % 60)}초</p>
+              </div>
+              <div className="bg-green-50 p-6 rounded-2xl text-center">
+                <div className="text-3xl mb-2">✅</div>
+                <p className="text-sm text-green-800 font-bold">정복한 대륙</p>
+                <p className="text-2xl font-black text-green-600">6 / 6</p>
+              </div>
+            </div>
+
+            {uniqueWrongs.length > 0 ? (
+              <div className="bg-rose-50 p-6 rounded-2xl mb-8 border border-rose-100">
+                <div className="flex items-center gap-2 mb-3 text-rose-700 font-bold"><span>📘</span><span>다시 살펴볼 나라 (오답 노트)</span></div>
+                <div className="flex flex-wrap gap-2">
+                  {uniqueWrongs.map((name, i) => (
+                    <span key={i} className="bg-white text-rose-500 px-3 py-1 rounded-full text-sm font-bold shadow-sm border border-rose-200">{name}</span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-blue-50 p-6 rounded-2xl mb-8 border border-blue-100 text-center">
+                <p className="text-blue-600 font-bold text-lg">틀린 문제가 하나도 없어요!<br/>완벽한 탐험이었습니다 👍</p>
+              </div>
             )}
 
-            {view === "PLAY" && (
-              <PuzzleGame
-                continentId={activeContinent}
-                mapData={mapData}
-                onComplete={handleComplete}
-                onBack={() => setView("SELECT")}
-                isMuted={isMuted}
-                showToast={showToast}
-                explorerName={explorerName}
-              />
+            <button onClick={onRestart} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xl rounded-2xl shadow-lg transition-transform hover:scale-105 flex items-center justify-center gap-2">
+              🔄 처음부터 다시하기
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // =============================================================================
+    // App
+    // =============================================================================
+    function App() {
+      const [view, setView] = useState("MAIN");
+      const [activeContinent, setActiveContinent] = useState(null);
+      const [mapData, setMapData] = useState(null);
+      const [isMuted, setIsMuted] = useState(false);
+      const [unlocked, setUnlocked] = useState(['asia']);
+      const [completed, setCompleted] = useState([]);
+      const [explorerName, setExplorerName] = useState("");
+      const [feedback, setFeedback] = useState({ mood: 'happy', msg: "안녕! 나는 탐험가 바나나야.\n이름이 뭐야? 🍌" });
+      const [isTeacherMode, setIsTeacherMode] = useState(false);
+      const [records, setRecords] = useState({});
+
+      const currentLevel = completed.length;
+      const currentTitle = EXPLORER_TITLES[Math.min(currentLevel, EXPLORER_TITLES.length - 1)];
+
+      useEffect(() => {
+        fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+          .then(res => res.json())
+          .then(topo => {
+            const features = topojson.feature(topo, topo.objects.countries).features;
+            const processed = features.map(f => {
+              const info = COUNTRY_INFO[Number(f.id)];
+              return {
+                ...f,
+                properties: {
+                  ...f.properties,
+                  continent: info ? info.continent : null,
+                  name: info ? info.name : null
+                }
+              };
+            });
+            setMapData(processed);
+          })
+          .catch(() => {
+            setMapData([]);
+          });
+      }, []);
+
+      const showToast = (mood, msg) => {
+        setFeedback({ mood, msg });
+        setTimeout(() => setFeedback({ mood: 'happy', msg: null }), 4000);
+      };
+
+      const handleBananaClick = () => {
+        if (view === 'SELECT') {
+          const messages = [
+            { mood: 'happy', msg: "지도를 알면\n세상이 보여! 🌏" },
+            { mood: 'excited', msg: "위치를 아는 건\n그 나라를 이해하는 시작이야!" },
+            { mood: 'happy', msg: "난 네가 참 좋아! ❤️" },
+            { mood: 'excited', msg: "탐험에 성공할수록\n난 진화해! ✨" },
+            { mood: 'happy', msg: "바뀐 내 모습 어때?\n멋지지? 😎" }
+          ];
+          const random = messages[Math.floor(Math.random() * messages.length)];
+          showToast(random.mood, random.msg);
+          if (!isMuted) playSound('snap');
+        }
+      };
+
+      const handleStartGame = (name) => {
+        initAudio();
+        setExplorerName(name);
+        setIsTeacherMode(false);
+        setUnlocked(['asia']);
+        setCompleted([]);
+        setRecords({});
+        setFeedback({ mood: 'excited', msg: `반가워, ${name}!\n나를 드래그해서 옮겨봐!` });
+        setView("SELECT");
+      };
+
+      const unlockAll = () => {
+        initAudio();
+        setUnlocked(CONTINENT_ORDER);
+        setIsTeacherMode(true);
+        showToast('excited', "선생님 모드 활성화!\n모든 대륙이 열렸습니다 🏫");
+        playSound('fanfare');
+        setView("SELECT");
+      };
+
+      const previewEnding = () => {
+        initAudio();
+        setCompleted(CONTINENT_ORDER);
+        setRecords({
+          asia: { time: 45, wrong: ['일본'] }, europe: { time: 60, wrong: [] },
+          africa: { time: 55, wrong: [] }, north_america: { time: 30, wrong: [] },
+          south_america: { time: 40, wrong: [] }, oceania: { time: 25, wrong: [] },
+        });
+        setView("REPORT");
+        playSound('fanfare');
+      };
+
+      const handleComplete = (contId, time, wrongList) => {
+        if (!completed.includes(contId)) {
+          setCompleted(prev => [...prev, contId]);
+          setRecords(prev => ({ ...prev, [contId]: { time, wrong: wrongList } }));
+
+          const currentIndex = CONTINENT_ORDER.indexOf(contId);
+          if (currentIndex < CONTINENT_ORDER.length - 1) {
+            const nextCont = CONTINENT_ORDER[currentIndex + 1];
+            if (!unlocked.includes(nextCont)) {
+              setTimeout(() => {
+                setUnlocked(prev => [...prev, nextCont]);
+                if (!isMuted) playSound('fanfare');
+                showToast('excited', `축하해!\n[${CONTINENT_META[nextCont].name}] 대륙이 열렸어! 🎉`);
+              }, 1500);
+            }
+            setView("SELECT");
+          } else {
+            setTimeout(() => {
+              if (!isMuted) playSound('fanfare');
+              setView("REPORT");
+            }, 1200);
+          }
+        } else {
+          setView("SELECT");
+        }
+      };
+
+      return (
+        <div className="w-full h-screen bg-slate-900 select-none overflow-hidden flex flex-col relative text-slate-800">
+          <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950 via-slate-900 to-black pointer-events-none">
+            <StarField />
+          </div>
+
+          <header className="px-6 py-4 flex justify-between items-center z-50 pointer-events-none">
+            <div
+              className="flex items-center gap-3 pointer-events-auto bg-white/10 backdrop-blur-md rounded-full px-4 py-2 shadow-lg border border-white/20 cursor-pointer hover:bg-white/20 transition-all"
+              onClick={() => setView('MAIN')}
+            >
+              <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-2 rounded-full text-white shadow-md">🌍</div>
+              <div>
+                <h1 className="text-lg text-white leading-none drop-shadow-sm whitespace-nowrap" style={{ fontFamily: 'Jua, sans-serif' }}>도전! 바나나 월드</h1>
+                <p className="text-xs font-bold text-yellow-300">{explorerName ? `${currentTitle}` : '탐험 준비 중'}</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className="pointer-events-auto p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors border border-white/20"
+              title="소리 켜기/끄기"
+            >
+              {isMuted ? '🔇' : '🔊'}
+            </button>
+          </header>
+
+          <div className="flex-1 relative z-10 flex flex-col overflow-hidden">
+            {!mapData ? (
+              <div className="flex flex-col items-center justify-center h-full gap-4 text-white">
+                <div className="animate-spin w-12 h-12 border-4 border-white/30 border-t-yellow-400 rounded-full"></div>
+                <span style={{ fontFamily: 'Jua, sans-serif' }} className="text-xl">지구본을 닦고 있어요...</span>
+              </div>
+            ) : (
+              <>
+                {view === "MAIN" && <MainScreen onStart={handleStartGame} onTeacherMode={unlockAll} />}
+                {view === "SELECT" && (
+                  <GlobeSelection
+                    mapData={mapData}
+                    unlocked={unlocked}
+                    completed={completed}
+                    onSelect={(c) => { setActiveContinent(c); setView("PLAY"); }}
+                    onBack={() => setView("MAIN")}
+                    isMuted={isMuted}
+                    showToast={showToast}
+                    explorerName={explorerName}
+                    isTeacherMode={isTeacherMode}
+                    onPreviewEnding={previewEnding}
+                  />
+                )}
+                {view === "PLAY" && (
+                  <PuzzleGame
+                    continentId={activeContinent}
+                    mapData={mapData}
+                    onComplete={handleComplete}
+                    onBack={() => setView("SELECT")}
+                    isMuted={isMuted}
+                    showToast={showToast}
+                    explorerName={explorerName}
+                  />
+                )}
+                {view === "REPORT" && (
+                  <FinalReport
+                    explorerName={explorerName}
+                    records={records}
+                    onRestart={() => setView("SELECT")}
+                  />
+                )}
+              </>
             )}
+          </div>
 
-            {view === "REPORT" && <FinalReport explorerName={explorerName} records={records} onRestart={() => setView("SELECT")} />}
-          </>
-        )}
-      </div>
+          <DraggableBanana mood={feedback.mood} message={feedback.msg} level={currentLevel} onClick={handleBananaClick} />
+        </div>
+      );
+    }
 
-      <DraggableBanana mood={feedback.mood} message={feedback.msg} level={currentLevel} onClick={handleBananaClick} />
-
-      <style>{`
-        .animate-bounce-in { animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .animate-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes bounceIn { 0% { transform: scale(0) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
-        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
-        .animate-twinkle { animation: twinkle 3s infinite ease-in-out; }
-
-        /* ✅ Tailwind에 없는 클래스 보강 */
-        @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-spin-slow { animation: spinSlow 18s linear infinite; }
-
-        .text-outline-black { text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; }
-      `}</style>
-    </div>
-  );
-}
+    // Render
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
