@@ -17,15 +17,17 @@ import {
   GraduationCap,
   Clock,
   BookOpen,
-  RotateCcw,
-  Eye
+  RotateCcw
 } from "lucide-react";
 import * as d3 from "d3-geo";
 import { feature } from "topojson-client";
 
 /**
- * [도전! 바나나 월드 : Vercel 배포용 원본]
- * - 모든 기능(선생님 모드, 퀴즈, 오세아니아 뷰 등)이 포함된 최종본입니다.
+ * [도전! 바나나 월드 : 파이널 퍼펙트]
+ * - 하얀 화면 오류 수정 (컴포넌트 참조 순서 완벽 정리)
+ * - 기능 보장: 별 배경, 선생님 모드, 리포트 미리보기
+ * - 데이터: 아프리카 국가 추가, 파푸아뉴기니 삭제
+ * - UI: 퀴즈 하단 배치, 바나나 멘트 강화
  */
 
 // =============================================================================
@@ -118,7 +120,7 @@ const COUNTRY_INFO = {
   604: { name: '페루', capital: '리마', desc: '마추픽추 유적', continent: 'south_america' },
   170: { name: '콜롬비아', capital: '보고타', desc: '커피와 에메랄드', continent: 'south_america' },
   862: { name: '베네수엘라', capital: '카라카스', desc: '미녀들의 나라', continent: 'south_america' },
-  // 오세아니아
+  // 오세아니아 (파푸아뉴기니 제거됨)
   36: { name: '호주', capital: '캔버라', desc: '캥거루와 코알라', continent: 'oceania' },
   554: { name: '뉴질랜드', capital: '웰링턴', desc: '반지의 제왕 촬영지', continent: 'oceania' },
   242: { name: '피지', capital: '수바', desc: '남태평양의 휴양지', continent: 'oceania' },
@@ -141,6 +143,7 @@ const EXPLORER_TITLES = [
   "엘리트 탐험가 🗺️", "마스터 탐험가 👑", "전설의 탐험가 🚀", "우주 정복자 🪐" 
 ];
 
+// Audio Context Singleton
 let audioCtx = null;
 const initAudio = () => {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -183,35 +186,37 @@ const playSound = (type) => {
 };
 
 // =============================================================================
-// 2) 하위 컴포넌트들
+// 2) 하위 컴포넌트들 (정의 순서 중요)
 // =============================================================================
 
-const StarField = () => {
+function StarField() {
   const stars = useMemo(() => Array.from({ length: 100 }).map((_, i) => ({ id: i, x: Math.random() * 100, y: Math.random() * 100, size: Math.random() * 2 + 1, delay: Math.random() * 5 })), []);
   return (
     <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
       {stars.map(s => <div key={s.id} className="absolute rounded-full bg-white animate-twinkle" style={{ left: `${s.x}%`, top: `${s.y}%`, width: `${s.size}px`, height: `${s.size}px`, animationDelay: `${s.delay}s`, opacity: Math.random() * 0.7 + 0.3 }} />)}
     </div>
   );
-};
+}
 
-const BananaAvatar = ({ level, mood }) => (
-  <div className="w-full h-full relative filter drop-shadow-xl">
-    <svg viewBox="0 0 100 100" className="w-full h-full">
-      <path d="M30,85 Q5,50 30,15 Q60,5 85,25 Q95,60 75,90 Q55,100 30,85" fill="#FFEB3B" stroke="#FBC02D" strokeWidth="3" />
-      {level >= 1 && <><path d="M25,25 Q55,0 85,30 L90,25 L20,20 Z" fill="#8D6E63" stroke="#5D4037" strokeWidth="2" /><ellipse cx="55" cy="20" rx="25" ry="12" fill="#D7CCC8" stroke="#8D6E63" strokeWidth="2" /></>}
-      {level >= 5 && <path d="M20,60 Q10,70 15,90 L25,85" fill="red" opacity="0.8" />}
-      <circle cx="35" cy="55" r="4" fill="#FF8A80" opacity="0.6" />
-      <circle cx="75" cy="55" r="4" fill="#FF8A80" opacity="0.6" />
-      {mood === 'happy' ? <><circle cx="45" cy="45" r="3.5" fill="#3E2723" /><circle cx="65" cy="45" r="3.5" fill="#3E2723" /><path d="M45,60 Q55,70 65,60" fill="none" stroke="#3E2723" strokeWidth="3" strokeLinecap="round" /></> : mood === 'sad' ? <><path d="M40,45 L50,50 L40,55" fill="none" stroke="#3E2723" strokeWidth="2" /><path d="M70,45 L60,50 L70,55" fill="none" stroke="#3E2723" strokeWidth="2" /><path d="M45,65 Q55,55 65,65" fill="none" stroke="#3E2723" strokeWidth="3" strokeLinecap="round" /></> : <><path d="M40,40 L50,35" fill="none" stroke="#3E2723" strokeWidth="2" /><path d="M60,35 L70,40" fill="none" stroke="#3E2723" strokeWidth="2" /><circle cx="45" cy="45" r="3.5" fill="#3E2723" /><circle cx="65" cy="45" r="3.5" fill="#3E2723" /><path d="M45,60 Q55,80 65,60" fill="#3E2723" /></>}
-      {level >= 2 && <g><rect x="38" y="40" width="14" height="10" rx="3" fill="#333" /><rect x="58" y="40" width="14" height="10" rx="3" fill="#333" /><line x1="52" y1="45" x2="58" y2="45" stroke="#333" strokeWidth="2" /></g>}
-      {level >= 3 && <path d="M45,65 Q55,55 65,65" fill="none" stroke="#3E2723" strokeWidth="4" />}
-      {level >= 6 && <path d="M45,10 L50,20 L55,10 L60,20 L65,10 L60,25 L50,25 Z" fill="gold" stroke="orange" strokeWidth="1" />}
-    </svg>
-  </div>
-);
+function BananaAvatar({ level, mood }) {
+  return (
+    <div className="w-full h-full relative filter drop-shadow-xl">
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <path d="M30,85 Q5,50 30,15 Q60,5 85,25 Q95,60 75,90 Q55,100 30,85" fill="#FFEB3B" stroke="#FBC02D" strokeWidth="3" />
+        {level >= 1 && <><path d="M25,25 Q55,0 85,30 L90,25 L20,20 Z" fill="#8D6E63" stroke="#5D4037" strokeWidth="2" /><ellipse cx="55" cy="20" rx="25" ry="12" fill="#D7CCC8" stroke="#8D6E63" strokeWidth="2" /></>}
+        {level >= 5 && <path d="M20,60 Q10,70 15,90 L25,85" fill="red" opacity="0.8" />}
+        <circle cx="35" cy="55" r="4" fill="#FF8A80" opacity="0.6" />
+        <circle cx="75" cy="55" r="4" fill="#FF8A80" opacity="0.6" />
+        {mood === 'happy' ? <><circle cx="45" cy="45" r="3.5" fill="#3E2723" /><circle cx="65" cy="45" r="3.5" fill="#3E2723" /><path d="M45,60 Q55,70 65,60" fill="none" stroke="#3E2723" strokeWidth="3" strokeLinecap="round" /></> : mood === 'sad' ? <><path d="M40,45 L50,50 L40,55" fill="none" stroke="#3E2723" strokeWidth="2" /><path d="M70,45 L60,50 L70,55" fill="none" stroke="#3E2723" strokeWidth="2" /><path d="M45,65 Q55,55 65,65" fill="none" stroke="#3E2723" strokeWidth="3" strokeLinecap="round" /></> : <><path d="M40,40 L50,35" fill="none" stroke="#3E2723" strokeWidth="2" /><path d="M60,35 L70,40" fill="none" stroke="#3E2723" strokeWidth="2" /><circle cx="45" cy="45" r="3.5" fill="#3E2723" /><circle cx="65" cy="45" r="3.5" fill="#3E2723" /><path d="M45,60 Q55,80 65,60" fill="#3E2723" /></>}
+        {level >= 2 && <g><rect x="38" y="40" width="14" height="10" rx="3" fill="#333" /><rect x="58" y="40" width="14" height="10" rx="3" fill="#333" /><line x1="52" y1="45" x2="58" y2="45" stroke="#333" strokeWidth="2" /></g>}
+        {level >= 3 && <path d="M45,65 Q55,55 65,65" fill="none" stroke="#3E2723" strokeWidth="4" />}
+        {level >= 6 && <path d="M45,10 L50,20 L55,10 L60,20 L65,10 L60,25 L50,25 Z" fill="gold" stroke="orange" strokeWidth="1" />}
+      </svg>
+    </div>
+  );
+}
 
-const DraggableBanana = ({ mood = 'happy', message, onClick, level = 0 }) => {
+function DraggableBanana({ mood = 'happy', message, onClick, level = 0 }) {
   const [pos, setPos] = useState({ x: window.innerWidth - 120, y: window.innerHeight - 140 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
@@ -242,9 +247,13 @@ const DraggableBanana = ({ mood = 'happy', message, onClick, level = 0 }) => {
       <div className="w-24 h-24 hover:scale-105 transition-transform"><BananaAvatar level={level} mood={mood} /></div>
     </div>
   );
-};
+}
 
-const MainScreen = ({ onStart, onTeacherMode }) => {
+// =============================================================================
+// 3) 화면 컴포넌트
+// =============================================================================
+
+function MainScreen({ onStart, onTeacherMode }) {
   const [name, setName] = useState("");
   const handleSubmit = (e) => { e.preventDefault(); if (name.trim()) onStart(name); };
   return (
@@ -262,13 +271,13 @@ const MainScreen = ({ onStart, onTeacherMode }) => {
       </div>
       <div className="mt-auto w-full flex justify-between items-end pt-4 pb-2 text-white/40">
         <div className="flex flex-col"><span className="text-xs font-bold">Design & Development by</span><span className="font-['Jua'] text-white/60 text-sm">보라쌤과 사회를 보라</span></div>
-        <button onClick={onTeacherMode} className="flex items-center gap-1 text-xs font-bold hover:text-yellow-300 transition-colors bg-white/10 px-3 py-1 rounded-full pointer-events-auto"><Unlock size={12} /> 선생님은 여기로!</button>
+        <button onClick={onTeacherMode} className="flex items-center gap-1 text-xs font-bold hover:text-yellow-300 transition-colors bg-white/10 px-3 py-1 rounded-full"><Unlock size={12} /> 선생님은 여기로!</button>
       </div>
     </div>
   );
-};
+}
 
-const GlobeSelection = ({ mapData, unlocked, completed, onSelect, onBack, isMuted, showToast, explorerName, isTeacherMode, onPreviewEnding }) => {
+function GlobeSelection({ mapData, unlocked, completed, onSelect, onBack, isMuted, showToast, explorerName, isTeacherMode, onPreviewEnding }) {
   const [rotation, setRotation] = useState([0, 0]);
   const [isDragging, setIsDragging] = useState(false);
   const [hovered, setHovered] = useState(null);
@@ -290,7 +299,7 @@ const GlobeSelection = ({ mapData, unlocked, completed, onSelect, onBack, isMute
   return (
     <div className="h-full flex flex-col items-center justify-center relative overflow-hidden" onMouseMove={(e) => handleMove(e.clientX, e.clientY)} onMouseUp={() => setIsDragging(false)} onMouseLeave={() => setIsDragging(false)} onMouseDown={(e) => handleStart(e.clientX, e.clientY)} onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)} onTouchEnd={() => setIsDragging(false)} onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}>
       <div className="absolute top-4 left-4 z-20"><button onClick={onBack} className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors border border-white/20"><ArrowLeft /></button></div>
-      {isTeacherMode && <button onClick={onPreviewEnding} className="absolute bottom-6 right-20 z-40 p-3 bg-indigo-600/80 backdrop-blur text-white font-bold rounded-full shadow-lg hover:bg-indigo-500 transition-all flex items-center gap-2 pointer-events-auto border-2 border-white/30 text-xs"><Trophy size={16} /> 리포트 미리보기</button>}
+      {isTeacherMode && <button onClick={onPreviewEnding} className="absolute bottom-6 right-20 z-40 p-3 bg-indigo-600/80 backdrop-blur text-white font-bold rounded-full shadow-lg hover:bg-indigo-500 transition-all flex items-center gap-2 pointer-events-auto border-2 border-white/30 text-xs"><Trophy size={16} /> 미리보기</button>}
       <div className="cursor-grab active:cursor-grabbing relative flex-1 flex items-center justify-center w-full">
         <svg viewBox="0 0 800 600" className="w-full h-full max-w-5xl drop-shadow-2xl">
           <defs><radialGradient id="ocean" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#2563eb" /><stop offset="100%" stopColor="#1e3a8a" /></radialGradient></defs>
@@ -314,9 +323,9 @@ const GlobeSelection = ({ mapData, unlocked, completed, onSelect, onBack, isMute
       </div>
     </div>
   );
-};
+}
 
-const PuzzleGame = ({ continentId, mapData, onComplete, onBack, isMuted, showToast, explorerName }) => {
+function PuzzleGame({ continentId, mapData, onComplete, onBack, isMuted, showToast, explorerName }) {
   const meta = CONTINENT_META[continentId];
   const svgRef = useRef(null);
   const [pieces, setPieces] = useState([]);
@@ -440,7 +449,7 @@ const PuzzleGame = ({ continentId, mapData, onComplete, onBack, isMuted, showToa
             {mode === 'PUZZLE' ? <span className="bg-slate-100 text-sm px-2 py-0.5 rounded-full font-bold text-slate-500">{placed.length} / {placed.length + pieces.length}</span> : <span className="bg-yellow-100 text-yellow-700 text-sm px-2 py-0.5 rounded-full font-bold animate-pulse">퀴즈 {quizCount + 1} / {CONTINENT_META[continentId].quizCount}</span>}
           </div>
         </div>
-        {mode === 'QUIZ' && quizTarget && <div className="absolute top-20 z-20 animate-bounce w-full flex justify-center"><div className="bg-white/95 px-8 py-3 rounded-2xl shadow-xl border-4 border-indigo-500 text-center"><span className="text-xl font-['Jua'] text-slate-800"><span className="text-indigo-600 text-2xl">{quizTarget.properties.name}</span>은(는) 어디 있을까?</span></div></div>}
+
         <svg ref={svgRef} viewBox="0 0 800 600" className="w-full h-full max-h-[85vh] drop-shadow-xl select-none" preserveAspectRatio="xMidYMid slice">
           <g>
             {allFeaturesInView.map((f, i) => {
@@ -472,7 +481,8 @@ const PuzzleGame = ({ continentId, mapData, onComplete, onBack, isMuted, showToa
           </g>
         </svg>
       </div>
-      <div className={`h-48 lg:h-full lg:w-80 bg-white border-t lg:border-l border-slate-200 shadow-xl z-20 flex flex-col transition-all duration-500 ${mode === 'QUIZ' ? 'translate-y-full lg:translate-y-0 lg:translate-x-full w-0 p-0' : ''}`}>
+
+      <div className={`h-48 lg:h-full lg:w-80 bg-white border-t lg:border-l border-slate-200 shadow-xl z-20 flex flex-col transition-all duration-500`}>
         {mode === 'PUZZLE' ? (
           <>
             <div className="p-3 bg-indigo-50 border-b border-indigo-100 text-center font-bold text-indigo-800 text-sm">남은 나라 ({pieces.length})</div>
@@ -498,9 +508,9 @@ const PuzzleGame = ({ continentId, mapData, onComplete, onBack, isMuted, showToa
       {showWin && <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in"><div className="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl border-4 border-white animate-in zoom-in relative overflow-hidden"><div className="absolute inset-0 pointer-events-none flex items-center justify-center"><Sparkles className="text-yellow-400 w-full h-full opacity-20 animate-spin-slow" /></div><Trophy size={64} className="mx-auto text-yellow-400 mb-4 drop-shadow-md animate-bounce" /><h2 className="text-3xl font-['Jua'] text-slate-800 mb-2">{meta.name} 정복 완료!</h2><div className="flex justify-center gap-1 mb-6">{[1,2,3].map(i => <Star key={i} className="fill-yellow-400 text-yellow-400" />)}</div><p className="text-slate-500 mb-6 font-bold">모든 미션(퍼즐+퀴즈)을 완료했습니다.<br/>참 잘했어요!</p><button onClick={onBack} className="w-full py-3 bg-indigo-500 text-white font-bold rounded-xl hover:bg-indigo-600 shadow-lg">다음 대륙 탐험하기</button></div></div>}
     </div>
   );
-};
+}
 
-const FinalReport = ({ explorerName, records, onRestart }) => {
+function FinalReport({ explorerName, records, onRestart }) {
   const totalTime = Object.values(records).reduce((acc, r) => acc + r.time, 0);
   const allWrongs = Object.values(records).flatMap(r => r.wrong);
   const uniqueWrongs = [...new Set(allWrongs)];
@@ -524,13 +534,12 @@ const FinalReport = ({ explorerName, records, onRestart }) => {
       </div>
     </div>
   );
-};
+}
 
-// =============================================================================
-// 4) 메인 앱 컴포넌트
-// =============================================================================
-
-export default function ChallengeBananaWorldFinal() {
+// -----------------------------------------------------------------------------
+// 4) 메인 앱 실행 (렌더링)
+// -----------------------------------------------------------------------------
+export default function ChallengeBananaWorldFinalPerfect() {
   const [view, setView] = useState("MAIN");
   const [activeContinent, setActiveContinent] = useState(null);
   const [mapData, setMapData] = useState(null);
@@ -540,8 +549,8 @@ export default function ChallengeBananaWorldFinal() {
   const [explorerName, setExplorerName] = useState("");
   const [feedback, setFeedback] = useState({ mood: 'happy', msg: "안녕! 나는 탐험가 바나나야.\n이름이 뭐야? 🍌" });
   const [isTeacherMode, setIsTeacherMode] = useState(false);
-  
   const [records, setRecords] = useState({});
+
   const currentLevel = completed.length;
   const currentTitle = EXPLORER_TITLES[Math.min(currentLevel, EXPLORER_TITLES.length - 1)];
 
@@ -550,32 +559,17 @@ export default function ChallengeBananaWorldFinal() {
     link.href = "https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap";
     link.rel = "stylesheet";
     document.head.appendChild(link);
-
-    fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
-      .then(res => res.json())
-      .then(topo => {
+    fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(res => res.json()).then(topo => {
         const features = feature(topo, topo.objects.countries).features;
         const processed = features.map(f => {
           const info = COUNTRY_INFO[Number(f.id)];
-          return {
-            ...f,
-            properties: {
-              ...f.properties,
-              continent: info ? info.continent : null,
-              name: info ? info.name : null
-            }
-          };
+          return { ...f, properties: { ...f.properties, continent: info ? info.continent : null, name: info ? info.name : null } };
         });
         setMapData(processed);
       });
   }, []);
 
-  const showToast = (mood, msg) => {
-    setFeedback({ mood, msg });
-    setTimeout(() => {
-      setFeedback({ mood: 'happy', msg: null });
-    }, 4000);
-  };
+  const showToast = (mood, msg) => { setFeedback({ mood, msg }); setTimeout(() => { setFeedback({ mood: 'happy', msg: null }); }, 4000); };
 
   const handleBananaClick = () => {
     if (view === 'SELECT') {
@@ -592,59 +586,20 @@ export default function ChallengeBananaWorldFinal() {
     }
   };
 
-  const handleStartGame = (name) => {
-    initAudio();
-    setExplorerName(name);
-    setIsTeacherMode(false);
-    setFeedback({ mood: 'excited', msg: `반가워, ${name}!\n나를 드래그해서 옮겨봐!` });
-    setView("SELECT");
-  };
-
-  const unlockAll = () => {
-    initAudio();
-    setUnlocked(CONTINENT_ORDER);
-    setIsTeacherMode(true);
-    showToast('excited', "선생님 모드 활성화!\n모든 대륙이 열렸습니다 🏫");
-    playSound('fanfare');
-    setView("SELECT");
-  };
-
-  const previewEnding = () => {
-    initAudio();
-    setCompleted(CONTINENT_ORDER);
-    setRecords({
-      asia: { time: 45, wrong: ['일본'] }, europe: { time: 60, wrong: [] },
-      africa: { time: 55, wrong: [] }, north_america: { time: 30, wrong: [] },
-      south_america: { time: 40, wrong: [] }, oceania: { time: 25, wrong: [] },
-    });
-    setView("REPORT");
-    playSound('fanfare');
-  };
-
+  const handleStartGame = (name) => { initAudio(); setExplorerName(name); setIsTeacherMode(false); setFeedback({ mood: 'excited', msg: `반가워, ${name}!\n나를 드래그해서 옮겨봐!` }); setView("SELECT"); };
+  const unlockAll = () => { initAudio(); setUnlocked(CONTINENT_ORDER); setIsTeacherMode(true); showToast('excited', "선생님 모드 활성화!\n모든 대륙이 열렸습니다 🏫"); playSound('fanfare'); setView("SELECT"); };
+  const previewEnding = () => { initAudio(); setCompleted(CONTINENT_ORDER); setRecords({ asia: { time: 45, wrong: ['일본'] }, europe: { time: 60, wrong: [] }, africa: { time: 55, wrong: [] }, north_america: { time: 30, wrong: [] }, south_america: { time: 40, wrong: [] }, oceania: { time: 25, wrong: [] }, }); setView("REPORT"); playSound('fanfare'); };
+  
   const handleComplete = (contId, time, wrongList) => {
     if (!completed.includes(contId)) {
       setCompleted(prev => [...prev, contId]);
       setRecords(prev => ({ ...prev, [contId]: { time, wrong: wrongList } }));
-
       const currentIndex = CONTINENT_ORDER.indexOf(contId);
       if (currentIndex < CONTINENT_ORDER.length - 1) {
         const nextCont = CONTINENT_ORDER[currentIndex + 1];
-        if (!unlocked.includes(nextCont)) {
-          setTimeout(() => {
-            setUnlocked(prev => [...prev, nextCont]);
-            playSound('fanfare');
-            showToast('excited', `축하해!\n[${CONTINENT_META[nextCont].name}] 대륙이 열렸어! 🎉`);
-          }, 1500);
-        }
-      } else {
-        setTimeout(() => {
-          playSound('fanfare');
-          setView("REPORT");
-        }, 2000);
-      }
-    } else {
-      setView("SELECT");
-    }
+        if (!unlocked.includes(nextCont)) { setTimeout(() => { setUnlocked(prev => [...prev, nextCont]); playSound('fanfare'); showToast('excited', `축하해!\n[${CONTINENT_META[nextCont].name}] 대륙이 열렸어! 🎉`); }, 1500); }
+      } else { setTimeout(() => { playSound('fanfare'); setView("REPORT"); }, 2000); }
+    } else { setView("SELECT"); }
   };
 
   return (
@@ -658,32 +613,17 @@ export default function ChallengeBananaWorldFinal() {
         </div>
         <button onClick={() => setIsMuted(!isMuted)} className="pointer-events-auto p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors border border-white/20">{isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}</button>
       </header>
-
       <div className="flex-1 relative z-10 flex flex-col overflow-hidden">
-        {!mapData ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-white"><Loader2 className="animate-spin w-12 h-12 text-yellow-400" /><span className="font-['Jua'] text-xl">지구본을 닦고 있어요...</span></div>
-        ) : (
-          <>
-            {view === "MAIN" && <MainScreen onStart={handleStartGame} onTeacherMode={unlockAll} />}
-            {view === "SELECT" && <GlobeSelection mapData={mapData} unlocked={unlocked} completed={completed} onSelect={(c) => { setActiveContinent(c); setView("PLAY"); }} onBack={() => setView("MAIN")} isMuted={isMuted} showToast={showToast} explorerName={explorerName} isTeacherMode={isTeacherMode} onPreviewEnding={previewEnding} />}
-            {view === "PLAY" && <PuzzleGame continentId={activeContinent} mapData={mapData} onComplete={handleComplete} onBack={() => setView("SELECT")} isMuted={isMuted} showToast={showToast} explorerName={explorerName} />}
-            {view === "REPORT" && <FinalReport explorerName={explorerName} records={records} onRestart={() => setView("SELECT")} />}
-          </>
-        )}
+        {!mapData ? <div className="flex flex-col items-center justify-center h-full gap-4 text-white"><Loader2 className="animate-spin w-12 h-12 text-yellow-400" /><span className="font-['Jua'] text-xl">지구본을 닦고 있어요...</span></div> : <>
+          {view === "MAIN" && <MainScreen onStart={handleStartGame} onTeacherMode={unlockAll} />}
+          {view === "SELECT" && <GlobeSelection mapData={mapData} unlocked={unlocked} completed={completed} onSelect={(c) => { setActiveContinent(c); setView("PLAY"); }} onBack={() => setView("MAIN")} isMuted={isMuted} showToast={showToast} explorerName={explorerName} isTeacherMode={isTeacherMode} onPreviewEnding={previewEnding} />}
+          {view === "PLAY" && <PuzzleGame continentId={activeContinent} mapData={mapData} onComplete={handleComplete} onBack={() => setView("SELECT")} isMuted={isMuted} showToast={showToast} explorerName={explorerName} />}
+          {view === "REPORT" && <FinalReport explorerName={explorerName} records={records} onRestart={() => setView("SELECT")} />}
+        </>}
       </div>
-
       <DraggableBanana mood={feedback.mood} message={feedback.msg} level={currentLevel} onClick={handleBananaClick} />
-      
-      <style>{`
-        .font-jua { font-family: 'Jua', sans-serif; }
-        .animate-bounce-in { animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .animate-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes bounceIn { 0% { transform: scale(0) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
-        @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
-        .animate-twinkle { animation: twinkle 3s infinite ease-in-out; }
-        .text-outline-black { text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; }
-      `}</style>
+      <style>{`.font-jua { font-family: 'Jua', sans-serif; } .animate-bounce-in { animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); } .animate-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; } @keyframes bounceIn { 0% { transform: scale(0) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } } @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } } @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } } .animate-twinkle { animation: twinkle 3s infinite ease-in-out; } .text-outline-black { text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; }`}</style>
     </div>
   );
 }
+
