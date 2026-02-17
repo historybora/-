@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>도전! 바나나 히스토리 V9 (지도 풀세트)</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Nanum+Gothic:wght@700;800&display=swap" rel="stylesheet">
+  <!-- D3 & TopoJSON -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+
+  <style>
+    :root{
+      --bg-app:#fffde7;
+      --primary:#fbc02d;
+      --secondary:#e65100;
+      --text:#3e2723;
+
+      --sea:#b3e5fc;
+      --paper:#fff9c4;
+
+      --font-title:'Jua', sans-serif;
+      --font-body:'Jua', sans-serif;
+
+      --shadow: 0 10px 25px rgba(0,0,0,.18);
+      --stroke: #5d4037;
+    }
+
+    *{box-sizing:border-box;}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      background:var(--bg-app);
+      font-family:var(--font-body);
+      overflow:hidden;
+      user-select:none;
+    }
+
+    /* ===== Main Menu ===== */
+    #main-menu{
+      position:absolute; inset:0;
+      background: var(--paper);
+      background-image: radial-gradient(#fff176 10%, transparent 10%);
+      background-size: 22px 22px;
+      z-index:999;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      transition: transform .5s ease;
+    }
+    .title-box{width:100%; text-align:center; margin-bottom:18px;}
+    .main-title{
+      font-family:var(--font-title);
+      font-size: clamp(2.1rem, 7vw, 3.0rem);
+      color:var(--secondary);
+      text-shadow: 3px 3px 0 #fff;
+      margin: 0;
+      line-height: 1.05;
+      /* ✅ 오른쪽 잘림 해결: 줄바꿈 허용 + 패딩 */
+      padding: 0 10px;
+      word-break: keep-all;
+    }
+    .sub-title{
+      font-size:1.35rem;
+      color:#5d4037;
+      margin-top:10px;
+      background:white;
+      display:inline-block;
+      padding:8px 24px;
+      border-radius:30px;
+      border:3px solid #8d6e63;
+      font-weight:bold;
+    }
+
+    .nano-banana-svg{
+      width:140px;
+      height:auto;
+      margin-bottom:10px;
+      filter: drop-shadow(0 8px 8px rgba(0,0,0,0.2));
+      animation: float 2.5s ease-in-out infinite;
+    }
+    @keyframes float{0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)}}
+
+    .menu-container{display:flex; flex-direction:column; gap:14px; margin:18px 0 32px;}
+    .menu-btn{
+      width:min(320px, 92vw);
+      padding:16px 14px;
+      background:white;
+      border:4px solid var(--text);
+      border-radius:20px;
+      font-family:var(--font-title);
+      font-size:1.5rem;
+      color:var(--text);
+      cursor:pointer;
+      box-shadow: 6px 6px 0 var(--primary);
+      transition: transform .08s;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+    }
+    .menu-btn:active{transform: translate(4px,4px); box-shadow:2px 2px 0 var(--primary);}
+    .footer-credit{
+      position:absolute;
+      bottom:22px;
+      color:#8d6e63;
+      font-size:1.05rem;
+      font-weight:bold;
+      background: rgba(255,255,255,.65);
+      padding:6px 14px;
+      border-radius:15px;
+    }
+
+    /* ===== App Screen Layout ===== */
+    #app-screen{
+      display:none;
+      position:absolute; inset:0;
+      flex-direction:column;
+      background:var(--bg-app);
+    }
+    header{
+      height:56px;
+      background:white;
+      padding:0 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom:4px solid #f9a825;
+      flex-shrink:0;
+      z-index:60;
+    }
+    .home-btn{
+      font-size:1.8rem;
+      cursor:pointer;
+      background:none;border:none;
+      padding:6px 10px;
+      border-radius:12px;
+    }
+    .home-btn:active{background:#f5f5f5;}
+    .page-title{
+      font-family:var(--font-title);
+      font-size:1.55rem;
+      color:var(--text);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:60vw;
+      text-align:center;
+    }
+
+    /* ✅ 지도 영역: 남는 하늘색 여백 해결 (map-container가 화면을 꽉 차도록) */
+    #map-container{
+      position:relative;
+      flex:1;
+      min-height:0; /* 핵심 */
+      background:var(--sea);
+      overflow:hidden;
+    }
+    #map-svg{
+      width:100%;
+      height:100%;
+      display:block;
+      background:transparent;
+      touch-action: pan-x pan-y; /* zoom은 d3로 */
+    }
+    #loading-msg{
+      position:absolute;
+      top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      font-size:1.4rem;
+      color:#0277bd;
+      font-family:var(--font-title);
+      text-align:center;
+      pointer-events:none;
+      z-index:10;
+      background: rgba(255,255,255,.55);
+      padding:10px 14px;
+      border-radius:14px;
+      border:2px solid rgba(0,0,0,.08);
+    }
+
+    /* Banana guide */
+    #banana-guide{
+      position:absolute;
+      bottom:18px; right:10px;
+      z-index:100;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      pointer-events:none;
+    }
+    .bubble{
+      background:white;
+      border:4px solid var(--text);
+      border-radius:24px 24px 6px 24px;
+      padding:14px 16px;
+      margin-bottom:10px;
+      width:min(320px, 85vw);
+      font-size:1.15rem;
+      line-height:1.35;
+      color:var(--text);
+      box-shadow: var(--shadow);
+      pointer-events:auto;
+      opacity:0;
+      transform: translateY(10px);
+      transition: all .25s ease;
+    }
+    .bubble.show{opacity:1; transform: translateY(0);}
+
+    /* Footer UI */
+    footer{
+      background:white;
+      padding:12px 14px 16px;
+      border-top:2px solid #ddd;
+      box-shadow: 0 -5px 15px rgba(0,0,0,0.08);
+      flex-shrink:0;
+      z-index:70;
+    }
+
+    /* Explore UI */
+    #ui-explore{display:flex; flex-direction:column; gap:10px;}
+    .row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      justify-content:space-between;
+      flex-wrap:nowrap;
+    }
+    .badge-era{
+      background:var(--text);
+      color:var(--primary);
+      font-family:var(--font-title);
+      font-size:1.15rem;
+      padding:8px 10px;
+      border-radius:12px;
+      min-width:120px;
+      text-align:center;
+      box-shadow: 3px 3px 0 rgba(0,0,0,.25);
+      flex-shrink:0;
+    }
+    .badge-year{
+      background:#eee;
+      color:#37474f;
+      font-family:'Nanum Gothic', sans-serif;
+      font-weight:800;
+      font-size:.95rem;
+      padding:8px 10px;
+      border-radius:12px;
+      border:2px solid rgba(0,0,0,.08);
+      flex-shrink:0;
+      white-space:nowrap;
+    }
+    input[type=range]{
+      flex:1;
+      height:22px;
+      border-radius:11px;
+      background:#e0e0e0;
+      accent-color:var(--secondary);
+      cursor:pointer;
+      border:2px solid #bdbdbd;
+      min-width:80px;
+    }
+
+    /* ✅ 궁금해요 버튼 잘림 해결: 크기+패딩+footer overflow 확인 */
+    .icon-btn{
+      width:48px;
+      height:48px;
+      border-radius:50%;
+      border:none;
+      flex-shrink:0;
+      cursor:pointer;
+      font-family:var(--font-title);
+      font-size:1.3rem;
+      color:white;
+      box-shadow: 0 4px 0 #01579b;
+      display:grid;
+      place-items:center;
+    }
+    .icon-btn:active{transform: translateY(3px); box-shadow:0 1px 0 #01579b;}
+    .btn-qna{background:#0288d1;}
+    .btn-search{background:#43a047; box-shadow: 0 4px 0 #1b5e20;}
+    .btn-search:active{box-shadow:0 1px 0 #1b5e20;}
+    .btn-layer{background:#8e24aa; box-shadow: 0 4px 0 #4a148c;}
+    .btn-layer:active{box-shadow:0 1px 0 #4a148c;}
+
+    /* Quiz UI */
+    #ui-quiz{display:none; text-align:center;}
+    .quiz-q-box{
+      background:#fff3e0;
+      border:3px solid var(--secondary);
+      border-radius:15px;
+      padding:12px;
+      margin-bottom:10px;
+      font-size:1.18rem;
+      color:#d84315;
+      font-weight:bold;
+    }
+    .quiz-opt-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+    .quiz-btn{
+      background:white;
+      border:2px solid #aaa;
+      border-radius:12px;
+      padding:12px 10px;
+      font-size:1.05rem;
+      cursor:pointer;
+      color:#444;
+      font-family:var(--font-body);
+      min-height:46px;
+    }
+    .quiz-btn:active{background:#eee;}
+    .quiz-meta{
+      display:flex; justify-content:space-between; gap:10px;
+      font-family:'Nanum Gothic', sans-serif;
+      font-weight:800;
+      color:#37474f;
+      margin-top:10px;
+      font-size:.92rem;
+      opacity:.9;
+    }
+
+    /* Modals */
+    .modal-overlay{
+      position:absolute; inset:0;
+      background: rgba(0,0,0,0.7);
+      z-index:500;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .popup-box{
+      background:white;
+      border:5px solid var(--stroke);
+      border-radius:20px;
+      width:100%;
+      max-width:520px;
+      max-height:82vh;
+      overflow:auto;
+      padding:18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+      position:relative;
+    }
+    .popup-title{
+      margin:0 0 12px;
+      font-family:var(--font-title);
+      color:#1565c0;
+      text-align:center;
+      font-size:1.6rem;
+    }
+    .close-btn{
+      width:100%;
+      padding:12px;
+      border:none;
+      border-radius:12px;
+      font-family:var(--font-title);
+      font-size:1.15rem;
+      cursor:pointer;
+      background:#1976d2;
+      color:white;
+      margin-top:12px;
+    }
+
+    /* Stamp board */
+    .stamp-wrap{background:#fff8e1;}
+    .stamp-title{color:#e65100;}
+    .stamp-grid{display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-top:12px;}
+    .stamp-slot{
+      aspect-ratio: 1 / 1;
+      border: 2px dashed #bbb;
+      border-radius: 12px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      background:#fffde7;
+      position:relative;
+      overflow:hidden;
+    }
+    .stamp-slot.stamped{border:2px solid #fbc02d; background:#fff9c4;}
+    .stamp-slot-num{font-size:.9rem; color:#777; margin-bottom:4px;}
+    .stamp-mark{
+      font-size:2rem;
+      opacity:0;
+      transform: scale(3) rotate(-28deg);
+      transition: all .38s cubic-bezier(.18,.88,.32,1.27);
+    }
+    .stamp-slot.stamped .stamp-mark{opacity:1; transform: scale(1) rotate(0deg);}
+    .path-row{
+      margin-top:12px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      justify-content:center;
+      font-family:var(--font-title);
+      color:#5d4037;
+    }
+    .path-chip{
+      padding:8px 12px;
+      border-radius:999px;
+      border:3px solid #8d6e63;
+      background:white;
+      box-shadow: 3px 3px 0 rgba(0,0,0,.15);
+      font-size:1.05rem;
+    }
+
+    /* Certificate + Report */
+    .cert-box{
+      background: linear-gradient(180deg, #fffde7, #fff8e1);
+      border:10px solid #fbc02d;
+      border-radius:20px;
+      padding:18px;
+      text-align:center;
+    }
+    .cert-title{
+      font-family:'Black Han Sans', sans-serif;
+      font-size:2rem;
+      color:#e65100;
+      margin:8px 0 10px;
+      text-decoration: underline;
+      text-underline-offset: 8px;
+    }
+    .cert-name{
+      font-family:var(--font-title);
+      font-size:1.35rem;
+      color:#3e2723;
+      margin:6px 0 12px;
+    }
+    .cert-body{
+      font-size:1.08rem;
+      line-height:1.55;
+      color:#3e2723;
+      margin-bottom:14px;
+    }
+    .report-card{
+      text-align:left;
+      background:white;
+      border:3px solid rgba(0,0,0,.12);
+      border-radius:14px;
+      padding:12px;
+      margin:12px 0;
+      box-shadow: 0 6px 18px rgba(0,0,0,.08);
+      font-family:'Nanum Gothic', sans-serif;
+      font-weight:800;
+      color:#37474f;
+      font-size:.95rem;
+      white-space:pre-wrap;
+    }
+    .cert-actions{display:flex; gap:10px; margin-top:10px;}
+    .action-btn{
+      flex:1;
+      padding:12px 10px;
+      border:none;
+      border-radius:12px;
+      cursor:pointer;
+      font-family:var(--font-title);
+      font-size:1.1rem;
+      color:white;
+    }
+    .btn-home{background:#e65100;}
+    .btn-copy{background:#2e7d32;}
+    .btn-home:active,.btn-copy:active{filter:brightness(.92);}
+
+    /* Map labels */
+    .label-txt{
+      font-family: var(--font-title);
+      font-size: 20px;
+      fill:#37474f;
+      text-anchor: middle;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 5px;
+      pointer-events:none;
+      font-weight: normal;
+    }
+    .pin-label{
+      font-family:'Nanum Gothic', sans-serif;
+      font-weight:800;
+      font-size:14px;
+      fill:#212121;
+      paint-order: stroke;
+      stroke:white;
+      stroke-width:4px;
+      pointer-events:none;
+    }
+    .river-path{fill:none; stroke:#29b6f6; stroke-width:3px; opacity:.9; stroke-linecap:round;}
+    .route-path{fill:none; stroke-width:5px; opacity:.92; stroke-linecap:round;}
+    .route-label{
+      font-family:'Nanum Gothic', sans-serif;
+      font-weight:800;
+      font-size:12px;
+      fill:#263238;
+      paint-order: stroke;
+      stroke:white;
+      stroke-width:4px;
+      pointer-events:none;
+    }
+    .highlight-ring{
+      fill:none;
+      stroke:#ff1744;
+      stroke-width:6px;
+      filter: drop-shadow(0 6px 8px rgba(0,0,0,.25));
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ===== Main Menu ===== -->
+  <div id="main-menu">
+    <svg class="nano-banana-svg" viewBox="0 0 140 170" id="main-banana">
+      <g transform="translate(0, 10)">
+        <path d="M30,35 L110,35 L100,5 L40,5 Z" fill="#212121"/>
+        <ellipse cx="70" cy="35" rx="45" ry="5" fill="#212121"/>
+        <path d="M35,35 Q70,90 105,35" fill="none" stroke="#212121" stroke-width="3" opacity="0.8"/>
+      </g>
+      <g transform="translate(0, 40)">
+        <path d="M70,0 C105,0 125,40 115,100 C105,130 65,135 35,110 C10,80 35,0 70,0 Z" fill="#fdd835" stroke="#fbc02d" stroke-width="4"/>
+        <g id="face-normal">
+          <circle cx="55" cy="50" r="5" fill="#3e2723"/><circle cx="95" cy="50" r="5" fill="#3e2723"/>
+          <path d="M60,65 Q75,80 90,65" fill="none" stroke="#3e2723" stroke-width="4" stroke-linecap="round"/>
+        </g>
+        <ellipse cx="45" cy="60" rx="6" ry="4" fill="#ff8a80" opacity="0.6"/>
+        <ellipse cx="105" cy="60" rx="6" ry="4" fill="#ff8a80" opacity="0.6"/>
+      </g>
+    </svg>
+
+    <div class="title-box">
+      <h1 class="main-title">도전! 바나나 히스토리</h1>
+      <div class="sub-title">한국사편</div>
+    </div>
+
+    <div class="menu-container">
+      <div class="menu-btn" onclick="App.start('explore')">🌏 역사 탐험 모드</div>
+      <div class="menu-btn" onclick="App.start('quiz')">⚔️ Stage 도전!</div>
+    </div>
+
+    <div class="footer-credit">💜 보라쌤과 역사를 보라</div>
+  </div>
+
+  <!-- ===== App Screen ===== -->
+  <div id="app-screen">
+    <header>
+      <button class="home-btn" onclick="App.goHome()">🏠</button>
+      <div class="page-title" id="header-txt">역사 탐험</div>
+      <div style="width:44px"></div>
+    </header>
+
+    <div id="map-container">
+      <div id="loading-msg">지도를 펼치는 중... 🍌</div>
+      <svg id="map-svg"></svg>
+
+      <div id="banana-guide">
+        <div class="bubble" id="banana-msg">안녕! 나노바나나야! 🍌</div>
+        <svg width="96" height="115" viewBox="0 0 140 170">
+          <use href="#main-banana"></use>
+        </svg>
+      </div>
+    </div>
+
+    <footer>
+      <!-- Explore UI -->
+      <div id="ui-explore">
+        <div class="row">
+          <div class="badge-era" id="era-badge">고조선</div>
+          <div class="badge-year" id="year-badge">기원전~</div>
+        </div>
+
+        <div class="row">
+          <input type="range" id="era-slider" min="0" max="0" step="1" value="0"/>
+          <button class="icon-btn btn-search" onclick="App.openSearch()">🔎</button>
+          <button class="icon-btn btn-layer" onclick="App.openLayer()">🗺️</button>
+          <button class="icon-btn btn-qna" onclick="App.openQna()">❓</button>
+        </div>
+      </div>
+
+      <!-- Quiz UI -->
+      <div id="ui-quiz">
+        <div class="quiz-q-box" id="quiz-question">문제 로딩중...</div>
+        <div class="quiz-opt-grid" id="quiz-options"></div>
+        <div class="quiz-meta">
+          <div id="quiz-stage-meta">Stage 1</div>
+          <div id="quiz-score-meta">정답 0 / 오답 0</div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ===== Modals ===== -->
+  <!-- QnA -->
+  <div class="modal-overlay" id="qna-modal" onclick="if(event.target===this) App.closeQna()">
+    <div class="popup-box" style="background:#e3f2fd;">
+      <h2 class="popup-title">💡 선생님, 궁금해요!</h2>
+      <div id="qna-list"></div>
+      <button class="close-btn" onclick="App.closeQna()">닫기</button>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="modal-overlay" id="search-modal" onclick="if(event.target===this) App.closeSearch()">
+    <div class="popup-box">
+      <h2 class="popup-title" style="color:#2e7d32;">🔎 찾기(지명/사건)</h2>
+      <input id="search-input" placeholder="예) 한산도 / 병인양요 / 대동법 / 개경 / 우금치" style="
+        width:100%; padding:12px 12px; border-radius:12px; border:2px solid rgba(0,0,0,.15);
+        font-family:'Nanum Gothic', sans-serif; font-weight:800; font-size:1rem;
+      "/>
+      <div id="search-results" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+      <button class="close-btn" onclick="App.closeSearch()" style="background:#2e7d32;">닫기</button>
+    </div>
+  </div>
+
+  <!-- Layer -->
+  <div class="modal-overlay" id="layer-modal" onclick="if(event.target===this) App.closeLayer()">
+    <div class="popup-box">
+      <h2 class="popup-title" style="color:#6a1b9a;">🗺️ 표시 레이어</h2>
+      <div style="display:flex; flex-direction:column; gap:10px; font-family:'Nanum Gothic',sans-serif; font-weight:800;">
+        <label><input type="checkbox" id="layer-territory" checked/> 영토/권역(근사 폴리곤)</label>
+        <label><input type="checkbox" id="layer-routes" checked/> 이동/진격/침입 경로</label>
+        <label><input type="checkbox" id="layer-pins" checked/> 핀(도시/전투/유적)</label>
+        <label><input type="checkbox" id="layer-labels" checked/> 지도 글자(국가명)</label>
+      </div>
+      <button class="close-btn" onclick="App.applyLayer()">적용</button>
+      <button class="close-btn" onclick="App.closeLayer()" style="background:#6a1b9a;">닫기</button>
+    </div>
+  </div>
+
+  <!-- Stamp -->
+  <div class="modal-overlay" id="stamp-modal">
+    <div class="popup-box stamp-wrap">
+      <h2 class="popup-title stamp-title">📒 나의 도장판</h2>
+      <div class="path-row">
+        <span class="path-chip" id="path-chip">🌿 길을 따라 전진!</span>
+        <span class="path-chip" id="stage-clear-chip">Stage Clear!</span>
+        <span class="path-chip">🎁 보물상자</span>
+      </div>
+      <div class="stamp-grid" id="stamp-board"></div>
+      <div style="margin-top:12px; font-family:var(--font-title); color:#5d4037; font-size:1.15rem;" id="stamp-msg">
+        미션을 완료하고 도장을 모으세요!
+      </div>
+    </div>
+  </div>
+
+  <!-- Certificate -->
+  <div class="modal-overlay" id="cert-modal">
+    <div class="popup-box cert-box">
+      <div class="cert-title">🏆 역사 박사 임명장</div>
+      <div class="cert-name" id="cert-name">위 사람</div>
+      <div class="cert-body" id="cert-body">
+        한국사 스테이지를 모두 통과했으므로<br/>이 상장을 수여합니다!
+      </div>
+
+      <div class="report-card" id="report-text">리포트 생성 중...</div>
+
+      <div class="cert-actions">
+        <button class="action-btn btn-copy" onclick="App.copyReport()">리포트 복사</button>
+        <button class="action-btn btn-home" onclick="App.goHome()">메인으로</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ============================================================================
+  [0] Utilities
+============================================================================ */
+const Util = {
+  clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
+  fmtYearRange:(r)=> r?.label ?? "",
+  deepClone:(o)=>JSON.parse(JSON.stringify(o)),
+  uniq:(arr)=>Array.from(new Set(arr)),
+  normalize:(s)=> (s||"").toString().trim().toLowerCase(),
+  distance:(a,b)=>Math.hypot(a[0]-b[0], a[1]-b[1]),
+  now:()=>performance.now(),
+};
+
+/* ============================================================================
+  [1] Data: 교과서 지도 정보(핵심) → 앱 데이터화
+  - 좌표는 대표 위치(근사)이며, 나중에 정확 GeoJSON로 교체 가능
+============================================================================ */
+
+/** 근사 폴리곤(대표 영역) — 추후 정확 GeoJSON로 바꾸기 */
+const POLY = {
+  KOREA: [[124.0,43.5],[131.8,43.0],[131.8,33.0],[125.0,33.0]],
+
+  // 삼국(근사)
+  GOG: [[122,44.5],[132,44.5],[131,37.3],[128.2,37.0],[123.5,37.8]],
+  BAEK: [[125.3,37.4],[127.6,37.4],[127.8,34.6],[125.2,34.6]],
+  SIL: [[127.8,37.6],[130.2,37.6],[130.3,34.8],[128.0,34.8]],
+  GAYA: [[128.0,35.6],[129.2,35.6],[129.2,34.7],[128.0,34.7]],
+
+  // 통일신라(근사), 고려, 조선
+  UNISIL: [[126.0,38.7],[130.4,38.6],[130.4,34.3],[126.0,34.3]],
+  GORYEO: [[124.5,41.2],[129.3,41.0],[129.3,34.2],[125.0,34.2],[125.0,38.4]],
+  JOSEON: [[124.3,43.3],[130.8,43.0],[130.6,33.2],[125.0,33.2]],
+
+  // 대동법 실시지역(대표 도 단위 근사 – 시각용)
+  GYEONGGI: [[126.3,38.0],[127.7,38.0],[127.7,36.8],[126.3,36.8]],
+  GANGWON: [[127.7,38.5],[129.4,38.5],[129.4,37.0],[127.7,37.0]],
+  CHUNGCHEONG: [[126.3,36.9],[127.9,36.9],[127.9,36.0],[126.3,36.0]],
+  JEOLLA: [[126.0,36.0],[127.6,36.0],[127.6,34.0],[126.0,34.0]],
+  GYEONGSANG: [[127.9,36.9],[129.6,36.9],[129.6,34.4],[127.9,34.4]],
+  HWANGHAE: [[125.1,38.6],[126.6,38.6],[126.6,37.4],[125.1,37.4]],
+};
+
+/** 핀(도시/전투/유적) 대표 좌표 */
+const PINS = {
+  // 고구려/삼국
+  "졸본":[125.6,41.1],
+  "국내성":[126.3,41.4],
+  "평양":[125.75,39.03],
+  "한성":[127.0,37.5],
+  "금성(경주)":[129.22,35.84],
+  "웅진(공주)":[127.12,36.45],
+  "탐라":[126.53,33.50],
+  "충주":[127.93,36.97],
+
+  // 고려/조선
+  "개경":[126.55,37.97],
+  "벽란도":[126.42,37.85],
+  "서경(평양)":[125.75,39.03],
+  "의주":[124.39,40.45],
+  "강화":[126.52,37.74],
+  "한산도":[128.43,34.78],
+  "부산":[129.04,35.10],
+
+  // 병인양요/신미양요(강화도 주변)
+  "광성보":[126.49,37.71],
+  "덕진진":[126.49,37.73],
+  "초지진":[126.52,37.68],
+  "문수산성":[126.64,37.74],
+  "정족산성":[126.53,37.64],
+  "양화진":[126.94,37.55],
+
+  // 동학
+  "고부":[126.86,35.63],
+  "백산":[126.90,35.68],
+  "황토현":[126.93,35.75],
+  "황룡촌":[126.93,35.62],
+  "전주":[127.15,35.82],
+  "공주":[127.12,36.45],
+  "우금치":[127.10,36.47],
+  "태인":[126.99,35.65],
+  "장성":[126.78,35.30],
+
+  // 1862
+  "정주":[125.63,39.69],
+  "진주":[128.08,35.18],
+  "단성":[127.96,35.25],
+
+  // 한국전쟁
+  "인천":[126.70,37.46],
+  "서울":[126.98,37.57],
+  "대전":[127.38,36.35],
+  "대구":[128.60,35.87],
+  "포항":[129.36,36.02],
+  "원산":[127.44,39.15],
+  "흥남":[128.59,39.82],
+  "청진":[129.76,41.78],
+  "삼척":[129.17,37.45],
+  "판문점":[126.69,37.95],
+
+  // 임시정부/독립운동
+  "상하이":[121.47,31.23],
+  "블라디보스토크":[131.88,43.12],
+  "연해주":[131.0,43.0],
+  "서전서숙":[128.2,43.4],
+  "명동학교":[129.0,43.4],
+  "신흥무관학교":[125.5,41.0],
+
+  // 3.1 시위(도 단위 표시용)
+  "경기도/경성부":[127.0,37.6],
+  "평안도":[125.5,39.4],
+  "함경도":[129.0,41.0],
+  "황해도":[125.7,38.1],
+  "충청도":[127.2,36.5],
+  "전라도":[126.9,35.3],
+  "경상도":[128.6,35.5],
+};
+
+/** 교과서 지도 기반 “핵심 이벤트/경로” */
+const ROUTES = {
+  // 광개토·장수왕 확장(대표 방향)
+  goguryeoExpansion: [
+    {from:PINS["국내성"], to:[123.5,44.0], label:"거란", color:"#d84315"},
+    {from:PINS["국내성"], to:[126.0,44.6], label:"부여", color:"#d84315"},
+    {from:PINS["국내성"], to:[129.4,44.4], label:"숙신", color:"#d84315"},
+    {from:PINS["국내성"], to:[130.8,43.1], label:"동부여", color:"#d84315"},
+    {from:PINS["국내성"], to:[121.0,41.8], label:"후연", color:"#d84315"},
+    {from:PINS["평양"], to:PINS["한성"], label:"남진", color:"#6d4c41"},
+    {from:PINS["평양"], to:PINS["금성(경주)"], label:"영향", color:"#6d4c41"},
+  ],
+
+  // 병인/신미 양요: 강화도 중심
+  ganghwaIncidents: [
+    {from:PINS["양화진"], to:PINS["강화"], label:"진격", color:"#5e35b1"},
+    {from:PINS["강화"], to:PINS["광성보"], label:"격전", color:"#7b1fa2"},
+    {from:PINS["강화"], to:PINS["덕진진"], label:"격전", color:"#7b1fa2"},
+    {from:PINS["강화"], to:PINS["초지진"], label:"격전", color:"#7b1fa2"},
+    {from:PINS["강화"], to:PINS["문수산성"], label:"격전", color:"#fb8c00"},
+  ],
+
+  // 동학: 동선(대표)
+  donghak: [
+    {from:PINS["고부"], to:PINS["백산"], label:"봉기", color:"#2e7d32"},
+    {from:PINS["백산"], to:PINS["황토현"], label:"전투", color:"#fb8c00"},
+    {from:PINS["황토현"], to:PINS["전주"], label:"진군", color:"#2e7d32"},
+    {from:PINS["전주"], to:PINS["공주"], label:"2차 봉기", color:"#ef6c00"},
+    {from:PINS["공주"], to:PINS["우금치"], label:"우금치", color:"#d32f2f"},
+  ],
+
+  // 한국전쟁: 대표 흐름(근사)
+  koreaWar: [
+    {from:[126.0,38.2], to:PINS["서울"], label:"남침", color:"#2e7d32"},
+    {from:PINS["서울"], to:PINS["대전"], label:"남하", color:"#2e7d32"},
+    {from:PINS["대전"], to:PINS["대구"], label:"낙동강선", color:"#2e7d32"},
+    {from:PINS["인천"], to:PINS["서울"], label:"인천상륙", color:"#fb8c00"},
+    {from:PINS["서울"], to:PINS["원산"], label:"북진", color:"#fb8c00"},
+    {from:PINS["원산"], to:PINS["청진"], label:"최대북진", color:"#fb8c00"},
+    {from:[125.0,41.0], to:PINS["평양"], label:"중공군", color:"#6d4c41"},
+    {from:PINS["판문점"], to:PINS["판문점"], label:"정전(1953.7)", color:"#1565c0"},
+  ],
+
+  // 임시정부 이동(상징)
+  provisionalGov: [
+    {from:PINS["블라디보스토크"], to:PINS["상하이"], label:"정부 수립(1919.4)", color:"#ef6c00"},
+    {from:PINS["상하이"], to:[126.98,37.57], label:"한성정부(1919.4)", color:"#ef6c00"},
+  ],
+};
+
+/** 시대/주제 스테이지 (탐험+스테이지용) */
+const STAGES = [
+  {
+    id:"goguryeo_expansion",
+    title:"삼국① 고구려(광개토·장수왕)",
+    year:{label:"4~5세기"},
+    map:[
+      {name:"고구려", poly:POLY.GOG, fill:"#ffe082"},
+      {name:"백제", poly:POLY.BAEK, fill:"#ffcc80"},
+      {name:"신라", poly:POLY.SIL, fill:"#90caf9"},
+      {name:"가야", poly:POLY.GAYA, fill:"#c8e6c9"},
+    ],
+    labels:["고구려","백제","신라","가야"],
+    pins:[
+      {name:"국내성", at:PINS["국내성"], icon:"👑", desc:"초기 수도(집안)"},
+      {name:"광개토대왕릉비", at:[126.28,41.39], icon:"🪨", desc:"광개토대왕 업적 기록"},
+      {name:"평양", at:PINS["평양"], icon:"🏰", desc:"장수왕이 옮긴 수도"},
+      {name:"졸본", at:PINS["졸본"], icon:"🌱", desc:"고구려 건국지"},
+      {name:"충주 고구려비", at:PINS["충주"], icon:"🪨", desc:"남진(중원 진출) 증거"},
+      {name:"한성", at:PINS["한성"], icon:"🏙️", desc:"한강 유역(백제)"},
+    ],
+    routes: ROUTES.goguryeoExpansion,
+    qna:[
+      {q:"장수왕이 수도를 옮긴 이유?", d:"남진 거점 확보 + 한강 유역 압박, 중원 진출 기반"},
+      {q:"광개토대왕릉비가 중요한 이유?", d:"정복 활동과 대외 관계를 보여주는 1차 사료(비문)"},
+      {q:"충주 고구려비의 의미?", d:"고구려가 한강 이북·중원까지 영향력 행사했음을 보여줌"},
+    ],
+    guide:`<b>고구려 전성기</b> 지도야!<br/>핀을 눌러 “왜 저기가 중요했는지” 확인해봐 🍌`,
+  },
+
+  {
+    id:"trade_diplomacy",
+    title:"삼국② 교류와 진출(교과서 핵심)",
+    year:{label:"4~6세기"},
+    map:[
+      {name:"고구려", poly:POLY.GOG, fill:"#ffe082"},
+      {name:"백제", poly:POLY.BAEK, fill:"#ffcc80"},
+      {name:"신라", poly:POLY.SIL, fill:"#90caf9"},
+      {name:"가야", poly:POLY.GAYA, fill:"#c8e6c9"},
+    ],
+    pins:[
+      {name:"한성", at:PINS["한성"], icon:"🏙️", desc:"한강 유역 = 교통·경제 중심"},
+      {name:"금성(경주)", at:PINS["금성(경주)"], icon:"👑", desc:"신라의 수도"},
+      {name:"탐라", at:PINS["탐라"], icon:"🍊", desc:"해상 교류 거점"},
+    ],
+    routes:[
+      {from:PINS["한성"], to:[121.0,31.5], label:"동진(교류)", color:"#00897b"},
+      {from:PINS["한성"], to:[132.0,34.0], label:"왜(교류)", color:"#00897b"},
+      {from:PINS["평양"], to:[118.0,40.0], label:"중국(대외)", color:"#6d4c41"},
+    ],
+    qna:[
+      {q:"한강 유역이 중요한 이유?", d:"교통·경제 중심(내륙/해상 연결)이라 삼국이 치열하게 다툼"},
+      {q:"백제의 외교 특징?", d:"남조·왜와 교류 활발(문화 전파), 해상 교통 활용"},
+      {q:"신라의 성장 포인트?", d:"내륙 교통+화랑 등 인재, 한강 진출로 국가 성장 가속"},
+    ],
+    guide:`<b>교류/진출</b>은 지리랑 같이 봐야 머리에 남아!<br/>경로를 눌러 의미를 확인해봐 🍌`,
+  },
+
+  {
+    id:"daedongbeop",
+    title:"조선① 대동법 확대",
+    year:{label:"1608~1708"},
+    map:[{name:"조선", poly:POLY.JOSEON, fill:"#ffe0b2"}],
+    pins:[
+      {name:"경기도", at:PINS["경기도/경성부"], icon:"📦", desc:"1608(광해군)"},
+      {name:"강원도", at:[128.3,37.8], icon:"📦", desc:"1623(인조)"},
+      {name:"충청도", at:[127.2,36.5], icon:"📦", desc:"1651(효종)"},
+      {name:"전라도", at:[126.9,35.3], icon:"📦", desc:"1658(효종)"},
+      {name:"경상도", at:[128.6,35.5], icon:"📦", desc:"1677(숙종)"},
+      {name:"황해도", at:[125.8,38.1], icon:"📦", desc:"1708(숙종)"},
+    ],
+    // 도 단위 근사 폴리곤(시각화)
+    mapExtras:[
+      {name:"경기도", poly:POLY.GYEONGGI, fill:"#fff59d", hint:"1608"},
+      {name:"강원도", poly:POLY.GANGWON, fill:"#a5d6a7", hint:"1623"},
+      {name:"충청도", poly:POLY.CHUNGCHEONG, fill:"#b39ddb", hint:"1651"},
+      {name:"전라도", poly:POLY.JEOLLA, fill:"#ffccbc", hint:"1658"},
+      {name:"경상도", poly:POLY.GYEONGSANG, fill:"#f8bbd0", hint:"1677"},
+      {name:"황해도", poly:POLY.HWANGHAE, fill:"#ffe0b2", hint:"1708"},
+    ],
+    qna:[
+      {q:"대동법이 뭐야?", d:"공납을 쌀/포/동전으로 통일해 부담을 줄이고 특산물 폐해를 완화"},
+      {q:"왜 지역별로 늦게 확대됐어?", d:"기득권(방납) 반발, 지역 사정 차이 → 점진적으로 확대"},
+      {q:"대동법의 효과?", d:"농민 부담 완화 + 상공업(공인) 성장 + 유통 활성화"},
+    ],
+    guide:`대동법은 “연표+지도”로 보면 진짜 안 까먹어!<br/>핀 눌러서 연도 체크 🍌`,
+  },
+
+  {
+    id:"byeongin_sinmi",
+    title:"조선② 병인·신미양요(강화도)",
+    year:{label:"1866·1871"},
+    map:[{name:"조선", poly:POLY.JOSEON, fill:"#ffe0b2"}],
+    pins:[
+      {name:"강화", at:PINS["강화"], icon:"🛡️", desc:"서해 방어 요충지"},
+      {name:"광성보", at:PINS["광성보"], icon:"💥", desc:"신미양요 격전"},
+      {name:"덕진진", at:PINS["덕진진"], icon:"💥", desc:"격전지"},
+      {name:"초지진", at:PINS["초지진"], icon:"💥", desc:"격전지"},
+      {name:"문수산성", at:PINS["문수산성"], icon:"🏯", desc:"한성 방어선"},
+      {name:"정족산성", at:PINS["정족산성"], icon:"🏯", desc:"병인양요 관련"},
+      {name:"양화진", at:PINS["양화진"], icon:"⚓", desc:"한강 입구"},
+    ],
+    routes: ROUTES.ganghwaIncidents,
+    qna:[
+      {q:"병인양요(1866) 원인?", d:"천주교 박해(병인박해) 이후 프랑스의 무력 시위"},
+      {q:"신미양요(1871) 배경?", d:"제너럴셔먼호 사건 등 + 통상 요구 → 무력 충돌"},
+      {q:"강화도가 중요한 이유?", d:"한성으로 들어가는 관문(서해·한강)"},
+    ],
+    guide:`강화도 주변은 “요새+수로”로 이해하면 끝!<br/>격전지 핀을 눌러봐 🍌`,
+  },
+
+  {
+    id:"farmer_1862",
+    title:"조선③ 1862 농민 봉기",
+    year:{label:"1862"},
+    map:[{name:"조선", poly:POLY.JOSEON, fill:"#ffe0b2"}],
+    pins:[
+      {name:"정주", at:PINS["정주"], icon:"⚑", desc:"홍경래의 난(1811)"},
+      {name:"진주", at:PINS["진주"], icon:"⚑", desc:"진주 농민 봉기(1862)"},
+      {name:"개령", at:[128.11,36.10], icon:"⚑", desc:"개령 농민 봉기(1862)"},
+    ],
+    qna:[
+      {q:"1862 봉기의 원인(핵심 3개)?", d:"삼정의 문란(전정·군정·환곡) + 수탈 + 지방관 탐학"},
+      {q:"의미는?", d:"민란 확산 → 개혁 요구 분출, 이후 개화·개혁 흐름과 연결"},
+      {q:"홍경래의 난(1811)과 공통점?", d:"세금·차별·지역 불만 등 구조 문제 폭발"},
+    ],
+    guide:`“삼정의 문란”은 지도에 찍어보면 기억이 오래가! 🍌`,
+  },
+
+  {
+    id:"donghak_1894",
+    title:"근대① 동학 농민 운동",
+    year:{label:"1894"},
+    map:[{name:"조선", poly:POLY.JOSEON, fill:"#ffe0b2"}],
+    pins:[
+      {name:"고부", at:PINS["고부"], icon:"🧑‍🌾", desc:"봉기 출발"},
+      {name:"백산", at:PINS["백산"], icon:"🧑‍🌾", desc:"집결"},
+      {name:"황토현", at:PINS["황토현"], icon:"💥", desc:"전투"},
+      {name:"전주", at:PINS["전주"], icon:"📜", desc:"전주 화약"},
+      {name:"공주", at:PINS["공주"], icon:"🏯", desc:"관군·일본군 진로"},
+      {name:"우금치", at:PINS["우금치"], icon:"💥", desc:"결정적 전투"},
+    ],
+    routes: ROUTES.donghak,
+    qna:[
+      {q:"동학의 구호(핵심)?", d:"보국안민·제폭구민 + 폐정개혁 요구"},
+      {q:"전주 화약이란?", d:"관군과 타협해 철수, 집강소 설치(질서 유지·개혁 추진)"},
+      {q:"왜 국제전으로 번졌어?", d:"청·일 개입 → 청일전쟁으로 이어짐"},
+    ],
+    guide:`동학은 “경로+전투”로 보면 서사가 딱 잡혀! 🍌`,
+  },
+
+  {
+    id:"korea_war",
+    title:"현대① 6·25 전쟁",
+    year:{label:"1950~1953"},
+    map:[{name:"한반도", poly:POLY.KOREA, fill:"#fffde7"}],
+    pins:[
+      {name:"서울", at:PINS["서울"], icon:"🏙️", desc:"점령/수복 반복"},
+      {name:"인천", at:PINS["인천"], icon:"⚓", desc:"인천상륙작전(1950.9)"},
+      {name:"평양", at:PINS["평양"], icon:"🏙️", desc:"국군·UN군 입성(1950.10)"},
+      {name:"청진", at:PINS["청진"], icon:"🧭", desc:"최대 북진선(개념)"},
+      {name:"대구", at:PINS["대구"], icon:"🛡️", desc:"낙동강 방어선"},
+      {name:"판문점", at:PINS["판문점"], icon:"🕊️", desc:"정전 협정(1953.7)"},
+    ],
+    routes: ROUTES.koreaWar,
+    qna:[
+      {q:"전쟁 전개 3단계로 정리하면?", d:"남침→인천상륙·북진→중공군 개입·교착(정전)"},
+      {q:"38선이 중요한 이유?", d:"분단 경계선이었고 전쟁 후에도 유사한 선에서 정전"},
+      {q:"판문점의 의미?", d:"정전 협정 체결 장소, 이후 군사적 긴장 관리의 상징"},
+    ],
+    guide:`현대사는 “흐름”이 생명! 경로를 따라가며 이해해봐 🍌`,
+  },
+
+  {
+    id:"provisional_gov",
+    title:"근대② 임시정부와 독립운동 거점",
+    year:{label:"1910s~"},
+    map:[{name:"동아시아", poly:[[110,50],[140,50],[140,25],[110,25]], fill:"#fffde7"}],
+    pins:[
+      {name:"상하이", at:PINS["상하이"], icon:"🏛️", desc:"대한민국 임시정부"},
+      {name:"블라디보스토크", at:PINS["블라디보스토크"], icon:"🧊", desc:"대한국민의회(1919.3)"},
+      {name:"연해주", at:PINS["연해주"], icon:"🌲", desc:"독립운동 기반"},
+    ],
+    routes: ROUTES.provisionalGov,
+    qna:[
+      {q:"왜 해외에 거점이 많아?", d:"일제 통치 아래 국내 활동 제한 → 만주·연해주·중국 등지로 확장"},
+      {q:"임시정부의 의미?", d:"독립운동의 구심점 + 정부 형태 유지(정통성)"},
+    ],
+    guide:`“국내+국외”를 같이 보게 해주는 지도야 🍌`,
+  },
+
+  {
+    id:"march_first",
+    title:"근대③ 3·1 운동(지역 분포)",
+    year:{label:"1919"},
+    map:[{name:"조선", poly:POLY.JOSEON, fill:"#ffe0b2"}],
+    pins:[
+      {name:"경기도/경성부 415", at:PINS["경기도/경성부"], icon:"📣", desc:"시위 건수 415"},
+      {name:"평안도 276", at:PINS["평안도"], icon:"📣", desc:"시위 건수 276"},
+      {name:"경상도 273", at:PINS["경상도"], icon:"📣", desc:"시위 건수 273"},
+      {name:"충청도 225", at:PINS["충청도"], icon:"📣", desc:"시위 건수 225"},
+      {name:"황해도 180", at:PINS["황해도"], icon:"📣", desc:"시위 건수 180"},
+      {name:"함경도 144", at:PINS["함경도"], icon:"📣", desc:"시위 건수 144"},
+      {name:"전라도 89", at:PINS["전라도"], icon:"📣", desc:"시위 건수 89"},
+    ],
+    qna:[
+      {q:"왜 경성/경기도가 많아?", d:"인구·교통·정보 집결 + 학생·종교계 네트워크"},
+      {q:"의미는?", d:"전 민족적 저항 + 임시정부 수립, 이후 독립운동의 방향에 큰 영향"},
+    ],
+    guide:`3·1은 “전국 확산”이 포인트! 핀 눌러서 숫자 비교해봐 🍌`,
+  }
+];
+
+/** 스테이지 퀴즈: 난이도 점점 상승 + 지도 클릭형 포함 */
+const QUIZZES = [
+  // Stage 1
+  [
+    {q:"장수왕이 옮긴 수도는?", type:"map", ans:"평양"},
+    {q:"광개토대왕릉비가 중요한 이유에 가장 가까운 것은?", o:["정복 활동과 대외 관계를 보여주는 비문 사료","세종이 만든 문자 창제 기록"], a:0},
+    {q:"충주 고구려비의 의미는?", o:["고구려의 중원 진출 증거","조선의 대동법 시행"], a:0},
+  ],
+  // Stage 2
+  [
+    {q:"한강 유역이 중요한 이유는?", o:["교통·경제 중심이라 삼국이 다툼","사막이라 사람이 살지 않음"], a:0},
+    {q:"탐라는 주로 어떤 의미?", o:["해상 교류 거점","산악 지대만 있는 지역"], a:0},
+    {q:"지도에서 ‘한성’을 찾아 눌러봐!", type:"map", ans:"한성"},
+  ],
+  // Stage 3 (대동법)
+  [
+    {q:"대동법은 무엇을 통일한 제도?", o:["공납을 쌀/포/동전으로 통일","과거 시험을 폐지"], a:0},
+    {q:"경기도 대동법 시작 연도(광해군)?", o:["1608","1708"], a:0},
+    {q:"지도에서 ‘황해도(1708)’ 핀을 찾아 눌러봐!", type:"map", ans:"황해도"},
+  ],
+  // Stage 4 (병인/신미)
+  [
+    {q:"병인양요의 직접 배경으로 보기 가장 적절한 것은?", o:["천주교 박해","훈민정음 창제"], a:0},
+    {q:"강화도가 중요한 이유는?", o:["한성으로 들어가는 관문","사막이라 방어가 쉬움"], a:0},
+    {q:"지도에서 ‘광성보’를 눌러 격전지를 확인해!", type:"map", ans:"광성보"},
+  ],
+  // Stage 5 (1862)
+  [
+    {q:"1862 농민 봉기의 핵심 원인(3정의 문란)은?", o:["전정·군정·환곡","호패·향약·서원"], a:0},
+    {q:"진주 농민 봉기는 몇 년?", o:["1862","1894"], a:0},
+    {q:"지도에서 ‘진주’를 찾아 눌러봐!", type:"map", ans:"진주"},
+  ],
+  // Stage 6 (동학)
+  [
+    {q:"동학 농민 운동의 구호로 옳은 것은?", o:["보국안민·제폭구민","척화비 건립"], a:0},
+    {q:"전주 화약 이후 설치된 기구는?", o:["집강소","비변사"], a:0},
+    {q:"지도에서 ‘우금치’ 전투 지점을 눌러봐!", type:"map", ans:"우금치"},
+  ],
+  // Stage 7 (6.25)
+  [
+    {q:"6·25 전쟁 전개 흐름으로 옳은 것은?", o:["남침→인천상륙·북진→중공군 개입·교착","광개토대왕 즉위→대동법→정전"], a:0},
+    {q:"정전 협정 장소는?", o:["판문점","경복궁"], a:0},
+    {q:"지도에서 ‘인천’을 눌러 인천상륙작전을 확인해!", type:"map", ans:"인천"},
+  ],
+  // Stage 8 (임시정부/독립)
+  [
+    {q:"대한민국 임시정부의 주요 거점은?", o:["상하이","평양"], a:0},
+    {q:"대한국민의회(1919.3)와 연결되는 지역은?", o:["블라디보스토크","한산도"], a:0},
+    {q:"지도에서 ‘상하이’를 찾아 눌러봐!", type:"map", ans:"상하이"},
+  ],
+  // Stage 9 (3.1)
+  [
+    {q:"3·1 운동의 의미로 가장 적절한 것은?", o:["전 민족적 저항 확산, 임시정부 수립 등으로 연결","대동법 실시 지역 확대"], a:0},
+    {q:"시위 건수가 가장 많은 곳은?", o:["경기도/경성부","전라도"], a:0},
+    {q:"지도에서 ‘경기도/경성부 415’를 눌러봐!", type:"map", ans:"경기도/경성부 415"},
+  ]
+];
+
+/* ============================================================================
+  [2] App State
+============================================================================ */
+const App = {
+  mode: 'explore',
+  stageIdx: 0,
+  quizIdx: 0,
+  correct: 0,
+  wrong: 0,
+  startTimeMs: 0,
+  timeSpentMs: 0,
+  clearedStages: 0,
+  layer:{
+    territory:true,
+    routes:true,
+    pins:true,
+    labels:true,
+  },
+
+  init: () => {
+    const slider = document.getElementById("era-slider");
+    slider.max = STAGES.length - 1;
+    slider.addEventListener("input", (e) => App.setExplore(parseInt(e.target.value,10)));
+
+    // search input
+    const si = document.getElementById("search-input");
+    si.addEventListener("input", ()=>App.renderSearch(si.value));
+
+    // initial
+    App.setExplore(0);
+  },
+
+  start: (mode) => {
+    App.mode = mode;
+    document.getElementById("main-menu").style.transform = "translateY(-100%)";
+    document.getElementById("app-screen").style.display = "flex";
+
+    if(mode === 'explore'){
+      document.getElementById("ui-explore").style.display = "flex";
+      document.getElementById("ui-quiz").style.display = "none";
+      document.getElementById("header-txt").innerText = "역사 탐험";
+      App.setExplore(parseInt(document.getElementById("era-slider").value,10) || 0);
+    }else{
+      document.getElementById("ui-explore").style.display = "none";
+      document.getElementById("ui-quiz").style.display = "block";
+      document.getElementById("header-txt").innerText = "Stage 도전";
+      App.startTimeMs = Util.now();
+      App.timeSpentMs = 0;
+      App.correct = 0;
+      App.wrong = 0;
+      App.clearedStages = 0;
+      App.startStage(0);
+    }
+  },
+
+  goHome: () => {
+    document.getElementById("main-menu").style.transform = "translateY(0)";
+    document.getElementById("cert-modal").style.display = "none";
+    document.getElementById("stamp-modal").style.display = "none";
+    setTimeout(()=>{ document.getElementById("app-screen").style.display = "none"; }, 500);
+  },
+
+  setExplore: (idx) => {
+    idx = Util.clamp(idx, 0, STAGES.length-1);
+    const data = STAGES[idx];
+    document.getElementById("era-slider").value = idx;
+    document.getElementById("era-badge").innerText = data.title.split(" ")[0] + " " + (data.title.split(" ")[1] || "");
+    document.getElementById("year-badge").innerText = Util.fmtYearRange(data.year);
+
+    if(Map.ready) Map.renderStage(data);
+    Banana.say(data.guide || `<b>${data.title}</b>야!<br/>핀을 눌러봐 🍌`);
+  },
+
+  // ===== Quiz =====
+  startStage: (idx) => {
+    if(idx >= QUIZZES.length){
+      App.finishAll();
+      return;
+    }
+    App.stageIdx = idx;
+    App.quizIdx = 0;
+
+    const stageData = STAGES[idx] || STAGES[0];
+    if(Map.ready) Map.renderStage(stageData);
+
+    Banana.say(`Stage ${idx+1} 시작!<br/>이번엔 더 똑똑해지자 🍌`);
+    App.nextQuiz();
+    App.updateQuizMeta();
+  },
+
+  nextQuiz: () => {
+    const qList = QUIZZES[App.stageIdx] || [];
+    if(App.quizIdx >= qList.length){
+      App.animateStageClear(App.stageIdx);
+      return;
+    }
+    const q = qList[App.quizIdx];
+    document.getElementById("quiz-question").innerText = `Q. ${q.q}`;
+
+    const optsDiv = document.getElementById("quiz-options");
+    optsDiv.innerHTML = "";
+
+    if(q.type === 'map'){
+      Banana.say("지도에서 정답 핀을 찾아 눌러봐! 📍");
+      optsDiv.innerHTML = `<div style="grid-column:span 2; padding:18px; color:#777; font-family:'Nanum Gothic',sans-serif; font-weight:800;">
+        👆 지도를 눌러주세요! (정답 핀 클릭)
+      </div>`;
+    }else{
+      q.o.forEach((txt,i)=>{
+        const btn = document.createElement("button");
+        btn.className = "quiz-btn";
+        btn.innerText = txt;
+        btn.onclick = ()=>App.check(i === q.a);
+        optsDiv.appendChild(btn);
+      });
+    }
+
+    App.updateQuizMeta();
+  },
+
+  updateQuizMeta: () => {
+    document.getElementById("quiz-stage-meta").innerText = `Stage ${App.stageIdx+1} / ${QUIZZES.length}`;
+    document.getElementById("quiz-score-meta").innerText = `정답 ${App.correct} / 오답 ${App.wrong}`;
+  },
+
+  check: (isCorrect) => {
+    if(isCorrect){
+      App.correct++;
+      Banana.say("정답! 😆");
+      App.quizIdx++;
+      App.updateQuizMeta();
+      setTimeout(()=>App.nextQuiz(), 900);
+    }else{
+      App.wrong++;
+      Banana.say("아깝다 ㅠㅠ 😭<br/>다시 생각해봐!");
+      App.updateQuizMeta();
+    }
+  },
+
+  handleMapClick: (pinName) => {
+    if(App.mode !== 'quiz') return;
+    const q = (QUIZZES[App.stageIdx]||[])[App.quizIdx];
+    if(!q || q.type !== 'map') return;
+
+    // 정답 비교: 핀명에 부가 텍스트가 있을 수 있으니 “포함”도 허용
+    const ok = (pinName === q.ans) || (pinName.includes(q.ans)) || (q.ans.includes(pinName));
+    App.check(ok);
+  },
+
+  animateStageClear: (stageIndex) => {
+    const modal = document.getElementById("stamp-modal");
+    const board = document.getElementById("stamp-board");
+    const msg = document.getElementById("stamp-msg");
+    const chip = document.getElementById("stage-clear-chip");
+
+    board.innerHTML = "";
+    const total = QUIZZES.length;
+    for(let i=0;i<total;i++){
+      const isStamped = i < stageIndex;
+      const div = document.createElement("div");
+      div.className = `stamp-slot ${isStamped ? 'stamped':''}`;
+      div.innerHTML = `
+        <div class="stamp-slot-num">${i+1}</div>
+        <div class="stamp-mark">💮</div>
+      `;
+      if(i === stageIndex){
+        div.id = "current-slot";
+        div.classList.remove("stamped");
+      }
+      // 마지막 칸은 보물상자
+      if(i === total-1){
+        div.innerHTML = `
+          <div class="stamp-slot-num">🎁</div>
+          <div class="stamp-mark">🧰</div>
+        `;
+        if(i < stageIndex) div.classList.add("stamped");
+        if(i === stageIndex){
+          div.id = "current-slot";
+          div.classList.remove("stamped");
+        }
+      }
+      board.appendChild(div);
+    }
+
+    modal.style.display = "flex";
+    chip.innerText = `Stage ${stageIndex+1} Clear!`;
+
+    msg.innerText = `Stage ${stageIndex+1} 클리어! 도장 쾅!`;
+
+    setTimeout(()=>{
+      const slot = document.getElementById("current-slot");
+      if(slot) slot.classList.add("stamped");
+    }, 450);
+
+    setTimeout(()=>{
+      modal.style.display = "none";
+      App.clearedStages = stageIndex + 1;
+      App.startStage(stageIndex + 1);
+    }, 1700);
+  },
+
+  finishAll: () => {
+    App.timeSpentMs = Util.now() - App.startTimeMs;
+    App.showCertificate();
+  },
+
+  showCertificate: () => {
+    const modal = document.getElementById("cert-modal");
+    const report = App.buildReportText();
+    document.getElementById("cert-name").innerHTML = `<b>위 사람</b>은(는)`;
+    document.getElementById("report-text").innerText = report;
+    modal.style.display = "flex";
+    Banana.say("와… 진짜 다 깼다!<br/>이제 너는 역사 박사! 🍌🏆");
+  },
+
+  buildReportText: () => {
+    const totalQ = QUIZZES.flat().length;
+    const acc = totalQ ? Math.round((App.correct/totalQ)*100) : 0;
+    const sec = Math.round(App.timeSpentMs/1000);
+    const mm = Math.floor(sec/60);
+    const ss = sec%60;
+
+    // 스테이지별 간단 요약
+    const stageTitles = QUIZZES.map((_,i)=>`Stage ${i+1}: ${STAGES[i]?.title || "스테이지"}`).join("\n");
+
+    // 추천 복습 포인트(오답 기반 간단)
+    const review = [];
+    if(App.wrong >= 5) review.push("• 오답이 많았던 편이야 → ‘지도 클릭형(핵심 지명)’부터 다시!");
+    if(App.wrong === 0) review.push("• 완벽 클리어! → 이제 난이도 상(서술형/사료형)로 확장 가능!");
+    review.push("• 추천 복습 루트: 지명(핀) → 경로(선) → 개념(말풍선 QnA)");
+
+    return [
+      "📌 [학습 리포트 - 도전! 바나나 히스토리]",
+      `- 총 문제: ${totalQ}`,
+      `- 정답/오답: ${App.correct} / ${App.wrong}`,
+      `- 정답률: ${acc}%`,
+      `- 소요 시간: ${mm}분 ${ss}초`,
+      "",
+      "🗺️ [스테이지 목록]",
+      stageTitles,
+      "",
+      "✅ [복습 추천]",
+      review.join("\n"),
+      "",
+      "🍌 나노바나나 드림"
+    ].join("\n");
+  },
+
+  copyReport: async () => {
+    const txt = document.getElementById("report-text").innerText;
+    try{
+      await navigator.clipboard.writeText(txt);
+      Banana.say("리포트 복사 완료! 📋🍌");
+    }catch(e){
+      alert("복사에 실패했어. (기기 설정/브라우저 제한일 수 있어요)");
+    }
+  },
+
+  // ===== QnA =====
+  openQna: () => {
+    const idx = parseInt(document.getElementById("era-slider").value,10) || 0;
+    const data = STAGES[idx];
+    const list = document.getElementById("qna-list");
+    list.innerHTML = "";
+
+    const block = (q,d)=>`
+      <div style="margin-bottom:10px;">
+        <div style="font-family:var(--font-title); font-size:1.15rem; color:#0d47a1;">❓ ${q}</div>
+        <div style="padding:10px; background:#fff9c4; border-radius:10px; margin-top:6px; border:2px solid rgba(0,0,0,.08); font-family:'Nanum Gothic',sans-serif; font-weight:800; color:#37474f;">
+          ${d}
+        </div>
+      </div>
+    `;
+
+    if(!data.qna || !data.qna.length){
+      list.innerHTML = "<p style='text-align:center; font-family:var(--font-title);'>질문이 아직 없어! 🍌</p>";
+    }else{
+      // ✅ “내용 보강”: 기본 QnA + “교과서 포인트” 자동 추가
+      const auto = [
+        {q:"이 시대 지도에서 꼭 봐야 할 3요소는?", d:"① 핵심 지명(수도/전투/거점) ② 이동 경로(진격·침입·교류) ③ 왜 그 지리가 중요한가(강·바다·관문)"},
+        {q:"시험에 자주 나오는 지도형 포인트는?", d:"‘왜 거기냐’(지리적 이유) + ‘결과가 뭐냐’(정치·경제·전쟁 영향)로 연결하기"},
+      ];
+      const merged = [...data.qna, ...auto];
+      merged.forEach(x=> list.insertAdjacentHTML("beforeend", block(x.q, x.d)));
+    }
+
+    document.getElementById("qna-modal").style.display = "flex";
+  },
+  closeQna: ()=> document.getElementById("qna-modal").style.display = "none",
+
+  // ===== Search =====
+  openSearch: () => {
+    document.getElementById("search-modal").style.display = "flex";
+    const si = document.getElementById("search-input");
+    si.value = "";
+    si.focus();
+    App.renderSearch("");
+  },
+  closeSearch: ()=> document.getElementById("search-modal").style.display = "none",
+
+  renderSearch: (query) => {
+    const q = Util.normalize(query);
+    const results = [];
+
+    // collect all pins across stages
+    STAGES.forEach((st, idx)=>{
+      (st.pins||[]).forEach(p=>{
+        results.push({
+          type:"pin",
+          key:p.name,
+          stageIdx: idx,
+          label:`${p.name} · ${st.title}`,
+          at:p.at
+        });
+      });
+      (st.routes||[]).forEach(r=>{
+        results.push({
+          type:"route",
+          key:r.label,
+          stageIdx: idx,
+          label:`${r.label} · ${st.title}`,
+          at:r.to
+        });
+      });
+      (st.qna||[]).forEach(qa=>{
+        results.push({
+          type:"qna",
+          key:qa.q,
+          stageIdx: idx,
+          label:`${qa.q} · ${st.title}`,
+          at:null
+        });
+      });
+    });
+
+    const filtered = q
+      ? results.filter(x=> Util.normalize(x.label).includes(q) || Util.normalize(x.key).includes(q))
+      : results.slice(0, 18);
+
+    const box = document.getElementById("search-results");
+    box.innerHTML = "";
+
+    if(!filtered.length){
+      box.innerHTML = `<div style="padding:10px; font-family:var(--font-title); text-align:center; color:#666;">검색 결과가 없어 🍌</div>`;
+      return;
+    }
+
+    filtered.slice(0, 30).forEach(item=>{
+      const btn = document.createElement("button");
+      btn.className = "quiz-btn";
+      btn.style.textAlign = "left";
+      btn.style.borderColor = "rgba(0,0,0,.15)";
+      btn.innerText = item.label;
+      btn.onclick = ()=>{
+        App.closeSearch();
+        App.mode = 'explore';
+        document.getElementById("ui-explore").style.display = "flex";
+        document.getElementById("ui-quiz").style.display = "none";
+        document.getElementById("header-txt").innerText = "역사 탐험";
+        App.setExplore(item.stageIdx);
+
+        // focus/highlight
+        if(item.at && Map.ready){
+          Map.flyToLonLat(item.at, 2.2);
+          Map.flashAtLonLat(item.at);
+        }else{
+          Banana.say("이 항목은 위치가 아니라 ‘개념’이야!<br/>❓ 버튼에서 확인해봐 🍌");
+          App.openQna();
+        }
+      };
+      box.appendChild(btn);
+    });
+  },
+
+  // ===== Layer =====
+  openLayer: () => {
+    document.getElementById("layer-modal").style.display = "flex";
+    document.getElementById("layer-territory").checked = App.layer.territory;
+    document.getElementById("layer-routes").checked = App.layer.routes;
+    document.getElementById("layer-pins").checked = App.layer.pins;
+    document.getElementById("layer-labels").checked = App.layer.labels;
+  },
+  closeLayer: ()=> document.getElementById("layer-modal").style.display = "none",
+  applyLayer: () => {
+    App.layer.territory = document.getElementById("layer-territory").checked;
+    App.layer.routes = document.getElementById("layer-routes").checked;
+    App.layer.pins = document.getElementById("layer-pins").checked;
+    App.layer.labels = document.getElementById("layer-labels").checked;
+    App.closeLayer();
+    App.setExplore(parseInt(document.getElementById("era-slider").value,10) || 0);
+    Banana.say("레이어 적용 완료! 🗺️🍌");
+  }
+};
+
+/* ============================================================================
+  [3] Banana guide
+============================================================================ */
+const Banana = {
+  say: (html) => {
+    const b = document.getElementById("banana-msg");
+    b.innerHTML = html;
+    b.classList.remove("show");
+    void b.offsetWidth;
+    b.classList.add("show");
+  }
+};
+
+/* ============================================================================
+  [4] Map (D3)
+  - ✅ 화면 반 잘림/하늘색 여백 문제 해결: SVG를 container에 “fit”
+  - ✅ 글씨 겹침 문제 완화: 핀 라벨은 기본 숨기고(또는 자동 오프셋), 클릭 시 강조
+============================================================================ */
+const Map = {
+  svg:null, g:null, proj:null, path:null, ready:false, zoom:null,
+  width:800, height:600,
+  currentTransform: d3.zoomIdentity,
+
+  init: () => {
+    Map.svg = d3.select("#map-svg");
+    Map.svg.attr("preserveAspectRatio", "xMidYMid meet");
+    Map.g = Map.svg.append("g");
+
+    Map.g.append("g").attr("id","l-land");
+    Map.g.append("g").attr("id","l-territory");
+    Map.g.append("g").attr("id","l-territory2");
+    Map.g.append("g").attr("id","l-river");
+    Map.g.append("g").attr("id","l-route");
+    Map.g.append("g").attr("id","l-pin");
+    Map.g.append("g").attr("id","l-label");
+    Map.g.append("g").attr("id","l-highlight");
+
+    Map.zoom = d3.zoom()
+      .scaleExtent([1, 10])
+      .on("zoom", (e)=>{
+        Map.currentTransform = e.transform;
+        Map.g.attr("transform", e.transform);
+      });
+
+    Map.svg.call(Map.zoom);
+
+    Map.resize();
+    window.addEventListener("resize", ()=>Map.resize());
+
+    // Base map
+    d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/land-50m.json").then(data=>{
+      document.getElementById("loading-msg").style.display = "none";
+      const land = topojson.feature(data, data.objects.land);
+
+      // Projection: 한반도 중심 fit
+      Map.proj = d3.geoMercator();
+      Map.path = d3.geoPath().projection(Map.proj);
+
+      // Fit to Korea-ish bbox
+      const bbox = {type:"Feature", geometry:{type:"Polygon", coordinates:[[
+        [118, 46],[135,46],[135,32],[118,32],[118,46]
+      ]]}};
+      Map.fitToFeature(bbox);
+
+      d3.select("#l-land")
+        .append("path")
+        .datum(land)
+        .attr("d", Map.path)
+        .attr("fill", "#fffde7")
+        .attr("stroke", "#e0e0e0");
+
+      // Rivers (대표)
+      Map.drawRivers();
+
+      Map.ready = true;
+      App.setExplore(0);
+    });
+  },
+
+  resize: () => {
+    const el = document.getElementById("map-container");
+    const rect = el.getBoundingClientRect();
+    Map.width = Math.max(320, rect.width);
+    Map.height = Math.max(320, rect.height);
+
+    Map.svg
+      .attr("viewBox", `0 0 ${Map.width} ${Map.height}`)
+      .attr("width", Map.width)
+      .attr("height", Map.height);
+
+    if(Map.proj){
+      // projection is defined: keep current center/scale as-is
+    }
+  },
+
+  fitToFeature: (feature) => {
+    // Fit projection to given feature
+    const pad = 30;
+    const tmpPath = d3.geoPath().projection(Map.proj);
+    const b = tmpPath.bounds(feature);
+    const dx = b[1][0]-b[0][0];
+    const dy = b[1][1]-b[0][1];
+    const x = (b[0][0]+b[1][0])/2;
+    const y = (b[0][1]+b[1][1])/2;
+
+    const scale = 0.95 / Math.max(dx/(Map.width-pad*2), dy/(Map.height-pad*2));
+    const translate = [Map.width/2 - scale*x, Map.height/2 - scale*y];
+    Map.proj.scale(scale).translate(translate);
+  },
+
+  drawRivers: () => {
+    const rivers = [
+      {n:"압록강", p:[[124.2,41.7],[125.6,41.3],[127.0,41.4]]},
+      {n:"대동강", p:[[125.1,39.4],[125.7,39.1],[126.2,39.0]]},
+      {n:"한강", p:[[126.6,37.7],[127.2,37.5],[128.0,37.3]]},
+      {n:"금강", p:[[126.5,36.0],[127.2,36.3],[127.5,36.0]]},
+      {n:"낙동강", p:[[128.9,35.1],[128.5,35.8],[129.0,36.5]]},
+    ];
+    const lineGen = d3.line()
+      .x(d=>Map.proj(d)[0])
+      .y(d=>Map.proj(d)[1])
+      .curve(d3.curveBasis);
+
+    const lR = d3.select("#l-river");
+    lR.selectAll("*").remove();
+
+    rivers.forEach(r=>{
+      lR.append("path")
+        .attr("d", lineGen(r.p))
+        .attr("class","river-path");
+      const t = Map.proj(r.p[1]);
+      lR.append("text")
+        .attr("x", t[0]).attr("y", t[1])
+        .attr("class","route-label")
+        .text(r.n);
+    });
+  },
+
+  renderStage: (stage) => {
+    if(!Map.ready) return;
+
+    // layers
+    const lTerr = d3.select("#l-territory"); lTerr.selectAll("*").remove();
+    const lTerr2 = d3.select("#l-territory2"); lTerr2.selectAll("*").remove();
+    const lRoute = d3.select("#l-route"); lRoute.selectAll("*").remove();
+    const lPin = d3.select("#l-pin"); lPin.selectAll("*").remove();
+    const lLabel = d3.select("#l-label"); lLabel.selectAll("*").remove();
+    d3.select("#l-highlight").selectAll("*").remove();
+
+    // Fit view to stage bbox if wide (e.g., 동아시아/상하이)
+    Map.fitToStage(stage);
+
+    // Territory polygons
+    if(App.layer.territory){
+      (stage.map||[]).forEach(m=>{
+        Map.drawPolygon(lTerr, m.poly, m.fill, m.name);
+      });
+      // extras (도 단위 등)
+      (stage.mapExtras||[]).forEach(m=>{
+        Map.drawPolygon(lTerr2, m.poly, m.fill, `${m.name} (${m.hint||""})`, 0.65, true);
+      });
+    }
+
+    // Labels (국가명) - ✅ 겹침 최소화: 중앙에만
+    if(App.layer.labels){
+      (stage.map||[]).forEach(m=>{
+        const c = Map.polyCentroid(m.poly);
+        const xy = Map.proj(c);
+        lLabel.append("text")
+          .attr("x",xy[0]).attr("y",xy[1])
+          .attr("class","label-txt")
+          .text(m.name);
+      });
+    }
+
+    // Routes
+    if(App.layer.routes && stage.routes){
+      stage.routes.forEach(r=>{
+        Map.drawRoute(lRoute, r.from, r.to, r.color || "#1e88e5", r.label);
+      });
+    }
+
+    // Pins
+    if(App.layer.pins && stage.pins){
+      Map.drawPins(lPin, stage.pins);
+    }
+  },
+
+  fitToStage: (stage) => {
+    // create a bbox polygon from stage polygons + pins
+    let lonMin=999, lonMax=-999, latMin=999, latMax=-999;
+
+    const add = (pt)=>{
+      const [lon,lat]=pt;
+      lonMin=Math.min(lonMin,lon); lonMax=Math.max(lonMax,lon);
+      latMin=Math.min(latMin,lat); latMax=Math.max(latMax,lat);
+    };
+
+    (stage.map||[]).forEach(m=>m.poly.forEach(add));
+    (stage.mapExtras||[]).forEach(m=>m.poly.forEach(add));
+    (stage.pins||[]).forEach(p=>add(p.at));
+    (stage.routes||[]).forEach(r=>{ add(r.from); add(r.to); });
+
+    // fallback
+    if(lonMin>lonMax){
+      lonMin=118; lonMax=135; latMin=32; latMax=46;
+    }
+
+    // padding
+    lonMin-=1.2; lonMax+=1.2;
+    latMin-=1.0; latMax+=1.0;
+
+    const bbox = {type:"Feature", geometry:{type:"Polygon", coordinates:[[
+      [lonMin,latMax],[lonMax,latMax],[lonMax,latMin],[lonMin,latMin],[lonMin,latMax]
+    ]]}};
+
+    Map.fitToFeature(bbox);
+
+    // reset zoom transform to identity for clarity when switching stage
+    Map.svg.transition().duration(350).call(Map.zoom.transform, d3.zoomIdentity);
+  },
+
+  drawPolygon: (layer, poly, fill, name, opacity=0.85, dashed=false) => {
+    const line = d3.line()
+      .x(d=>Map.proj(d)[0])
+      .y(d=>Map.proj(d)[1])
+      .curve(d3.curveBasisClosed);
+
+    layer.append("path")
+      .attr("d", line(poly))
+      .attr("fill", fill)
+      .attr("stroke", dashed ? "#5d4037" : "white")
+      .attr("stroke-width", dashed ? 2.2 : 2)
+      .attr("stroke-dasharray", dashed ? "6 6" : null)
+      .attr("opacity", opacity)
+      .on("click", ()=>Banana.say(`<b>${name}</b><br/>지도를 눌러 영역을 확인했어! 🍌`));
+  },
+
+  polyCentroid: (poly) => {
+    const lon = d3.mean(poly, p=>p[0]);
+    const lat = d3.mean(poly, p=>p[1]);
+    return [lon,lat];
+  },
+
+  drawRoute: (layer, from, to, color, label) => {
+    const p1 = Map.proj(from);
+    const p2 = Map.proj(to);
+    const midX = (p1[0]+p2[0])/2;
+    const midY = (p1[1]+p2[1])/2;
+    const ctrl = [midX + (p2[1]-p1[1])*0.18, midY + (p1[0]-p2[0])*0.18];
+
+    const d = `M ${p1[0]},${p1[1]} Q ${ctrl[0]},${ctrl[1]} ${p2[0]},${p2[1]}`;
+
+    layer.append("path")
+      .attr("d", d)
+      .attr("class","route-path")
+      .attr("stroke", color)
+      .attr("fill","none")
+      .attr("marker-end", "url(#arrow)");
+
+    // label near control
+    layer.append("text")
+      .attr("x", ctrl[0]).attr("y", ctrl[1])
+      .attr("class","route-label")
+      .text(label || "");
+  },
+
+  drawPins: (layer, pins) => {
+    // ✅ 글씨 겹침 해결: 라벨 자동 오프셋(가까운 것끼리 y를 다르게)
+    const placed = [];
+
+    pins.forEach((p, idx)=>{
+      const xy = Map.proj(p.at);
+      let dy = -28;
+      // if too close to previous labels, push up/down alternately
+      for(const o of placed){
+        if(Util.distance([xy[0],xy[1]],[o.x,o.y]) < 42){
+          dy -= 16;
+        }
+      }
+      placed.push({x:xy[0], y:xy[1]});
+
+      const g = layer.append("g")
+        .attr("transform",`translate(${xy[0]},${xy[1]})`)
+        .style("cursor","pointer")
+        .on("click",(e)=>{
+          e.stopPropagation();
+          Map.flashAtLonLat(p.at);
+
+          if(App.mode === 'quiz'){
+            App.handleMapClick(p.name);
+          }else{
+            Banana.say(`<b>${p.name}</b><br/>${p.desc || ""}`);
+          }
+        });
+
+      // pin circle
+      const bg = (p.icon==="💥") ? "#d32f2f" : (p.icon==="📣") ? "#6a1b9a" : "#fbc02d";
+
+      g.append("circle")
+        .attr("r", 18)
+        .attr("fill", bg)
+        .attr("stroke","white")
+        .attr("stroke-width",3);
+
+      g.append("text")
+        .attr("text-anchor","middle")
+        .attr("dy", 6)
+        .attr("font-size","17px")
+        .text(p.icon || "📍");
+
+      // label
+      g.append("text")
+        .attr("class","pin-label")
+        .attr("text-anchor","middle")
+        .attr("y", dy)
+        .text(p.name);
+    });
+
+    // marker defs once
+    if(Map.svg.select("defs").empty()){
+      const defs = Map.svg.append("defs");
+      defs.append("marker")
+        .attr("id","arrow")
+        .attr("viewBox","0 -5 10 10")
+        .attr("refX",10)
+        .attr("refY",0)
+        .attr("markerWidth",7)
+        .attr("markerHeight",7)
+        .attr("orient","auto")
+        .append("path")
+        .attr("d","M0,-5L10,0L0,5")
+        .attr("fill","#263238");
+    }
+  },
+
+  flyToLonLat: (lonlat, scale=2.0) => {
+    const [x,y] = Map.proj(lonlat);
+    const t = d3.zoomIdentity
+      .translate(Map.width/2 - x*scale, Map.height/2 - y*scale)
+      .scale(scale);
+    Map.svg.transition().duration(450).call(Map.zoom.transform, t);
+  },
+
+  flashAtLonLat: (lonlat) => {
+    const layer = d3.select("#l-highlight");
+    layer.selectAll("*").remove();
+    const [x,y] = Map.proj(lonlat);
+
+    const c = layer.append("circle")
+      .attr("cx",x).attr("cy",y)
+      .attr("r", 10)
+      .attr("class","highlight-ring")
+      .attr("opacity", 0.95);
+
+    c.transition().duration(450).attr("r", 40).attr("opacity", 0.0).remove();
+  }
+};
+
+window.onload = () => {
+  App.init();
+  Map.init();
+};
+</script>
+</body>
+</html>
