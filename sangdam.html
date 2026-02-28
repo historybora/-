@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>너에 대해 알려줘! 😄</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React and Babel for running the app -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        /* Custom font for better readability */
+        body {
+            font-family: 'Inter', 'Pretendard', sans-serif;
+        }
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+
+    <!-- React App (transpiled by Babel) -->
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Main App Component ---
+        function App() {
+            // --- Google Apps Script Web App URL ---
+            // 1단계에서 새로 배포하고 복사한 웹 앱 URL을 여기에 붙여넣어 주세요!
+            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzu40j2t_ICNTC4PhhtNPDGGLbhsiAjiKV8bYR4BXvgvaxru0DkQDnOZ7X8Vy6d7fei4w/exec";
+
+            const initialFormData = {
+                studentNumber: '', name: '', myPhone: '', momPhone: '', dadPhone: '',
+                moods: [],
+                familyIntro: '', friends: '', dailyRoutine: '',
+                strength: '', weakness: '', favSubject: '', hardSubject: '', goal: '',
+                toTeacher: '',
+            };
+            const [formData, setFormData] = useState(initialFormData);
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [successMessage, setSuccessMessage] = useState('');
+
+            const moodOptions = [
+                { emoji: '😄', text: '신나요' }, { emoji: '😊', text: '평온해요' }, { emoji: '🥰', text: '설레요' },
+                { emoji: '🤔', text: '고민있어요' }, { emoji: '😥', text: '속상해요' }, { emoji: '🤯', text: '복잡해요' },
+                { emoji: '😴', text: '피곤해요' }, { emoji: '😵', text: '지쳐요' }, { emoji: '😡', text: '화나요' },
+                { emoji: '🥳', text: '기대돼요' }, { emoji: '😎', text: '자신있어요' }, { emoji: '😑', text: '그냥 그래요' },
+            ];
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({ ...prev, [name]: value }));
+            };
+
+            const handleMoodSelect = (mood) => {
+                setFormData(prev => {
+                    const newMoods = prev.moods.includes(mood)
+                        ? prev.moods.filter(m => m !== mood)
+                        : [...prev.moods, mood];
+                    if (newMoods.length > 3) return prev;
+                    return { ...prev, moods: newMoods };
+                });
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (SCRIPT_URL === "https://script.google.com/macros/s/AKfycby0XkFKz47wfE0XTl0xFfB6h3tXsxLrIYntNDxyR2FCk6hQRYdFrpzs1UQ4XXBfXDauwQ/exec") {
+                    setError("앱 설정이 완료되지 않았습니다. 관리자에게 문의하세요.");
+                    return;
+                }
+                if (!formData.studentNumber || !formData.name) {
+                    setError('학번과 이름은 꼭 입력해주세요.');
+                    return;
+                }
+                setIsLoading(true);
+                setError('');
+                setSuccessMessage('');
+                
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        cache: 'no-cache',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData),
+                        redirect: 'follow'
+                    });
+                    
+                    setSuccessMessage('제출이 완료되었습니다. 고마워요!');
+                    setFormData(initialFormData);
+
+                } catch (err) {
+                    console.error("Error submitting form:", err);
+                    setError('제출 중 오류가 발생했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.');
+                } finally {
+                    setIsLoading(false);
+                    setTimeout(() => setSuccessMessage(''), 4000);
+                }
+            };
+            
+            return (
+                <div className="bg-gray-100 min-h-screen font-sans p-4 sm:p-8 relative">
+                    <div className="absolute top-4 right-6 text-xs text-gray-500 font-semibold">
+                        보라쌤과 역사를 보라
+                    </div>
+                    <div className="w-full max-w-3xl mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+                        <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">너에 대해 알려줘! 😄</h1>
+                        <p className="text-center text-gray-600 mb-2">너에 대해 알려주는 소중한 기록이야. 편안한 마음으로 솔직하게 작성해주면 돼!</p>
+                        <p className="text-center text-xs text-gray-500 mb-8">🔒 이 자료는 선생님만 볼 수 있고, 올해가 지나면 안전하게 삭제되니 안심해도 좋아.</p>
+                        
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <QuestionCard title="기본 정보 🙋‍♀️">
+                                <QuestionItem label="학번" name="studentNumber" value={formData.studentNumber} onChange={handleInputChange} placeholder="예) 1101" isRequired={true} />
+                                <QuestionItem label="이름" name="name" value={formData.name} onChange={handleInputChange} placeholder="예) 홍길동" isRequired={true} />
+                                <QuestionItem label="나의 연락처" name="myPhone" value={formData.myPhone} onChange={handleInputChange} placeholder="010-1234-5678" />
+                                <QuestionItem label="어머니 연락처" name="momPhone" value={formData.momPhone} onChange={handleInputChange} placeholder="010-1234-5678" />
+                                <QuestionItem label="아버지 연락처" name="dadPhone" value={formData.dadPhone} onChange={handleInputChange} placeholder="010-1234-5678" />
+                            </QuestionCard>
+
+                            <QuestionCard title="요즘 너의 마음 상태는 어때? (최대 3개)">
+                                <div className="flex flex-wrap gap-3">
+                                    {moodOptions.map(mood => (
+                                        <button type="button" key={mood.text} onClick={() => handleMoodSelect(mood.text)}
+                                            className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-transform transform hover:scale-105 ${
+                                                formData.moods.includes(mood.text)
+                                                    ? 'bg-blue-500 text-white border-blue-500'
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                                            }`}>
+                                            {mood.emoji} {mood.text}
+                                        </button>
+                                    ))}
+                                </div>
+                            </QuestionCard>
+                            
+                            <QuestionCard title="나의 세상 🏡">
+                                <QuestionItem label="우리 가족을 자유롭게 소개해줄래?" name="familyIntro" value={formData.familyIntro} onChange={handleInputChange} isTextarea={true} />
+                                <QuestionItem label="요즘 가장 많은 시간을 보내는 친구는 누구야?" name="friends" value={formData.friends} onChange={handleInputChange} isTextarea={true} />
+                                <QuestionItem label="요즘 너의 하루는 어때? (기상/취침 시간, 방과 후 활동 등)" name="dailyRoutine" value={formData.dailyRoutine} onChange={handleInputChange} isTextarea={true} />
+                            </QuestionCard>
+
+                            <QuestionCard title="나의 성장 🌱">
+                                <QuestionItem label="내가 생각하는 나의 가장 큰 장점은?" name="strength" value={formData.strength} onChange={handleInputChange} isTextarea={true} />
+                                <QuestionItem label="내가 보완하고 싶거나 성장하고 싶은 점이 있다면?" name="weakness" value={formData.weakness} onChange={handleInputChange} isTextarea={true} />
+                                <QuestionItem label="올해 꼭 이루고 싶은 목표가 있니?" name="goal" value={formData.goal} onChange={handleInputChange} isTextarea={true} />
+                            </QuestionCard>
+
+                            <QuestionCard title="나의 공부 📚">
+                                <QuestionItem label="가장 자신 있거나 좋아하는 과목은 뭐야? 그 이유는?" name="favSubject" value={formData.favSubject} onChange={handleInputChange} isTextarea={true} />
+                                <QuestionItem label="조금 어렵게 느껴지거나 도움이 필요한 과목은?" name="hardSubject" value={formData.hardSubject} onChange={handleInputChange} isTextarea={true} />
+                            </QuestionCard>
+
+                            <QuestionCard title="선생님께 💌">
+                                <QuestionItem label="고민, 건의사항, 칭찬 등 어떤 이야기든 환영이야!" name="toTeacher" value={formData.toTeacher} onChange={handleInputChange} isTextarea={true} />
+                            </QuestionCard>
+
+                            {error && <p className="text-red-500 text-center">{error}</p>}
+                            {successMessage && <p className="text-green-600 text-center font-bold">{successMessage}</p>}
+                            <button type="submit" disabled={isLoading} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400">
+                                {isLoading ? '제출하는 중...' : '제출하기'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Helper Components ---
+        const QuestionCard = ({ title, children }) => (<div className="bg-gray-50 p-6 rounded-lg border border-gray-200"><h2 className="text-lg font-semibold text-gray-800 mb-4">{title}</h2><div className="space-y-4">{children}</div></div>);
+        const QuestionItem = ({ label, name, value, onChange, placeholder, isRequired, isTextarea }) => (
+            <div>
+                <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                {isTextarea ? (
+                    <textarea id={name} name={name} value={value} onChange={onChange} rows="2" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder={placeholder}></textarea>
+                ) : (
+                    <input type="text" id={name} name={name} value={value} onChange={onChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder={placeholder} required={isRequired} />
+                )}
+            </div>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
