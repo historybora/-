@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>평가계획 점검기</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary: #2E6B4F;
+            --primary-light: #5A9E7A;
+            --primary-bg: #F4F7F5;
+            --primary-dim: #E6F0EA;
+            --text-dark: #1A2B20;
+            --text-mid: #3D5245;
+            --text-gray: #6B7D71;
+            --border: #C8D8CE;
+            --white: #FFFFFF;
+            --hover: #DDE9E2;
+            --danger: #C0392B;
+            --radius: 10px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.07);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Noto Sans KR', -apple-system, 'Malgun Gothic', sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            word-break: keep-all;
+        }
+
+        /* ── Header ── */
+        header {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 0 1.5rem;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+        }
+        .header-title {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── Main ── */
+        main {
+            flex: 1;
+            max-width: 860px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 1.5rem 1rem 3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+        .card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.4rem;
+            box-shadow: var(--shadow);
+        }
+        .card-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .card-sub { font-size: 0.83rem; color: var(--text-gray); margin-bottom: 1rem; }
+
+        /* ── Source Grid ── */
+        .source-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+        .source-chip {
+            background: var(--primary-dim);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .source-chip.added { background: #E3F0FF; border-color: #90C4F9; }
+        .chip-icon { font-size: 1.3rem; flex-shrink: 0; }
+        .chip-info { flex: 1; min-width: 0; }
+        .chip-name { font-size: 0.9rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chip-sub { font-size: 0.75rem; color: var(--text-gray); margin-top: 1px; }
+        .chip-remove { background: none; border: none; color: var(--text-gray); font-size: 1.3rem; cursor: pointer; padding: 2px; line-height: 1; flex-shrink: 0; }
+        .chip-remove:hover { color: var(--danger); }
+        .btn-add-source {
+            border: 2px dashed var(--primary-light);
+            border-radius: var(--radius);
+            background: transparent;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            width: 100%;
+        }
+        .btn-add-source:hover { background: var(--primary-dim); }
+        input[type="file"] { display: none; }
+
+        /* ── Upload Box ── */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 2.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #FAFCFB;
+            gap: 0.6rem;
+        }
+        .upload-area:hover, .upload-area.drag { border-color: var(--primary); background: var(--primary-dim); }
+        .upload-area.ready { border-color: var(--primary); border-style: solid; background: #EBF3EF; }
+        .upload-icon { font-size: 2.5rem; }
+        .upload-label { font-weight: 800; font-size: 1.05rem; color: var(--primary); }
+        .upload-hint { font-size: 0.85rem; color: var(--text-gray); line-height: 1.5; }
+
+        /* ── Submit ── */
+        #btn-submit {
+            width: 100%;
+            padding: 1.1rem;
+            font-size: 1.1rem;
+            font-weight: 900;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 14px rgba(46,107,79,0.35);
+        }
+        #btn-submit:hover { background: #245a41; }
+        #btn-submit:disabled { background: var(--primary-light); box-shadow: none; cursor: not-allowed; }
+
+        /* ── Loading ── */
+        #loading-section { display: none; text-align: center; padding: 2rem 1rem; }
+        .spinner {
+            width: 44px; height: 44px;
+            border: 4px solid var(--primary-dim);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-title { font-weight: 800; font-size: 1rem; color: var(--primary); margin-bottom: 0.3rem; }
+        .loading-sub { font-size: 0.85rem; color: var(--text-gray); }
+        .progress-wrap { background: var(--border); border-radius: 20px; height: 6px; margin: 1rem auto 0; max-width: 320px; overflow: hidden; }
+        .progress-bar { height: 100%; background: var(--primary); border-radius: 20px; width: 0%; transition: width 0.4s ease; }
+
+        /* ── Results ── */
+        #results-section { display: none; }
+        .result-banner {
+            background: linear-gradient(135deg, var(--primary) 0%, #1A4A32 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .result-banner-title { font-size: 1.25rem; font-weight: 900; }
+        .result-banner-sub { font-size: 0.85rem; opacity: 0.8; margin-top: 2px; }
+        .result-actions { display: flex; gap: 0.7rem; flex-wrap: wrap; }
+        .btn-action {
+            padding: 0.65rem 1.1rem;
+            font-size: 0.9rem;
+            font-weight: 800;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-copy-action { background: rgba(255,255,255,0.2); color: white; border: 1.5px solid rgba(255,255,255,0.5); }
+        .btn-copy-action:hover { background: rgba(255,255,255,0.32); }
+        .btn-pdf-action { background: white; color: var(--primary); border: none; }
+        .btn-pdf-action:hover { background: #f0f0f0; }
+        .btn-pdf-action:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .result-body { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
+        .result-section { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+        .rs-head { padding: 0.9rem 1.3rem; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+        .rs-icon { font-size: 1.3rem; }
+        .rs-title { font-size: 1rem; font-weight: 800; }
+        .rs-body { padding: 1.2rem 1.3rem; line-height: 1.75; font-size: 0.95rem; color: var(--text-mid); }
+
+        .rs-head.summary { background: #F0F7F3; }
+        .rs-title.summary { color: var(--primary); }
+        .rs-head.strength { background: #F0F7FF; }
+        .rs-title.strength { color: #1565C0; }
+        .strength-list { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+        .strength-list li { display: flex; align-items: flex-start; gap: 8px; padding: 0.7rem 0.9rem; background: #F5FAFF; border-radius: 8px; font-size: 0.93rem; line-height: 1.6; }
+        .strength-list li::before { content: "✅"; flex-shrink: 0; }
+
+        .rs-head.issues { background: #FFF8F0; }
+        .rs-title.issues { color: #B94A00; }
+        .issue-list { display: flex; flex-direction: column; gap: 0.8rem; }
+        .issue-card { border: 1px solid #F0D8C0; border-radius: 10px; overflow: hidden; background: #FFFAF6; }
+        .issue-card-head { display: flex; align-items: center; gap: 10px; padding: 0.75rem 1rem; background: #FFF0E0; border-bottom: 1px solid #F0D8C0; flex-wrap: wrap; }
+        .issue-num { width: 26px; height: 26px; background: #B94A00; color: white; border-radius: 50%; font-size: 0.8rem; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .issue-category { font-size: 0.82rem; font-weight: 800; color: #B94A00; background: #FFE0C0; padding: 2px 9px; border-radius: 20px; white-space: nowrap; }
+        .issue-problem { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); flex: 1; }
+        .issue-card-body { padding: 0.9rem 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
+        .issue-row { display: flex; gap: 8px; font-size: 0.9rem; line-height: 1.65; }
+        .issue-label { font-size: 0.78rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; height: fit-content; }
+        .lbl-evidence { background: #E8EEF8; color: #1A3A6B; }
+        .lbl-action { background: #E8F4EC; color: #1A4A28; }
+        .issue-text { color: var(--text-mid); }
+
+        .rs-head.checklist { background: #F5F0FF; }
+        .rs-title.checklist { color: #5B27A0; }
+        .checklist-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+        .checklist-list li { display: flex; align-items: flex-start; gap: 10px; padding: 0.65rem 0.9rem; background: #FAF7FF; border-radius: 8px; font-size: 0.92rem; line-height: 1.6; }
+        .check-box { width: 18px; height: 18px; border: 2px solid #9B6DD0; border-radius: 4px; flex-shrink: 0; margin-top: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+        .check-box.checked { background: #5B27A0; border-color: #5B27A0; }
+        .check-box.checked::after { content: "✓"; color: white; font-size: 0.75rem; font-weight: 900; }
+
+        .result-warning { background: #FFF8E1; border: 1px solid #FFE082; border-radius: 10px; padding: 0.9rem 1.1rem; font-size: 0.83rem; color: #795548; line-height: 1.6; }
+
+        /* ── PDF hidden template ── */
+        #pdf-tpl { display: none; width: 190mm; padding: 15mm 18mm; background: white; font-family: 'Malgun Gothic','AppleGothic',sans-serif; color: #111; }
+        .pt-h1 { font-size: 17pt; font-weight: bold; text-align: center; border-bottom: 2.5px solid #2E6B4F; padding-bottom: 8px; margin-bottom: 6px; }
+        .pt-meta { font-size: 9pt; text-align: right; color: #555; margin-bottom: 14px; }
+        .pt-warn { background: #fff8e1; border: 1px solid #ffe082; border-radius: 4px; padding: 8px 12px; font-size: 9pt; color: #795548; margin-bottom: 16px; line-height: 1.55; }
+        .pt-sec { font-size: 12pt; font-weight: bold; background: #f0f0f0; padding: 5px 10px; border-left: 4px solid #2E6B4F; margin: 18px 0 8px; }
+        .pt-body { font-size: 10.5pt; line-height: 1.7; padding: 0 4px; }
+        .pt-ul { font-size: 10.5pt; line-height: 1.7; padding-left: 20px; margin: 0 0 8px; }
+        .pt-ul li { margin-bottom: 4px; }
+        .pt-issue { font-size: 10.5pt; line-height: 1.65; border-bottom: 1px dashed #ddd; padding: 10px 6px 14px; }
+        .pt-issue:last-child { border-bottom: none; }
+        .pt-badge { display: inline-block; background: #B03A2E; color: white; padding: 2px 8px; border-radius: 3px; font-size: 8.5pt; font-weight: bold; margin-right: 5px; }
+        .pt-cl { list-style: none; font-size: 10.5pt; line-height: 1.7; padding-left: 4px; }
+        .pt-cl li { margin-bottom: 5px; }
+        .pt-cl li::before { content: "☐ "; }
+
+        footer { text-align: center; padding: 1.2rem; font-size: 0.82rem; color: var(--text-gray); background: var(--white); border-top: 1px solid var(--border); }
+
+        @media (max-width: 520px) {
+            .source-grid { grid-template-columns: 1fr; }
+            header { padding: 0 1rem; }
+            main { padding: 1rem 0.8rem 3rem; }
+            .result-banner { flex-direction: column; align-items: flex-start; }
+            .result-actions { width: 100%; }
+            .btn-action { flex: 1; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">📋 평가계획 점검기</div>
+</header>
+
+<main>
+
+    <!-- 1. Knowledge Base -->
+    <div class="card">
+        <div class="card-title">📚 점검 기준 (Knowledge Base)</div>
+        <div class="card-sub">AI가 아래 규정을 숙지하여 점검합니다. PDF·ZIP 파일 추가 가능.</div>
+        <div class="source-grid" id="source-grid">
+            <div class="source-chip">
+                <span class="chip-icon">🏛️</span>
+                <div class="chip-info">
+                    <div class="chip-name">대전시 학업성적관리 지침</div>
+                    <div class="chip-sub">2026학년도 기준 (기본 탑재)</div>
+                </div>
+            </div>
+        </div>
+        <button class="btn-add-source" onclick="document.getElementById('rule-file').click()">
+            ＋ 타 시도 규정 / 자체 예시 양식 추가 (PDF 또는 ZIP)
+        </button>
+        <input type="file" id="rule-file" accept=".pdf,.zip" multiple onchange="handleRuleUpload()">
+    </div>
+
+    <!-- 2. Upload -->
+    <div class="card">
+        <div class="card-title">📄 점검할 평가계획서</div>
+        <div class="card-sub">PDF 또는 ZIP 파일 (드래그 앤 드롭 가능)</div>
+        <div class="upload-area" id="plan-box"
+             onclick="document.getElementById('plan-file').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="handleDrop(event)">
+            <div class="upload-icon" id="plan-icon">📂</div>
+            <div class="upload-label" id="plan-title">평가계획서 업로드</div>
+            <div class="upload-hint" id="plan-desc">PDF 또는 ZIP 파일을 선택하거나 여기에 드래그하세요</div>
+        </div>
+        <input type="file" id="plan-file" accept=".pdf,.zip" onchange="handlePlanUpload()">
+    </div>
+
+    <!-- 3. Submit -->
+    <button id="btn-submit" onclick="startInspection()">✨ AI 점검 시작</button>
+
+    <!-- 4. Loading -->
+    <div id="loading-section">
+        <div class="spinner"></div>
+        <div class="loading-title" id="loading-title">📄 파일 분석 중...</div>
+        <div class="loading-sub" id="loading-sub">잠시만 기다려 주세요.</div>
+        <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    </div>
+
+    <!-- 5. Results -->
+    <div id="results-section">
+        <div class="result-banner">
+            <div>
+                <div class="result-banner-title">✅ AI 점검 완료!</div>
+                <div class="result-banner-sub" id="result-meta"></div>
+            </div>
+            <div class="result-actions">
+                <button class="btn-action btn-copy-action" onclick="copyResult()">📋 전체 복사</button>
+                <button class="btn-action btn-pdf-action" id="btn-pdf" onclick="generatePDF()">📄 PDF 저장</button>
+            </div>
+        </div>
+
+        <div class="result-body">
+            <div class="result-warning">
+                ⚠️ 본 결과는 AI 기반 참고용 점검 가이드입니다. 최종 판단은 교사가 학교 규정 및 교육청 지침에 따라 직접 확인해야 합니다.
+            </div>
+            <div class="result-section">
+                <div class="rs-head summary"><span class="rs-icon">📊</span><span class="rs-title summary">종합 평가 요약</span></div>
+                <div class="rs-body" id="rs-summary">—</div>
+            </div>
+            <div class="result-section">
+                <div class="rs-head strength"><span class="rs-icon">⭐</span><span class="rs-title strength">우수 사항</span></div>
+                <div class="rs-body"><ul class="strength-list" id="rs-strengths"></ul></div>
+            </div>
+            <div class="result-section">
+                <div class="rs-head issues"><span class="rs-icon">🔍</span><span class="rs-title issues">개선 필요 사항</span></div>
+                <div class="rs-body"><div class="issue-list" id="rs-issues"></div></div>
+            </div>
+            <div class="result-section">
+                <div class="rs-head checklist"><span class="rs-icon">✔️</span><span class="rs-title checklist">최종 제출 전 체크리스트</span></div>
+                <div class="rs-body"><ul class="checklist-list" id="rs-checklist"></ul></div>
+            </div>
+            <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
+                <button class="btn-action btn-pdf-action" id="btn-pdf2" onclick="generatePDF()" style="flex:1;min-width:140px;background:var(--primary);color:white;border-radius:10px;padding:0.9rem;">📄 PDF로 저장</button>
+                <button class="btn-action btn-copy-action" onclick="copyResult()" style="flex:1;min-width:140px;background:white;color:var(--primary);border:2px solid var(--primary);border-radius:10px;padding:0.9rem;">📋 텍스트 복사</button>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<footer>문의•개선: 보라쌤 (t_oj032@dje.go.kr)</footer>
+
+<!-- PDF hidden template -->
+<div id="pdf-tpl">
+    <div class="pt-h1">평가계획서 AI 점검 결과 리포트</div>
+    <div class="pt-meta">분석 일시: <span id="pt-date"></span> &nbsp;|&nbsp; 적용 기준: <span id="pt-rule"></span></div>
+    <div class="pt-warn">⚠ 본 결과는 AI 기반 참고용 점검 가이드입니다. 최종 판단은 교사가 직접 확인해야 합니다.</div>
+    <div class="pt-sec">1. 종합 평가 요약</div>
+    <div class="pt-body" id="pt-summary"></div>
+    <div class="pt-sec">2. 우수 사항</div>
+    <ul class="pt-ul" id="pt-strengths"></ul>
+    <div class="pt-sec">3. 개선 필요 사항</div>
+    <div id="pt-issues"></div>
+    <div class="pt-sec">4. 최종 제출 전 체크리스트</div>
+    <ul class="pt-cl" id="pt-checklist"></ul>
+</div>
+
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const MODEL_ID = 'gemini-1.5-flash';
+    let customRuleTexts = [];
+    let planFiles = [];
+    let globalResult = '';
+
+    // ══ File Extraction ══
+    async function extractPDFText(file) {
+        const buf = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        const total = pdf.numPages;
+        let text = '';
+        const CHUNK = 5;
+        for (let start = 1; start <= total; start += CHUNK) {
+            const end = Math.min(start + CHUNK - 1, total);
+            const promises = [];
+            for (let i = start; i <= end; i++) {
+                promises.push(pdf.getPage(i).then(p =>
+                    p.getTextContent().then(c => `\n--- PAGE ${i} ---\n${c.items.map(x => x.str).join(' ')}`)
+                ));
+            }
+            text += (await Promise.all(promises)).join('');
+        }
+        return text.replace(/[ \t]{2,}/g, ' ');
+    }
+
+    async function extractZIPText(file) {
+        const zip = await JSZip.loadAsync(await file.arrayBuffer());
+        const names = Object.keys(zip.files).filter(n => n.toLowerCase().endsWith('.pdf') && !zip.files[n].dir);
+        let combined = '';
+        for (const name of names) {
+            const blob = await zip.files[name].async('blob');
+            const t = await extractPDFText(new File([blob], name, { type: 'application/pdf' }));
+            combined += `\n\n=== [${name}] ===\n${t}`;
+        }
+        return combined || '[ZIP 내 PDF 없음]';
+    }
+
+    async function extractFile(file) {
+        return file.name.toLowerCase().endsWith('.zip') ? extractZIPText(file) : extractPDFText(file);
+    }
+
+    // ══ Rule Upload ══
+    async function handleRuleUpload() {
+        const inp = document.getElementById('rule-file');
+        const files = Array.from(inp.files);
+        if (!files.length) return;
+        const grid = document.getElementById('source-grid');
+        for (const file of files) {
+            try {
+                setLoading(true, `규정 파일 읽는 중: ${file.name}`, '', 30);
+                const text = await extractFile(file);
+                customRuleTexts.push({ name: file.name, text });
+                const chip = document.createElement('div');
+                chip.className = 'source-chip added';
+                chip.innerHTML = `
+                    <span class="chip-icon">📑</span>
+                    <div class="chip-info">
+                        <div class="chip-name" title="${file.name}">${file.name}</div>
+                        <div class="chip-sub">추가 규정 (최우선 적용)</div>
+                    </div>
+                    <button class="chip-remove" onclick="removeRule('${file.name.replace(/'/g,"\\'")}',this.parentElement)">×</button>`;
+                grid.appendChild(chip);
+            } catch { alert(`"${file.name}" 파일을 읽을 수 없습니다.`); }
+        }
+        inp.value = '';
+        setLoading(false);
+    }
+    function removeRule(name, el) { customRuleTexts = customRuleTexts.filter(r => r.name !== name); el.remove(); }
+
+    // ══ Plan Upload ══
+    function setPlanFile(file) {
+        planFiles = [file];
+        document.getElementById('plan-box').classList.add('ready');
+        document.getElementById('plan-icon').textContent = '✅';
+        document.getElementById('plan-title').textContent = '업로드 준비 완료';
+        document.getElementById('plan-desc').textContent = file.name;
+    }
+    function handlePlanUpload() { const f = document.getElementById('plan-file').files[0]; if (f) setPlanFile(f); }
+    function handleDrop(e) {
+        e.preventDefault();
+        document.getElementById('plan-box').classList.remove('drag');
+        const f = e.dataTransfer.files[0];
+        if (!f) return;
+        if (!/\.(pdf|zip)$/i.test(f.name)) { alert('PDF 또는 ZIP 파일만 지원합니다.'); return; }
+        setPlanFile(f);
+    }
+
+    // ══ Progress ══
+    function setLoading(on, title='', sub='', pct=0) {
+        document.getElementById('loading-section').style.display = on ? 'block' : 'none';
+        if (on) {
+            document.getElementById('loading-title').textContent = title;
+            document.getElementById('loading-sub').textContent = sub;
+            document.getElementById('progress-bar').style.width = pct + '%';
+        }
+    }
+    function setProgress(pct, title, sub) {
+        document.getElementById('loading-title').textContent = title;
+        document.getElementById('loading-sub').textContent = sub;
+        document.getElementById('progress-bar').style.width = pct + '%';
+    }
+
+    // ══ Main Inspection ══
+    async function startInspection() {
+        if (!planFiles.length) { alert('📄 점검할 평가계획서 파일을 먼저 업로드해 주세요.'); return; }
+        document.getElementById('btn-submit').disabled = true;
+        document.getElementById('results-section').style.display = 'none';
+        setLoading(true, '📄 파일 텍스트 추출 중...', '잠시만 기다려 주세요.', 10);
+        try {
+            const planText = await extractFile(planFiles[0]);
+            setProgress(35, '🤖 AI 분석 중...', 'Gemini API에 전송합니다.');
+            const data = await callGemini(planText);
+            setProgress(90, '📊 결과 정리 중...', '거의 다 됐어요!');
+            renderResults(data);
+            setProgress(100, '✅ 완료!', '');
+            await new Promise(r => setTimeout(r, 300));
+            setLoading(false);
+            document.getElementById('results-section').style.display = 'block';
+            document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
+        } catch (e) {
+            console.error(e);
+            setLoading(false);
+            alert('AI 분석 중 오류가 발생했습니다.\n' + e.message);
+        } finally {
+            document.getElementById('btn-submit').disabled = false;
+        }
+    }
+
+    // ══ Gemini API — 서버 프록시 호출 ══
+    async function callGemini(planText) {
+        let ruleSection = `[기본 규정 (대전시 2026년)]\n1. 수행평가 비율 ≥ 30%\n2. 서·논술형 비율 ≥ 30% (수행 100% 제외)\n3. 수행평가 기본점수 = 해당 영역 만점의 20~40%\n4. AI 도구 사용 유의사항 명시 (2026 신설)\n5. 결시자 처리 및 이의신청 절차 명시`;
+
+        if (customRuleTexts.length > 0) {
+            ruleSection = '[추가 업로드 규정/양식 - 최우선 적용]\n' +
+                customRuleTexts.map((r, i) =>
+                    `<자료${i+1}: ${r.name}>\n${r.text.substring(0, 6000)}\n</자료${i+1}>`
+                ).join('\n\n');
+        }
+
+        const systemPrompt = `당신은 대한민국 초·중·고등학교 평가계획을 점검하는 교육과정 전문가입니다.
+
+[점검 원칙]
+1. 추가 업로드 규정/양식이 있으면 그것을 최우선 기준으로 적용하세요.
+2. 문서 내 메모·작성 지침·예시 양식이 있으면 실제 내용과 대조하세요.
+3. 확인되지 않은 내용은 절대 추측하지 마세요 (할루시네이션 금지).
+4. 판단 시 문서 내 구체적 근거를 인용하세요.
+5. 개선 방향은 실제 수정 예시 문장/수치와 함께 제시하세요.
+6. 자유학기제 등 자율 학사운영 사항을 위반으로 처리하지 마세요.
+
+${ruleSection}
+
+위 기준으로 평가계획서를 분석하고 아래 JSON 형식으로만 응답하세요:
+{
+  "summary": "종합 평가 요약 (3~5문장)",
+  "strengths": ["잘된 점1", "잘된 점2"],
+  "issues": [
+    {
+      "category": "문제 유형",
+      "problem": "구체적 문제 설명",
+      "evidence": "문서 내 근거 인용",
+      "action": "수정 방향 + 예시 문장"
+    }
+  ],
+  "final_checklist": ["최종 점검 항목1", "항목2"]
+}`;
+
+        const payload = {
+            contents: [{ parts: [{ text: `[평가계획서 원문]\n${planText.substring(0, 25000)}\n[원문 끝]` }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 4096 }
+        };
+
+        // ★ 서버 프록시 호출 (API 키는 서버에만 존재)
+        const res = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ modelId: MODEL_ID, payload })
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: res.statusText }));
+            if (res.status === 429) throw new Error('API 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.');
+            throw new Error(err.error || `서버 오류 (${res.status})`);
+        }
+
+        const json = await res.json();
+        const raw = json.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!raw) throw new Error('응답이 비어있습니다.');
+        try { return JSON.parse(raw.replace(/```json|```/g, '').trim()); }
+        catch { throw new Error('응답 형식 파싱 실패. 다시 시도해주세요.'); }
+    }
+
+    // ══ Render Results ══
+    function renderResults(data) {
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일`;
+        const ruleStr = customRuleTexts.length > 0
+            ? customRuleTexts.map(r => r.name).join(', ')
+            : '대전광역시 2026 기준';
+
+        document.getElementById('result-meta').textContent = `${dateStr} · ${ruleStr}`;
+        document.getElementById('pt-date').textContent = dateStr;
+        document.getElementById('pt-rule').textContent = ruleStr;
+
+        document.getElementById('rs-summary').textContent = data.summary || '—';
+        document.getElementById('pt-summary').textContent = data.summary || '—';
+
+        const sl = document.getElementById('rs-strengths');
+        const ptSl = document.getElementById('pt-strengths');
+        sl.innerHTML = ''; ptSl.innerHTML = '';
+        const strengths = data.strengths?.length ? data.strengths : ['특이 사항 없음'];
+        strengths.forEach(s => {
+            sl.innerHTML += `<li>${s}</li>`;
+            ptSl.innerHTML += `<li>${s}</li>`;
+        });
+
+        const il = document.getElementById('rs-issues');
+        const ptIl = document.getElementById('pt-issues');
+        il.innerHTML = ''; ptIl.innerHTML = '';
+        if (data.issues?.length) {
+            data.issues.forEach((iss, i) => {
+                il.innerHTML += `
+                    <div class="issue-card">
+                        <div class="issue-card-head">
+                            <div class="issue-num">${i+1}</div>
+                            <span class="issue-category">${iss.category||'기타'}</span>
+                            <span class="issue-problem">${iss.problem||''}</span>
+                        </div>
+                        <div class="issue-card-body">
+                            <div class="issue-row">
+                                <span class="issue-label lbl-evidence">근거</span>
+                                <span class="issue-text">${iss.evidence||'—'}</span>
+                            </div>
+                            <div class="issue-row">
+                                <span class="issue-label lbl-action">조치</span>
+                                <span class="issue-text">${iss.action||'—'}</span>
+                            </div>
+                        </div>
+                    </div>`;
+                ptIl.innerHTML += `
+                    <div class="pt-issue">
+                        <span class="pt-badge">${iss.category}</span>
+                        <strong>${i+1}. ${iss.problem}</strong><br>
+                        <span style="color:#555">📎 근거: "${iss.evidence}"</span><br>
+                        <strong style="color:#2E6B4F">▶ 조치:</strong> ${iss.action}
+                    </div>`;
+            });
+        } else {
+            il.innerHTML = `<div style="padding:1rem;color:var(--primary);font-weight:700;">🎉 발견된 주요 문제점이 없습니다.</div>`;
+            ptIl.innerHTML = `<div class="pt-issue">발견된 주요 문제점이 없습니다.</div>`;
+        }
+
+        const cl = document.getElementById('rs-checklist');
+        const ptCl = document.getElementById('pt-checklist');
+        cl.innerHTML = ''; ptCl.innerHTML = '';
+        (data.final_checklist || []).forEach((c, i) => {
+            cl.innerHTML += `<li><div class="check-box" id="chk-${i}" onclick="this.classList.toggle('checked')"></div><span>${c}</span></li>`;
+            ptCl.innerHTML += `<li>${c}</li>`;
+        });
+
+        globalResult = `[평가계획서 AI 점검 리포트]\n분석 일시: ${dateStr}\n적용 기준: ${ruleStr}\n\n`;
+        globalResult += `⚠ AI 기반 참고용 가이드입니다. 최종 판단은 교사가 직접 확인해야 합니다.\n\n`;
+        globalResult += `■ 1. 종합 평가 요약\n${data.summary||'—'}\n\n`;
+        globalResult += `■ 2. 우수 사항\n` + strengths.map(s => `- ${s}`).join('\n') + '\n\n';
+        globalResult += `■ 3. 개선 필요 사항\n`;
+        (data.issues||[]).forEach((iss, i) => {
+            globalResult += `${i+1}. [${iss.category}] ${iss.problem}\n   📎 근거: "${iss.evidence}"\n   ▶ 조치: ${iss.action}\n\n`;
+        });
+        globalResult += `■ 4. 최종 체크리스트\n` + (data.final_checklist||[]).map(c => `□ ${c}`).join('\n');
+    }
+
+    // ══ Copy ══
+    function copyResult() {
+        if (!globalResult) return;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(globalResult).then(() => showToast('✅ 복사되었습니다!')).catch(fallbackCopy);
+        } else { fallbackCopy(); }
+    }
+    function fallbackCopy() {
+        const ta = document.createElement('textarea');
+        ta.value = globalResult;
+        ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta);
+        ta.select(); ta.setSelectionRange(0, 99999);
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('✅ 복사되었습니다!');
+    }
+    function showToast(msg) {
+        const t = document.createElement('div');
+        t.style.cssText = 'position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:#1A2B20;color:white;padding:0.7rem 1.4rem;border-radius:30px;font-weight:700;font-size:0.95rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2200);
+    }
+
+    // ══ PDF ══
+    async function generatePDF() {
+        const btns = [document.getElementById('btn-pdf'), document.getElementById('btn-pdf2')];
+        btns.forEach(b => { if(b){ b.disabled=true; b.textContent='⏳ 생성 중...'; } });
+        const el = document.getElementById('pdf-tpl');
+        el.style.display = 'block';
+        try {
+            const opt = {
+                margin: 10,
+                filename: '평가계획_AI점검결과.pdf',
+                image: { type: 'jpeg', quality: 0.97 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            const pdfBlob = await html2pdf().set(opt).from(el).toPdf().get('pdf').then(p => p.output('blob'));
+            el.style.display = 'none';
+            const filename = '평가계획_AI점검결과.pdf';
+            const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: '평가계획 AI 점검 결과' }).catch(() => {});
+            } else {
+                const url = URL.createObjectURL(pdfBlob);
+                const a = document.createElement('a');
+                a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click();
+                setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+            }
+            showToast('📄 PDF 저장 완료!');
+        } catch(e) {
+            el.style.display = 'none';
+            alert('PDF 생성 오류. 텍스트 복사 버튼을 이용해 주세요.');
+        } finally {
+            btns.forEach(b => { if(b){ b.disabled=false; b.textContent=b.id==='btn-pdf'?'📄 PDF 저장':'📄 PDF로 저장'; } });
+        }
+    }
+</script>
+</body>
+</html>
